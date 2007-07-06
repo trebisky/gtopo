@@ -16,7 +16,17 @@
  *	a TPQ file and display it.  7/5/2007
  * version 0.4 - pull a 2x2 group of maplets out of
  *	a TPQ file and display them.  7/5/2007
+ * version 0.5 - begin to navigate the directory structure
+ 	as shipped on the CD-roms  7/6/2007
  */
+
+/* This is the "root directory" where images of the
+ * CDROMS may be found.  This is used as a kind of
+ * search path, if directories do not exist they are ignored.
+ * If they do exist, they are searched for subdirectories like
+ * CA_D06 and az_d02, and so forth.
+ */
+char *topo_archives[] = { "/u1/topo", "/u2/topo", NULL };
 
 /* This one has 50 jpeg maplets in a 5x10 pattern */
 char *tpq_file = "../q36117h8.tpq";
@@ -140,6 +150,8 @@ main ( int argc, char **argv )
 	GtkWidget *main_window;
 	GtkWidget *vb;
 	int w, h;
+
+	archive_init ( topo_archives );
 
 	gtk_init ( &argc, &argv );
 

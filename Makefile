@@ -17,8 +17,13 @@ all:	gtopo
 clean:
 	rm -f gtopo
 
-gtopo:	gtopo.c
-	cc -o gtopo gtopo.c $(CFLAGS) $(GTKLIBS)
+OBJS = gtopo.o archive.o
+
+.c.o:	
+	cc -c $< $(CFLAGS)
+
+gtopo:	$(OBJS)
+	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
 
 # even though I have gtk 2.10.12, this shows 2.10.8
 # my home machine (trona) gives 2.8.15 */
