@@ -19,8 +19,10 @@
  * version 0.4 - pull a 2x2 group of maplets out of
  *	a TPQ file and display them.  7/5/2007
  * version 0.5 - begin to navigate the directory structure
- 	as shipped on the CD-roms  7/6/2007
+ * 	as shipped on the CD-roms  7/6/2007
  */
+
+int verbose_opt = 0;
 
 /* This is a list of "root directories" where images of the
  * CDROMS may be found.  It is used as a kind of search path,
@@ -125,7 +127,8 @@ configure_handler ( GtkWidget *wp, gpointer data )
 	w = wp->allocation.width;
 	h = wp->allocation.height;
 
-	printf ( "Configure event %d (%d, %d)\n", config_count++, w, h );
+	if ( verbose_opt )
+	    printf ( "Configure event %d (%d, %d)\n", config_count++, w, h );
 
 	/* Avoid memory leak */
 	if ( main_pixels )
@@ -138,11 +141,7 @@ configure_handler ( GtkWidget *wp, gpointer data )
 
 	mw = gdk_pixbuf_get_width ( map_buf[0] );
 	mh = gdk_pixbuf_get_height ( map_buf[0] );
-	/*
-	*/
 
-	/*
-	*/
 	draw_maplet ( map_buf[0], 0, 0 );
 	draw_maplet ( map_buf[1], mw, 0 );
 	draw_maplet ( map_buf[2], 0, mh );
@@ -158,14 +157,22 @@ main ( int argc, char **argv )
 	GtkWidget *vb;
 	int w, h;
 	char *tpq_path;
+	char *p;
 
-	archive_init ( topo_archives );
-	{
-	char *p = lookup_section ( 37, 112 );
-	printf ( "Found section: %s\n", p );
+	/* Let gtk strip off any of its arguments first
+	 */
+	gtk_init ( &argc, &argv );
+
+	argc--;
+	argv++;
+
+	while ( argc-- ) {
+	    p = *argv++;
+	    if ( strcmp ( p, "-v" ) == 0 )
+	    	verbose_opt = 1;
 	}
 
-	gtk_init ( &argc, &argv );
+	archive_init ( topo_archives, verbose_opt );
 
 	main_window = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
 
@@ -195,7 +202,7 @@ main ( int argc, char **argv )
 	*/
 
 	tpq_path = lookup_quad ( 36, 117, "h8" );
-	tpq_path = lookup_quad ( 36, 111, "h8" );
+	tpq_path = lookup_quad ( 37, 118, "h8" );
 	if ( ! tpq_path )
 	    error ("Cannot find your quad!\n", "" );
 
@@ -213,7 +220,8 @@ main ( int argc, char **argv )
 
 	gtk_widget_show ( main_da );
 
-	printf ( "single maplet size: %d by %d\n", w, h );
+	if ( verbose_opt )
+	    printf ( "single maplet size: %d by %d\n", w, h );
 
 	gtk_main ();
 

@@ -28,6 +28,8 @@ struct _section {
 
 struct _section *section_head;
 
+static int verbose = 0;
+
 /* Prototypes ... */
 int add_archive ( char * );
 int add_disk ( char *, char * );
@@ -44,17 +46,18 @@ strhide ( char *data )
 }
 
 int
-archive_init ( char *archives[] )
+archive_init ( char *archives[], int verbose_arg )
 {
 	char **p;
 	int nar = 0;
 
 	section_head = (struct _section *) NULL;
+	verbose = verbose_arg;
 
 	for ( p=archives; *p; p++ ) {
 	    if ( add_archive ( *p ) )
 		nar++;
-	    else
+	    else if ( verbose )
 	    	printf ( "Not a topo archive: %s\n", *p );
 	}
 
@@ -114,7 +117,8 @@ add_disk ( char *archive, char *disk )
 	if ( ! (dd = opendir ( disk_path )) )
 	    return 0;
 
-	printf ( "Found disk: %s\n", disk_path );
+	if ( verbose )
+	    printf ( "Found disk: %s\n", disk_path );
 
 	/* Loop through this disk image.
 	 */
@@ -165,8 +169,8 @@ add_section ( char *disk, char *section )
 	sp->next = section_head;
 	section_head = sp;
 
-	printf ( "Added section: %d  %s\n", sp->latlong, section_path );
-
+	if ( verbose )
+	    printf ( "Added section: %d  %s\n", sp->latlong, section_path );
 
 	return 1;
 }
