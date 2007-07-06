@@ -3,6 +3,6 @@
 
 int archive_init ( char **, int );
 char *lookup_section ( int, int );
-char *lookup_quad ( int, int, char * );
+char *lookup_quad ( double, double );
 
 /* THE END */

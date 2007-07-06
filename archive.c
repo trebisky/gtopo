@@ -188,37 +188,51 @@ lookup_section ( int lat_deg, int long_deg )
 	return NULL;
 }
 
+/* XXX - non reentrant static follows */
+static char *quad_path_buf[100];
+
+/* Correct for 7.5 minute quadrangles */
 char *
-lookup_quad ( int lat_deg, int long_deg, char *quad_code )
+lookup_quad ( double lat_deg, double long_deg )
 {
 	struct stat stat_buf;
+	int lat_int, long_int;
+	int lat_q, long_q;
 	char *section_path;
-	/* XXX non reentrant static follows */
-	static char *quad_path[100];
-	char qc[4];
 
-	section_path = lookup_section ( lat_deg, long_deg );
+	lat_int = lat_deg;
+	long_int = long_deg;
+
+	printf ( "lookup for %.4f, %.4f\n", lat_deg, long_deg );
+
+	section_path = lookup_section ( lat_int, long_int );
 	if ( ! section_path )
 	    return NULL;
 
-	sprintf ( (char *) quad_path, "%s/q%2d%03d%s.tpq", section_path, lat_deg, long_deg, quad_code );
+	/* This will yield indexes from 0-7,
+	 * then a-h for latitude (a at the north)
+	 *  and 1-8 for longitude (1 at the west)
+	 */
+	lat_q = 'a' + (int)(8.0 - (lat_deg - (double)lat_int) * 8.0);
+	long_q = '1' + (int)(8.0 - (long_deg - (double)long_int) * 8.0);
+	
+	sprintf ( (char *) quad_path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
+	printf ( "Trying %s\n", quad_path_buf );
 
-	if ( stat ( (char *) quad_path, &stat_buf ) >=  0 ) {
+	if ( stat ( (char *) quad_path_buf, &stat_buf ) >=  0 ) {
 	    if ( S_ISREG(stat_buf.st_mode) ) {
-	    	return (char *)quad_path;
+	    	return (char *)quad_path_buf;
 	    }
 	}
 
 	/* Try upper case */
-	qc[0] = toupper ( quad_code[0] );
-	qc[1] = quad_code[1];
-	qc[2] = '\0';
+	lat_q = toupper ( lat_q );
+	sprintf ( (char *) quad_path_buf, "%s/Q%2d%03d%c%c.TPQ", section_path, lat_int, long_int, lat_q, long_q );
+	printf ( "Trying %s\n", quad_path_buf );
 
-	sprintf ( (char *) quad_path, "%s/Q%2d%03d%s.TPQ", section_path, lat_deg, long_deg, qc );
-
-	if ( stat ( (char *) quad_path, &stat_buf ) >=  0 ) {
+	if ( stat ( (char *) quad_path_buf, &stat_buf ) >=  0 ) {
 	    if ( S_ISREG(stat_buf.st_mode) ) {
-	    	return (char *)quad_path;
+	    	return (char *)quad_path_buf;
 	    }
 	}
 

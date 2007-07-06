@@ -25,6 +25,9 @@
 
 int verbose_opt = 0;
 
+double cur_lat_deg;
+double cur_long_deg;
+
 /* This is a list of "root directories" where images of the
  * CDROMS may be found.  It is used as a kind of search path,
  * if directories do not exist they are ignored.
@@ -67,6 +70,17 @@ error ( char *msg, char *arg )
 {
 	printf ( msg, arg );
 	exit ( 1 );
+}
+
+double
+dms2deg ( int deg, int min, int sec )
+{
+	double rv;
+
+	rv = deg;
+	rv += ((double)min/60.0);
+	rv += ((double)sec/3600.0);
+	return rv;
 }
 
 gint
@@ -217,16 +231,14 @@ main ( int argc, char **argv )
 
 	syscm = gdk_colormap_get_system ();
 
+	cur_lat_deg = dms2deg ( 37, 1, 0 );
+	cur_long_deg = dms2deg ( 118, 31, 0 );
+	printf ( "LL %.4f %.4f\n", cur_lat_deg, cur_long_deg );
 
-	tpq_path = lookup_quad ( 36, 117, "h8" );
-	tpq_path = lookup_quad ( 37, 118, "h8" );
+	tpq_path = lookup_quad ( cur_lat_deg, cur_long_deg );
 	if ( ! tpq_path )
 	    error ("Cannot find your quad!\n", "" );
 
-	/* This block of 4 will be:
-		2  3
-		7  8
-	*/
 	map_buf[0] = load_tpq_maplet ( tpq_path, 2, 0 );
 	map_buf[1] = load_tpq_maplet ( tpq_path, 3, 0 );
 
