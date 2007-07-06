@@ -191,7 +191,12 @@ lookup_section ( int lat_deg, int long_deg )
 /* XXX - non reentrant static follows */
 static char *quad_path_buf[100];
 
-/* Correct for 7.5 minute quadrangles */
+/* Correct for 7.5 minute quadrangles
+ * Note that their "codes" follow the way that lat and long
+ * increase.  There are 64 quads in a 1x1 "section".
+ * a1 is in the southeast, h8 is in the northwest.
+ * i.e longitude become 1-8, latitude a-h
+ */
 char *
 lookup_quad ( double lat_deg, double long_deg )
 {
@@ -213,8 +218,8 @@ lookup_quad ( double lat_deg, double long_deg )
 	 * then a-h for latitude (a at the north)
 	 *  and 1-8 for longitude (1 at the west)
 	 */
-	lat_q = 'a' + (int)(8.0 - (lat_deg - (double)lat_int) * 8.0);
-	long_q = '1' + (int)(8.0 - (long_deg - (double)long_int) * 8.0);
+	lat_q  = 'a' + (int)((lat_deg  - (double)lat_int) * 8.0);
+	long_q = '1' + (int)((long_deg - (double)long_int) * 8.0);
 	
 	sprintf ( (char *) quad_path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
 	printf ( "Trying %s\n", quad_path_buf );
