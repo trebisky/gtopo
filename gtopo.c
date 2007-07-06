@@ -5,6 +5,8 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include "gtopo.h"
+
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
  * version 0.1 - really just a JPG file display gizmo, but
  *	a starting point for what is to follow.  Did not get
@@ -20,21 +22,26 @@
  	as shipped on the CD-roms  7/6/2007
  */
 
-/* This is the "root directory" where images of the
- * CDROMS may be found.  This is used as a kind of
- * search path, if directories do not exist they are ignored.
+/* This is a list of "root directories" where images of the
+ * CDROMS may be found.  It is used as a kind of search path,
+ * if directories do not exist they are ignored.
  * If they do exist, they are searched for subdirectories like
  * CA_D06 and az_d02, and so forth.
+ * This allows a path to be set up that will work on multiple
+ * machines that keep the topos in different places.
  */
 char *topo_archives[] = { "/u1/topo", "/u2/topo", NULL };
 
-/* This one has 50 jpeg maplets in a 5x10 pattern */
-char *tpq_file = "../q36117h8.tpq";
-
 #ifdef notdef
+/* This one has 50 jpeg maplets in a 5x10 pattern */
+char *tpq_path = "../q36117h8.tpq";
+
 /* This one has 100 jpeg maplets in a 10x10 pattern */
 /*  each is 406x480 */
-char *tpq_file = "../F30105A1.TPQ";
+/* These are found on every CD as:
+ *  /u1/topo/AZ_D05/AZ1_MAP3/F30105A1.TPQ
+ */
+char *tpq_path = "../F30105A1.TPQ";
 #endif
 
 GdkColormap *syscm;
@@ -150,8 +157,12 @@ main ( int argc, char **argv )
 	GtkWidget *main_window;
 	GtkWidget *vb;
 	int w, h;
+	char *p;
+	char *tpq_path;
 
 	archive_init ( topo_archives );
+	p = lookup_section ( 37, 112 );
+	printf ( "Found: %s\n", p );
 
 	gtk_init ( &argc, &argv );
 
@@ -181,11 +192,16 @@ main ( int argc, char **argv )
 		2  3
 		7  8
 	*/
-	map_buf[0] = load_tpq_maplet ( tpq_file, 2, 0 );
-	map_buf[1] = load_tpq_maplet ( tpq_file, 3, 0 );
 
-	map_buf[2] = load_tpq_maplet ( tpq_file, 2, 1 );
-	map_buf[3] = load_tpq_maplet ( tpq_file, 3, 1 );
+	tpq_path = lookup_quad ( 36, 117, "h8" );
+	if ( ! tpq_path )
+	    error ("Cannot find your quad!\n", "" );
+
+	map_buf[0] = load_tpq_maplet ( tpq_path, 2, 0 );
+	map_buf[1] = load_tpq_maplet ( tpq_path, 3, 0 );
+
+	map_buf[2] = load_tpq_maplet ( tpq_path, 2, 1 );
+	map_buf[3] = load_tpq_maplet ( tpq_path, 3, 1 );
 
 	w = gdk_pixbuf_get_width ( map_buf[0] );
 	h = gdk_pixbuf_get_height ( map_buf[0] );

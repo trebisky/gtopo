@@ -12,22 +12,25 @@
 CFLAGS = -g `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
 
+OBJS = gtopo.o archive.o
+
 all:	gtopo
 
 clean:
-	rm -f gtopo
-
-OBJS = gtopo.o archive.o
+	rm -f gtopo $(OBJS)
 
 .c.o:	
-	cc -c $< $(CFLAGS)
+	cc -c -g $< $(CFLAGS)
 
 gtopo:	$(OBJS)
 	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
 
 # even though I have gtk 2.10.12, this shows 2.10.8
-# my home machine (trona) gives 2.8.15 */
+# my home machine (trona) gives 2.8.15
 gtkversion:
 	pkg-config --modversion gtk+-2.0
+
+gtopo.o:	gtopo.h
+archive.o:	gtopo.h
 	
 # THE END
