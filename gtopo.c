@@ -25,13 +25,6 @@ GdkPixmap *main_pixels = NULL;
 /* One maplet (will change) */
 GdkPixbuf *map_buf;
 
-void
-error ( char *msg, char *arg )
-{
-	printf ( msg, arg );
-	exit ( 1 );
-}
-
 gint
 destroy_handler ( GtkWidget *w, gpointer data )
 {
@@ -158,7 +151,7 @@ main ( int argc, char **argv )
  * returns NULL if trouble.
  */
 GdkPixbuf *
-load_maplet ( char *name )
+load_maplet_1 ( char *name )
 {
 	GdkPixbuf *rv;
 
@@ -166,6 +159,65 @@ load_maplet ( char *name )
 	if ( ! rv )
 	    printf ("Cannot open %s\n", name );
 
+	return rv;
+}
+
+void
+error ( char *msg, char *arg )
+{
+	printf ( msg, arg );
+	exit ( 1 );
+}
+
+/* Basically this code was stolen from
+ * archive/gtk+-2.10.12/gdk-pixbuf/gdk-pixbuf-io.c
+ * and hacked on.
+ */
+GdkPixbuf *
+load_maplet ( char *name )
+{
+	GdkPixbuf *rv;
+	/* This is in /u1/archive/gtk+-2.10.12/gdk-picbuf/gdk-pixbuf-io.h
+	GdkPixbufModule *im;
+	 */
+	void *im;
+	FILE *f;
+	int size;
+	guchar buffer[1024];
+
+	rv = NULL;
+
+	f = g_fopen ( name, "rb" );
+	if ( ! f ) {
+	    error ( "Cannot open maplet: %s\n", name );
+	    return rv;
+	}
+
+	size = fread ( buffer, 1, sizeof(buffer), f );
+	fseek ( f, 0, SEEK_SET );
+	if ( size == 0 ) {
+	    error ( "Empty maplet file: %s\n", name );
+	    fclose ( f );
+	    return rv;
+	}
+
+	im = _gdk_pixbuf_get_module ( buffer, size, name, error );
+	if ( im == NULL ) {
+	    error ( "Weird file type for: %s\n", name );
+	    fclose ( f );
+	    return rv;
+	}
+
+#ifdef notdef
+	if ( im->module == NULL && ! _gdk_pixbuf_load_module (im, NULL)) {
+	    error ( "No module for: %s\n", name );
+	    fclose ( f );
+	    return rv;
+	}
+#endif
+
+	rv = _gdk_pixbuf_generic_image_load ( im, f, NULL );
+	fclose (f);
 	return rv;
 }
 
