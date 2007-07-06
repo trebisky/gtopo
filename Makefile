@@ -22,6 +22,9 @@ clean:
 .c.o:	
 	cc -c -g $< $(CFLAGS)
 
+gtopo.o:	gtopo.c gtopo.h
+archive.o:	archive.c gtopo.h
+
 gtopo:	$(OBJS)
 	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
 
@@ -30,7 +33,4 @@ gtopo:	$(OBJS)
 gtkversion:
 	pkg-config --modversion gtk+-2.0
 
-gtopo.o:	gtopo.h
-archive.o:	gtopo.h
-	
 # THE END

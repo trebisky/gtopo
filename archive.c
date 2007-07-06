@@ -197,11 +197,11 @@ lookup_quad ( int lat_deg, int long_deg, char *quad_code )
 	if ( ! section_path )
 	    return NULL;
 
-	sprintf ( quad_path, "%s/q%2d%03d%s.tpq", section_path, lat_deg, long_deg, quad_code );
+	sprintf ( (char *) quad_path, "%s/q%2d%03d%s.tpq", section_path, lat_deg, long_deg, quad_code );
 
-	if ( stat ( quad_path, &stat_buf ) >=  0 ) {
+	if ( stat ( (char *) quad_path, &stat_buf ) >=  0 ) {
 	    if ( S_ISREG(stat_buf.st_mode) ) {
-	    	return quad_path;
+	    	return (char *)quad_path;
 	    }
 	}
 
@@ -210,11 +210,11 @@ lookup_quad ( int lat_deg, int long_deg, char *quad_code )
 	qc[1] = quad_code[1];
 	qc[2] = '\0';
 
-	sprintf ( quad_path, "%s/Q%2d%03d%s.TPQ", section_path, lat_deg, long_deg, qc );
+	sprintf ( (char *) quad_path, "%s/Q%2d%03d%s.TPQ", section_path, lat_deg, long_deg, qc );
 
-	if ( stat ( quad_path, &stat_buf ) >=  0 ) {
+	if ( stat ( (char *) quad_path, &stat_buf ) >=  0 ) {
 	    if ( S_ISREG(stat_buf.st_mode) ) {
-	    	return quad_path;
+	    	return (char *)quad_path;
 	    }
 	}
 

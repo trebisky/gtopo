@@ -157,12 +157,13 @@ main ( int argc, char **argv )
 	GtkWidget *main_window;
 	GtkWidget *vb;
 	int w, h;
-	char *p;
 	char *tpq_path;
 
 	archive_init ( topo_archives );
-	p = lookup_section ( 37, 112 );
-	printf ( "Found: %s\n", p );
+	{
+	char *p = lookup_section ( 37, 112 );
+	printf ( "Found section: %s\n", p );
+	}
 
 	gtk_init ( &argc, &argv );
 
@@ -194,6 +195,7 @@ main ( int argc, char **argv )
 	*/
 
 	tpq_path = lookup_quad ( 36, 117, "h8" );
+	tpq_path = lookup_quad ( 36, 111, "h8" );
 	if ( ! tpq_path )
 	    error ("Cannot find your quad!\n", "" );
 
