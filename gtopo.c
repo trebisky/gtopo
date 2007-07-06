@@ -1,6 +1,9 @@
-#include <stdlib.h>
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>
+
+#include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
 
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
  * version 0.1 - really just a JPG file display gizmo, but
@@ -9,11 +12,11 @@
  *	the expose event handler  7/2/2007
  * version 0.2 - draw into a pixmap which gets copied to
  *	the drawing area on an expose event.  7/3/2007
+ * version 0.3 - actually pull a single maplet out of
+ *	a TPQ file and display it.  7/5/2007
  */
 
-GdkPixbuf *load_maplet ( char * );
-
-char *gfile = "topo0301.jpg";
+char *tpq_file = "../q36117h8.tpq";
 
 GdkColormap *syscm;
 
@@ -24,6 +27,18 @@ GdkPixmap *main_pixels = NULL;
 
 /* One maplet (will change) */
 GdkPixbuf *map_buf;
+
+/* Prototypes ..........
+ */
+void build_tpq_index ( char * );
+GdkPixbuf *load_tpq_maplet ( char *name, int who );
+
+void
+error ( char *msg, char *arg )
+{
+	printf ( msg, arg );
+	exit ( 1 );
+}
 
 gint
 destroy_handler ( GtkWidget *w, gpointer data )
@@ -130,7 +145,9 @@ main ( int argc, char **argv )
 
 	syscm = gdk_colormap_get_system ();
 
-	map_buf = load_maplet ( gfile );
+	/* maplet 2 is the old topo0301.jpg */
+	map_buf = load_tpq_maplet ( tpq_file, 2 );
+
 	w = gdk_pixbuf_get_width ( map_buf );
 	h = gdk_pixbuf_get_height ( map_buf );
 
@@ -146,78 +163,118 @@ main ( int argc, char **argv )
 	return 0;
 }
 
-/* Open up a .jpg file or some such and load it
- * into a pixmap.
- * returns NULL if trouble.
+/* ---------------------------------------------------------------- */
+/*  TPQ file handling stuff
+/* ---------------------------------------------------------------- */
+
+#define TPQ_HEADER_SIZE	1024
+
+/* We really see just 50 in the TPQ files we process,
+ * but allocate a bit more room, for no particular reason.
  */
-GdkPixbuf *
-load_maplet_1 ( char *name )
+#define TPQ_NUM_MAPLETS	64
+
+struct tpq_index_e {
+	long	offset;
+	long	size;
+};
+
+struct tpq_index_e tpq_index[TPQ_NUM_MAPLETS];
+char tpq_index_filename[100];
+int num_index = 0;
+
+/* For a TPQ file representing a 7.5 minute quadrangle, there
+ * are 50 maplets within the file.  These begin in the upper
+ * left (the far NW) and then move W to E for 5 maplets
+ * then down just like you read lines of text in a book.
+ * There are 10 maplets N to S
+ */
+
+#define BUFSIZE	1024
+
+void
+wonk_index ( long *info )
 {
-	GdkPixbuf *rv;
+	int i;
 
-	rv = gdk_pixbuf_new_from_file ( name, NULL );
-	if ( ! rv )
-	    printf ("Cannot open %s\n", name );
-
-	return rv;
+	num_index = (info[0] - 1024) - 4;
+	for ( i=0; i<num_index; i++ ) {
+	    tpq_index[i].offset = info[i];
+	    tpq_index[i].size = info[i+1] - info[i];
+	}
 }
 
 void
-error ( char *msg, char *arg )
+build_tpq_index ( char *name )
 {
-	printf ( msg, arg );
-	exit ( 1 );
+	int fd;
+	char buf[BUFSIZE];
+
+	fd = open ( name, O_RDONLY );
+	if ( fd < 0 )
+	    error ( "Cannot open: %s\n", name );
+
+	/* skip header */
+	if ( read( fd, buf, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
+	    error ( "Bogus TPQ file size - 1\n", "" );
+	if ( read( fd, buf, BUFSIZE ) != BUFSIZE )
+	    error ( "Bogus TPQ file size - 2\n", "" );
+
+	wonk_index ( (long *) buf );
+	strcpy ( tpq_index_filename, name );
+
+	close ( fd );
 }
 
-/* Basically this code was stolen from
- * archive/gtk+-2.10.12/gdk-pixbuf/gdk-pixbuf-io.c
- * and hacked on.
+char *tmpname = "gtopo.tmp";
+
+/* Pull a maplet out of a TPQ file.
+ * returns NULL if trouble.
  */
 GdkPixbuf *
-load_maplet ( char *name )
+load_tpq_maplet ( char *name, int who )
 {
-	GdkPixbuf *rv;
-	/* This is in /u1/archive/gtk+-2.10.12/gdk-picbuf/gdk-pixbuf-io.h
-	GdkPixbufModule *im;
-	 */
-	void *im;
-	FILE *f;
+	char buf[BUFSIZE];
+	int fd, ofd;
 	int size;
-	guchar buffer[1024];
+	int nw;
+	GdkPixbuf *rv;
 
-	rv = NULL;
+	if ( num_index < 1 )
+	    build_tpq_index ( name );
+	if ( strcmp ( tpq_index_filename, name ) != 0 )
+	    build_tpq_index ( name );
 
-	f = g_fopen ( name, "rb" );
-	if ( ! f ) {
-	    error ( "Cannot open maplet: %s\n", name );
-	    return rv;
+	/* open a temp file for R/W */
+	ofd = open ( tmpname, O_CREAT | O_TRUNC | O_WRONLY, 0600 );
+	if ( ofd < 0 )
+	    error ( "Cannot open tempfile: %s\n", tmpname );
+
+	fd = open ( name, O_RDONLY );
+	if ( fd < 0 )
+	    error ( "Cannot open: %s\n", name );
+
+	lseek ( fd, tpq_index[who].offset, SEEK_SET );
+	size = tpq_index[who].size;
+
+	while ( size > 0 ) {
+	    if ( read( fd, buf, BUFSIZE ) != BUFSIZE )
+		error ( "TPQ file read error\n", name );
+	    nw = size < BUFSIZE ? size : BUFSIZE;
+	    if ( write ( ofd, buf, nw ) != nw )
+		error ( "tmp file write error\n", tmpname );
+	    size -= nw;
 	}
 
-	size = fread ( buffer, 1, sizeof(buffer), f );
-	fseek ( f, 0, SEEK_SET );
-	if ( size == 0 ) {
-	    error ( "Empty maplet file: %s\n", name );
-	    fclose ( f );
-	    return rv;
-	}
+	close ( fd );
+	close ( ofd );
 
-	im = _gdk_pixbuf_get_module ( buffer, size, name, error );
-	if ( im == NULL ) {
-	    error ( "Weird file type for: %s\n", name );
-	    fclose ( f );
-	    return rv;
-	}
+	rv = gdk_pixbuf_new_from_file ( tmpname, NULL );
+	if ( ! rv )
+	    printf ("Cannot open %s\n", tmpname );
 
-#ifdef notdef
-	if ( im->module == NULL && ! _gdk_pixbuf_load_module (im, NULL)) {
-	    error ( "No module for: %s\n", name );
-	    fclose ( f );
-	    return rv;
-	}
-#endif
+	remove ( tmpname );
 
-	rv = _gdk_pixbuf_generic_image_load ( im, f, NULL );
-	fclose (f);
 	return rv;
 }
 
