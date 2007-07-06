@@ -20,6 +20,7 @@
  *	a TPQ file and display them.  7/5/2007
  * version 0.5 - begin to navigate the directory structure
  * 	as shipped on the CD-roms  7/6/2007
+ * version 0.6 - try to get mouse events 7/6/2007
  */
 
 int verbose_opt = 0;
@@ -69,7 +70,7 @@ error ( char *msg, char *arg )
 }
 
 gint
-destroy_handler ( GtkWidget *w, gpointer data )
+destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 {
 	gtk_main_quit ();
 	return FALSE;
@@ -78,7 +79,7 @@ destroy_handler ( GtkWidget *w, gpointer data )
 static int expose_count = 0;
 
 gint
-expose_handler ( GtkWidget *wp, GdkEventExpose *ep )
+expose_handler ( GtkWidget *wp, GdkEventExpose *ep, gpointer data )
 {
 	/*
 	if ( expose_count < 4 )
@@ -119,7 +120,7 @@ draw_maplet ( GdkPixbuf *map, int x, int y )
 }
 
 gint
-configure_handler ( GtkWidget *wp, gpointer data )
+configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 {
 	int w, h;
 	int mw, mh;
@@ -148,6 +149,19 @@ configure_handler ( GtkWidget *wp, gpointer data )
 	draw_maplet ( map_buf[3], mw, mh );
 
 	return TRUE;
+}
+
+gint
+mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
+{
+	int button;
+	float x, y;
+
+	button = event->button;
+	x = event->x;
+	y = event->y;
+	printf ( "Button event %d %.3f %.3f\n", button, x, y );
+	    
 }
 
 int
@@ -193,19 +207,26 @@ main ( int argc, char **argv )
 	gtk_signal_connect ( GTK_OBJECT(main_da), "configure_event",
 			GTK_SIGNAL_FUNC(configure_handler), NULL );
 
+	/* We never see the release event, unless we add the press
+	 * event to the mask.
+	 */
+	gtk_signal_connect ( GTK_OBJECT(main_da), "button_release_event",
+			GTK_SIGNAL_FUNC(mouse_handler), NULL );
+	gtk_widget_add_events ( GTK_WIDGET(main_da), GDK_BUTTON_RELEASE_MASK );
+	gtk_widget_add_events ( GTK_WIDGET(main_da), GDK_BUTTON_PRESS_MASK );
+
 	syscm = gdk_colormap_get_system ();
 
-	/* maplet 2 is the old topo0301.jpg */
-	/* This block of 4 will be:
-		2  3
-		7  8
-	*/
 
 	tpq_path = lookup_quad ( 36, 117, "h8" );
 	tpq_path = lookup_quad ( 37, 118, "h8" );
 	if ( ! tpq_path )
 	    error ("Cannot find your quad!\n", "" );
 
+	/* This block of 4 will be:
+		2  3
+		7  8
+	*/
 	map_buf[0] = load_tpq_maplet ( tpq_path, 2, 0 );
 	map_buf[1] = load_tpq_maplet ( tpq_path, 3, 0 );
 
