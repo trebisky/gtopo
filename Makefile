@@ -12,7 +12,7 @@
 CFLAGS = -g `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
 
-OBJS = gtopo.o archive.o
+OBJS = gtopo.o archive.o tpq_io.o
 
 all:	gtopo
 
@@ -24,6 +24,7 @@ clean:
 
 gtopo.o:	gtopo.c gtopo.h
 archive.o:	archive.c gtopo.h
+tpq_io.o:	tpq_io.c gtopo.h
 
 gtopo:	$(OBJS)
 	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
