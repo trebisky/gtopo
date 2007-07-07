@@ -20,8 +20,10 @@
  *	a TPQ file and display them.  7/5/2007
  * version 0.5 - begin to navigate the directory structure
  * 	as shipped on the CD-roms  7/6/2007
+ *	introduce archive.c
  * version 0.6 - try to get mouse events 7/6/2007
  * 	also add code to display an area given a lat and long.
+ *	split out tpq_io.c
  */
 
 int verbose_opt = 0;
@@ -62,8 +64,6 @@ GdkPixbuf *map_buf[4];
 
 /* Prototypes ..........
  */
-void build_tpq_index ( char * );
-GdkPixbuf *load_tpq_maplet ( char *, int, int );
 
 void
 error ( char *msg, char *arg )

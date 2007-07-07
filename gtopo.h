@@ -16,6 +16,11 @@ struct position {
 	int y_maplet;
 };
 
+/* from tpq_io.c */
+void build_tpq_index ( char * );
+GdkPixbuf *load_tpq_maplet ( char *, int, int );
+
+/* from archive.c */
 int archive_init ( char **, int );
 char *lookup_section ( int, int );
 char *lookup_quad ( struct position * );

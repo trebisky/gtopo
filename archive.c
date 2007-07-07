@@ -1,3 +1,6 @@
+#include <gtk/gtk.h>
+#include <glib/gstdio.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
