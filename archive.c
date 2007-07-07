@@ -198,29 +198,48 @@ static char *quad_path_buf[100];
  * i.e longitude become 1-8, latitude a-h
  */
 char *
-lookup_quad ( double lat_deg, double long_deg )
+lookup_quad ( struct position *curp )
 {
 	struct stat stat_buf;
 	int lat_int, long_int;
+	int lat_index, long_index;
 	int lat_q, long_q;
+	int maplet;
 	char *section_path;
 
-	lat_int = lat_deg;
-	long_int = long_deg;
+	lat_int = curp->lat_deg;
+	long_int = curp->long_deg;
 
-	printf ( "lookup for %.4f, %.4f\n", lat_deg, long_deg );
+	curp->latlong = lat_int * 1000 + long_int;
+
+	printf ( "lookup for %.4f, %.4f\n", curp->lat_deg, curp->long_deg );
 
 	section_path = lookup_section ( lat_int, long_int );
 	if ( ! section_path )
 	    return NULL;
 
 	/* This will yield indexes from 0-7,
-	 * then a-h for latitude (a at the north)
-	 *  and 1-8 for longitude (1 at the west)
+	 * then a-h for latitude (a at the south)
+	 *  and 1-8 for longitude (1 at the east)
 	 */
-	lat_q  = 'a' + (int)((lat_deg  - (double)lat_int) * 8.0);
-	long_q = '1' + (int)((long_deg - (double)long_int) * 8.0);
-	
+	lat_index = (curp->lat_deg  - (double)lat_int) * 8.0;
+	long_index = (curp->long_deg - (double)long_int) * 8.0;
+
+	curp->lat_quad = lat_q  = 'a' + lat_index;
+	curp->long_quad = long_q = '1' + long_index;
+
+	/* These are values in degrees that specify where on the quadrangle we are at.
+	 * Origin is 0,0 at the SE corner
+	 */
+	curp->lat_deg_quad = curp->lat_deg - (double)lat_int - ((double)lat_index) / 8.0;
+	curp->long_deg_quad = curp->long_deg - (double)long_int - ((double)long_index) / 8.0;
+
+	maplet = curp->lat_deg_quad * 8.0 * 10.0;
+	curp->y_maplet = 9 - maplet;
+
+	maplet = curp->long_deg_quad * 8.0 * 5.0;
+	curp->x_maplet = 4 - maplet;
+
 	sprintf ( (char *) quad_path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
 	printf ( "Trying %s\n", quad_path_buf );
 

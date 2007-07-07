@@ -21,12 +21,12 @@
  * version 0.5 - begin to navigate the directory structure
  * 	as shipped on the CD-roms  7/6/2007
  * version 0.6 - try to get mouse events 7/6/2007
+ * 	also add code to display an area given a lat and long.
  */
 
 int verbose_opt = 0;
 
-double cur_lat_deg;
-double cur_long_deg;
+struct position cur_pos;
 
 /* This is a list of "root directories" where images of the
  * CDROMS may be found.  It is used as a kind of search path,
@@ -185,6 +185,7 @@ main ( int argc, char **argv )
 	GtkWidget *vb;
 	int w, h;
 	char *tpq_path;
+	int xm, ym;
 	char *p;
 
 	/* Let gtk strip off any of its arguments first
@@ -231,19 +232,30 @@ main ( int argc, char **argv )
 
 	syscm = gdk_colormap_get_system ();
 
-	cur_lat_deg = dms2deg ( 37, 1, 0 );
-	cur_long_deg = dms2deg ( 118, 31, 0 );
-	printf ( "LL %.4f %.4f\n", cur_lat_deg, cur_long_deg );
+	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
+	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
 
-	tpq_path = lookup_quad ( cur_lat_deg, cur_long_deg );
+	tpq_path = lookup_quad ( &cur_pos );
 	if ( ! tpq_path )
 	    error ("Cannot find your quad!\n", "" );
 
-	map_buf[0] = load_tpq_maplet ( tpq_path, 2, 0 );
-	map_buf[1] = load_tpq_maplet ( tpq_path, 3, 0 );
+	xm = cur_pos.x_maplet;
+	ym = cur_pos.y_maplet;
+	printf ( "x,y maplet = %d %d\n", xm, ym );
 
-	map_buf[2] = load_tpq_maplet ( tpq_path, 2, 1 );
-	map_buf[3] = load_tpq_maplet ( tpq_path, 3, 1 );
+	/* what this will do is given the lat and long above,
+	 * will display a 2x2 maplet section that contains
+	 * the coordinate, but will not cross map sheets.
+	 */
+
+	if ( xm == 4 ) xm--;
+	if ( ym == 9 ) ym--;
+
+	map_buf[0] = load_tpq_maplet ( tpq_path, xm, ym );
+	map_buf[1] = load_tpq_maplet ( tpq_path, xm+1, ym );
+
+	map_buf[2] = load_tpq_maplet ( tpq_path, xm, ym+1 );
+	map_buf[3] = load_tpq_maplet ( tpq_path, xm+1, ym+1 );
 
 	w = gdk_pixbuf_get_width ( map_buf[0] );
 	h = gdk_pixbuf_get_height ( map_buf[0] );
