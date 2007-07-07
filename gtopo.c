@@ -140,6 +140,7 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	int mxdim, mydim;
 	int vxcent, vycent;
 	int offx, offy;
+	struct maplet *mp;
 
 	/* get the viewport size */
 	vxdim = wp->allocation.width;
@@ -161,15 +162,14 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	/* clear the whole pixmap to white */
 	gdk_draw_rectangle ( main_pixels, wp->style->white_gc, TRUE, 0, 0, vxdim, vydim );
 
-	/* get the maplet size */
-	mxdim = gdk_pixbuf_get_width ( map_buf[0] );
-	mydim = gdk_pixbuf_get_height ( map_buf[0] );
+	mp = load_maplet ( &cur_pos );
+	if ( mp ) {
+	    offx = mp->maplet_fx * mp->mxdim;
+	    offy = mp->maplet_fy * mp->mydim;;
+	    printf ( "Maplet offsets: %d %d\n", offx, offy );
 
-	offx = cur_pos.maplet_fx * mxdim;
-	offy = cur_pos.maplet_fy * mydim;;
-	printf ( "Maplet offsets: %d %d\n", offx, offy );
-
-	draw_maplet ( map_buf[0], vxcent-offx, vycent-offy );
+	    draw_maplet ( mp->pixbuf, vxcent-offx, vycent-offy );
+	}
 
 #ifdef notdef
 	draw_maplet ( map_buf[0], 0, 0 );
@@ -254,6 +254,7 @@ main ( int argc, char **argv )
 	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
 	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
 
+#ifdef notdef
 	tpq_path = lookup_quad ( &cur_pos );
 	if ( ! tpq_path )
 	    error ("Cannot find your quad!\n", "" );
@@ -264,7 +265,6 @@ main ( int argc, char **argv )
 
 	map_buf[0] = load_tpq_maplet ( tpq_path, xm, ym );
 
-#ifdef notdef
 	/* what this will do is given the lat and long above,
 	 * will display a 2x2 maplet section that contains
 	 * the coordinate, but will not cross map sheets.
@@ -278,13 +278,14 @@ main ( int argc, char **argv )
 
 	map_buf[2] = load_tpq_maplet ( tpq_path, xm, ym+1 );
 	map_buf[3] = load_tpq_maplet ( tpq_path, xm+1, ym+1 );
-#endif
 
 	w = gdk_pixbuf_get_width ( map_buf[0] );
 	h = gdk_pixbuf_get_height ( map_buf[0] );
 
 	/* big enough for four maplets */
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(main_da), w*2, h*2 );
+#endif
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(main_da), 350, 350 );
 
 	gtk_widget_show ( main_da );
 

@@ -191,17 +191,14 @@ lookup_section ( int lat_deg, int long_deg )
 	return NULL;
 }
 
-/* XXX - non reentrant static follows */
-static char *quad_path_buf[100];
-
 /* Correct for 7.5 minute quadrangles
  * Note that their "codes" follow the way that lat and long
  * increase.  There are 64 quads in a 1x1 "section".
  * a1 is in the southeast, h8 is in the northwest.
  * i.e longitude become 1-8, latitude a-h
  */
-char *
-lookup_quad ( struct position *curp )
+int
+lookup_quad ( struct maplet *mp )
 {
 	struct stat stat_buf;
 	int lat_int, long_int;
@@ -209,69 +206,72 @@ lookup_quad ( struct position *curp )
 	int lat_q, long_q;
 	double maplet_x, maplet_y;
 	char *section_path;
+	char path_buf[100];
 
-	lat_int = curp->lat_deg;
-	long_int = curp->long_deg;
+	lat_int = mp->lat_deg;
+	long_int = mp->long_deg;
 
-	curp->latlong = lat_int * 1000 + long_int;
+	mp->latlong = lat_int * 1000 + long_int;
 
-	printf ( "lookup for %.4f, %.4f\n", curp->lat_deg, curp->long_deg );
+	printf ( "lookup for %.4f, %.4f\n", mp->lat_deg, mp->long_deg );
 
 	section_path = lookup_section ( lat_int, long_int );
 	if ( ! section_path )
-	    return NULL;
+	    return 0;
 
 	/* This will yield indexes from 0-7,
 	 * then a-h for latitude (a at the south)
 	 *  and 1-8 for longitude (1 at the east)
 	 */
-	lat_index = (curp->lat_deg  - (double)lat_int) * 8.0;
-	long_index = (curp->long_deg - (double)long_int) * 8.0;
+	lat_index = (mp->lat_deg  - (double)lat_int) * 8.0;
+	long_index = (mp->long_deg - (double)long_int) * 8.0;
 
-	curp->lat_quad = lat_q  = 'a' + lat_index;
-	curp->long_quad = long_q = '1' + long_index;
+	mp->lat_quad = lat_q  = 'a' + lat_index;
+	mp->long_quad = long_q = '1' + long_index;
 
 	/* These are values in degrees that specify where on the quadrangle we are at.
 	 * Origin is 0,0 at the SE corner
 	 */
-	curp->lat_deg_quad = curp->lat_deg - (double)lat_int - ((double)lat_index) / 8.0;
-	curp->long_deg_quad = curp->long_deg - (double)long_int - ((double)long_index) / 8.0;
+	mp->lat_deg_quad = mp->lat_deg - (double)lat_int - ((double)lat_index) / 8.0;
+	mp->long_deg_quad = mp->long_deg - (double)long_int - ((double)long_index) / 8.0;
 
 	/* These count from E to W and from S to N */
-	maplet_x = curp->long_deg_quad * 8.0 * 5.0;
-	maplet_y = curp->lat_deg_quad * 8.0 * 10.0;
+	maplet_x = mp->long_deg_quad * 8.0 * 5.0;
+	maplet_y = mp->lat_deg_quad * 8.0 * 10.0;
 
 	/* flip the count to origin from the NW corner */
-	curp->x_maplet = 4 - (int) maplet_x;
-	curp->y_maplet = 9 - (int) maplet_y;
+	mp->x_maplet = 4 - (int) maplet_x;
+	mp->y_maplet = 9 - (int) maplet_y;
 
 	/* Now calculate a fraction (0-1.0) in the maplet
 	 * (with origin in the NW corner)
 	 */
-	curp->maplet_fx = 5.0 - maplet_x - curp->x_maplet;
-	curp->maplet_fy = 10.0 - maplet_y - curp->y_maplet;
+	mp->maplet_fx = 5.0 - maplet_x - mp->x_maplet;
+	mp->maplet_fy = 10.0 - maplet_y - mp->y_maplet;
 
-	sprintf ( (char *) quad_path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
-	printf ( "Trying %s\n", quad_path_buf );
+	sprintf ( path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
+	printf ( "Trying %s\n", path_buf );
 
-	if ( stat ( (char *) quad_path_buf, &stat_buf ) >=  0 ) {
+	if ( stat ( path_buf, &stat_buf ) >=  0 ) {
 	    if ( S_ISREG(stat_buf.st_mode) ) {
-	    	return (char *)quad_path_buf;
+		mp->tpq_path = strhide ( path_buf );
+		return 1;
 	    }
 	}
 
 	/* Try upper case */
 	lat_q = toupper ( lat_q );
-	sprintf ( (char *) quad_path_buf, "%s/Q%2d%03d%c%c.TPQ", section_path, lat_int, long_int, lat_q, long_q );
-	printf ( "Trying %s\n", quad_path_buf );
+	sprintf ( path_buf, "%s/Q%2d%03d%c%c.TPQ", section_path, lat_int, long_int, lat_q, long_q );
+	printf ( "Trying %s\n", path_buf );
 
-	if ( stat ( (char *) quad_path_buf, &stat_buf ) >=  0 ) {
+	if ( stat ( path_buf, &stat_buf ) >=  0 ) {
 	    if ( S_ISREG(stat_buf.st_mode) ) {
-	    	return (char *)quad_path_buf;
+		mp->tpq_path = strhide ( path_buf );
+		return 1;
 	    }
 	}
 
-	return NULL;
+	return 0;
 }
 
 /* THE END */
