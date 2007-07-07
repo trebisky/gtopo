@@ -136,31 +136,50 @@ draw_maplet ( GdkPixbuf *map, int x, int y )
 gint
 configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 {
-	int w, h;
-	int mw, mh;
+	int vxdim, vydim;
+	int mxdim, mydim;
+	int vxcent, vycent;
+	int offx, offy;
 
-	w = wp->allocation.width;
-	h = wp->allocation.height;
+	/* get the viewport size */
+	vxdim = wp->allocation.width;
+	vydim = wp->allocation.height;
+
+	/* viewport center */
+	vxcent = vxdim / 2;
+	vycent = vydim / 2;
 
 	if ( verbose_opt )
-	    printf ( "Configure event %d (%d, %d)\n", config_count++, w, h );
+	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
 
 	/* Avoid memory leak */
 	if ( main_pixels )
 	    gdk_pixmap_unref ( main_pixels );
 
-	main_pixels = gdk_pixmap_new ( wp->window, w, h, -1 );
+	main_pixels = gdk_pixmap_new ( wp->window, vxdim, vydim, -1 );
 
 	/* clear the whole pixmap to white */
-	gdk_draw_rectangle ( main_pixels, wp->style->white_gc, TRUE, 0, 0, w, h );
+	gdk_draw_rectangle ( main_pixels, wp->style->white_gc, TRUE, 0, 0, vxdim, vydim );
 
-	mw = gdk_pixbuf_get_width ( map_buf[0] );
-	mh = gdk_pixbuf_get_height ( map_buf[0] );
+	/* get the maplet size */
+	mxdim = gdk_pixbuf_get_width ( map_buf[0] );
+	mydim = gdk_pixbuf_get_height ( map_buf[0] );
 
+	offx = cur_pos.maplet_fx * mxdim;
+	offy = cur_pos.maplet_fy * mydim;;
+	printf ( "Maplet offsets: %d %d\n", offx, offy );
+
+	draw_maplet ( map_buf[0], vxcent-offx, vycent-offy );
+
+#ifdef notdef
 	draw_maplet ( map_buf[0], 0, 0 );
-	draw_maplet ( map_buf[1], mw, 0 );
-	draw_maplet ( map_buf[2], 0, mh );
-	draw_maplet ( map_buf[3], mw, mh );
+	draw_maplet ( map_buf[1], mxdim, 0 );
+	draw_maplet ( map_buf[2], 0, mydim );
+	draw_maplet ( map_buf[3], mxdim, mydim );
+#endif
+
+	/* mark center */
+	gdk_draw_rectangle ( main_pixels, wp->style->black_gc, TRUE, vxcent-1, vycent-1, 3, 3 );
 
 	return TRUE;
 }
@@ -243,6 +262,9 @@ main ( int argc, char **argv )
 	ym = cur_pos.y_maplet;
 	printf ( "x,y maplet = %d %d\n", xm, ym );
 
+	map_buf[0] = load_tpq_maplet ( tpq_path, xm, ym );
+
+#ifdef notdef
 	/* what this will do is given the lat and long above,
 	 * will display a 2x2 maplet section that contains
 	 * the coordinate, but will not cross map sheets.
@@ -256,6 +278,7 @@ main ( int argc, char **argv )
 
 	map_buf[2] = load_tpq_maplet ( tpq_path, xm, ym+1 );
 	map_buf[3] = load_tpq_maplet ( tpq_path, xm+1, ym+1 );
+#endif
 
 	w = gdk_pixbuf_get_width ( map_buf[0] );
 	h = gdk_pixbuf_get_height ( map_buf[0] );

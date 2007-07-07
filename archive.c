@@ -207,7 +207,7 @@ lookup_quad ( struct position *curp )
 	int lat_int, long_int;
 	int lat_index, long_index;
 	int lat_q, long_q;
-	int maplet;
+	double maplet_x, maplet_y;
 	char *section_path;
 
 	lat_int = curp->lat_deg;
@@ -237,11 +237,19 @@ lookup_quad ( struct position *curp )
 	curp->lat_deg_quad = curp->lat_deg - (double)lat_int - ((double)lat_index) / 8.0;
 	curp->long_deg_quad = curp->long_deg - (double)long_int - ((double)long_index) / 8.0;
 
-	maplet = curp->lat_deg_quad * 8.0 * 10.0;
-	curp->y_maplet = 9 - maplet;
+	/* These count from E to W and from S to N */
+	maplet_x = curp->long_deg_quad * 8.0 * 5.0;
+	maplet_y = curp->lat_deg_quad * 8.0 * 10.0;
 
-	maplet = curp->long_deg_quad * 8.0 * 5.0;
-	curp->x_maplet = 4 - maplet;
+	/* flip the count to origin from the NW corner */
+	curp->x_maplet = 4 - (int) maplet_x;
+	curp->y_maplet = 9 - (int) maplet_y;
+
+	/* Now calculate a fraction (0-1.0) in the maplet
+	 * (with origin in the NW corner)
+	 */
+	curp->maplet_fx = 5.0 - maplet_x - curp->x_maplet;
+	curp->maplet_fy = 10.0 - maplet_y - curp->y_maplet;
 
 	sprintf ( (char *) quad_path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
 	printf ( "Trying %s\n", quad_path_buf );
