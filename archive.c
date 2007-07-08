@@ -204,7 +204,7 @@ lookup_quad ( struct maplet *mp )
 	int lat_int, long_int;
 	int lat_index, long_index;
 	int lat_q, long_q;
-	double maplet_x, maplet_y;
+	double maplet_long, maplet_lat;
 	char *section_path;
 	char path_buf[100];
 
@@ -236,18 +236,18 @@ lookup_quad ( struct maplet *mp )
 	mp->long_deg_quad = mp->long_deg - (double)long_int - ((double)long_index) / 8.0;
 
 	/* These count from E to W and from S to N */
-	maplet_x = mp->long_deg_quad * 8.0 * 5.0;
-	maplet_y = mp->lat_deg_quad * 8.0 * 10.0;
+	maplet_long = mp->long_deg_quad * 8.0 * 5.0;
+	maplet_lat = mp->lat_deg_quad * 8.0 * 10.0;
 
 	/* flip the count to origin from the NW corner */
-	mp->x_maplet = 4 - (int) maplet_x;
-	mp->y_maplet = 9 - (int) maplet_y;
+	mp->x_maplet = 4 - (int) maplet_long;
+	mp->y_maplet = 9 - (int) maplet_lat;
 
-	/* Now calculate a fraction (0-1.0) in the maplet
+	/* calculate a fraction (0-1.0) in the maplet
 	 * (with origin in the NW corner)
 	 */
-	mp->maplet_fx = 5.0 - maplet_x - mp->x_maplet;
-	mp->maplet_fy = 10.0 - maplet_y - mp->y_maplet;
+	mp->maplet_fx = 5.0 - maplet_long - mp->x_maplet;
+	mp->maplet_fy = 10.0 - maplet_lat - mp->y_maplet;
 
 	sprintf ( path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
 	printf ( "Trying %s\n", path_buf );

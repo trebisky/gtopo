@@ -24,6 +24,20 @@
  * version 0.6 - try to get mouse events 7/6/2007
  * 	also add code to display an area given a lat and long.
  *	split out tpq_io.c
+ * version 0.7 - mouse events working, always displays central
+ * 	maplet on image center  7/8/2007
+ *
+ *  TODO
+ *   - generalize the 5x10 maplet business
+ *   - display other than 7.5 minute quad maplets
+ *   - handle maplet size discontinuity.
+ *   - display more than center maplet in new scheme,
+ *     need a routine to find maplet given maplet offset
+ *     from center (will need to jump to new quads and
+ *     sections as needed)
+ *   - be able to run off of mounted CDrom
+ *   - put temp file in cwd, home, then /tmp
+ *     give it a .topo.tmp name.
  */
 
 int verbose_opt = 0;
@@ -54,13 +68,12 @@ char *tpq_path = "../F30105A1.TPQ";
 
 GdkColormap *syscm;
 
-/* The drawing area */
-GtkWidget *main_da;
-/* A pixmap backup of the drawing area */
-GdkPixmap *main_pixels = NULL;
-
-/* The maplets */
-GdkPixbuf *map_buf[4];
+struct viewport {
+	int vx;
+	int vy;
+	GtkWidget *da;
+	GdkPixmap *pixels;
+} vp_info;
 
 /* Prototypes ..........
  */
@@ -90,6 +103,22 @@ destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 	return FALSE;
 }
 
+void
+pixmap_expose ( gint x, gint y, gint nx, gint ny )
+{
+	/*
+	gdk_draw_pixmap ( wp->window,
+		wp->style->fg_gc[GTK_WIDGET_STATE(wp)],
+		vp_info.pixels,
+		x, y, x, y, nx, ny );
+		*/
+
+	gdk_draw_pixmap ( vp_info.da->window,
+		vp_info.da->style->fg_gc[GTK_WIDGET_STATE(vp_info.da)],
+		vp_info.pixels,
+		x, y, x, y, nx, ny );
+}
+
 static int expose_count = 0;
 
 gint
@@ -99,42 +128,31 @@ expose_handler ( GtkWidget *wp, GdkEventExpose *ep, gpointer data )
 	if ( expose_count < 4 )
 	    printf ( "Expose event %d\n", expose_count++ );
 	    */
-
-	gdk_draw_pixmap ( wp->window,
-		wp->style->fg_gc[GTK_WIDGET_STATE(wp)],
-		main_pixels,
-		ep->area.x, ep->area.y,
-		ep->area.x, ep->area.y,
-		ep->area.width, ep->area.height );
+    	pixmap_expose ( ep->area.x, ep->area.y, ep->area.width, ep->area.height );
 
 	return FALSE;
 }
 
-/* This gets called when the drawing area gets created or resized.
- * (and after every one of these you get an expose event).
- */
-static int config_count = 0;
-
-/* Draw a pixbuf onto a drawable.
+/* Draw a pixbuf onto a drawable (in this case our backing pixmap)
  * The second argument is a gc (graphics context), which only needs to
  * be non-null if you expect clipping -- it sets foreground and background colors.
  * second to last two -1, -1 tell it to get h and w from the pixbuf
  * Last 3 arguments are dithering.
  */
-
 #define SRC_X	0
 #define SRC_Y	0
 
 void
 draw_maplet ( GdkPixbuf *map, int x, int y )
 {
-	gdk_draw_pixbuf ( main_pixels, NULL, map,
+	gdk_draw_pixbuf ( vp_info.pixels, NULL, map,
 		SRC_X, SRC_Y, x, y, -1, -1,
 		GDK_RGB_DITHER_NONE, 0, 0 );
 }
 
-gint
-configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
+/* This is the guts of what goes on during a reconfigure */
+void
+pixmap_redraw ( void )
 {
 	int vxdim, vydim;
 	int mxdim, mydim;
@@ -143,26 +161,18 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	struct maplet *mp;
 
 	/* get the viewport size */
-	vxdim = wp->allocation.width;
-	vydim = wp->allocation.height;
+	vxdim = vp_info.vx;
+	vydim = vp_info.vy;
 
 	/* viewport center */
 	vxcent = vxdim / 2;
 	vycent = vydim / 2;
 
-	if ( verbose_opt )
-	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
-
-	/* Avoid memory leak */
-	if ( main_pixels )
-	    gdk_pixmap_unref ( main_pixels );
-
-	main_pixels = gdk_pixmap_new ( wp->window, vxdim, vydim, -1 );
-
 	/* clear the whole pixmap to white */
-	gdk_draw_rectangle ( main_pixels, wp->style->white_gc, TRUE, 0, 0, vxdim, vydim );
+	gdk_draw_rectangle ( vp_info.pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
 
 	mp = load_maplet ( &cur_pos );
+	cur_pos.maplet = mp;
 	if ( mp ) {
 	    offx = mp->maplet_fx * mp->mxdim;
 	    offy = mp->maplet_fy * mp->mydim;;
@@ -171,15 +181,34 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	    draw_maplet ( mp->pixbuf, vxcent-offx, vycent-offy );
 	}
 
-#ifdef notdef
-	draw_maplet ( map_buf[0], 0, 0 );
-	draw_maplet ( map_buf[1], mxdim, 0 );
-	draw_maplet ( map_buf[2], 0, mydim );
-	draw_maplet ( map_buf[3], mxdim, mydim );
-#endif
-
 	/* mark center */
-	gdk_draw_rectangle ( main_pixels, wp->style->black_gc, TRUE, vxcent-1, vycent-1, 3, 3 );
+	gdk_draw_rectangle ( vp_info.pixels, vp_info.da->style->black_gc, TRUE, vxcent-1, vycent-1, 3, 3 );
+}
+
+static int config_count = 0;
+
+/* This gets called when the drawing area gets created or resized.
+ * (and after every one of these you get an expose event).
+ */
+gint
+configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
+{
+	int vxdim, vydim;
+
+	/* get the viewport size */
+	vp_info.vx = vxdim = wp->allocation.width;
+	vp_info.vy = vydim = wp->allocation.height;
+
+	if ( verbose_opt )
+	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
+
+	/* Avoid memory leak */
+	if ( vp_info.pixels )
+	    gdk_pixmap_unref ( vp_info.pixels );
+
+	vp_info.pixels = gdk_pixmap_new ( wp->window, vxdim, vydim, -1 );
+
+	pixmap_redraw ();
 
 	return TRUE;
 }
@@ -188,13 +217,57 @@ gint
 mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 {
 	int button;
+	int vxcent, vycent;
+	int mxdim, mydim;
+	double dlat, dlong;
+	double x_pixel_scale, y_pixel_scale;
 	float x, y;
 
-	button = event->button;
-	x = event->x;
-	y = event->y;
-	printf ( "Button event %d %.3f %.3f\n", button, x, y );
-	    
+	printf ( "Button event %d %.3f %.3f in (%d %d)\n",
+		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
+
+	/* viewport center */
+	vxcent = vp_info.vx / 2;
+	vycent = vp_info.vy / 2;
+
+	printf ( "Orig position (lat/long) %.4f %.4f\n",
+		cur_pos.lat_deg, cur_pos.long_deg );
+
+	if ( cur_pos.maplet ) {
+	    mxdim = cur_pos.maplet->mxdim;
+	    mydim = cur_pos.maplet->mydim;
+	} else {
+	    /* allow mouse motion if over unmapped area */
+	    mxdim = 410;	/* close */
+	    mydim = 256;
+	}
+
+	/* We break a 7.5 minute quadrangle (1/8 of a degree)
+	 * into 10 maplets in latitude, (5 in longitude).
+	 */
+	x_pixel_scale = 1.0 / (8.0 * 5.0 * (double)mxdim);
+	y_pixel_scale = 1.0 / (8.0 * 10.0 * (double)mydim);
+
+	dlat  = (event->y - (double)vycent) * y_pixel_scale;
+	dlong = (event->x - (double)vxcent) * x_pixel_scale;
+	printf ( "Delta position (lat/long) %.4f %.4f\n",
+		dlat, dlong );
+
+	/* Make location of the mouse click be the current position */
+	cur_pos.lat_deg -= dlat;
+	cur_pos.long_deg -= dlong;
+
+	printf ( "New position (lat/long) %.4f %.4f\n",
+		cur_pos.lat_deg, cur_pos.long_deg );
+
+	/* redraw on the new center */
+	pixmap_redraw ();
+
+	/* put the new pixmap on the screen */
+	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+
+
+	return TRUE;
 }
 
 int
@@ -233,61 +306,32 @@ main ( int argc, char **argv )
 	gtk_widget_show ( vb );
 	gtk_container_add ( GTK_CONTAINER(main_window), vb );
 
-	main_da = gtk_drawing_area_new ();
-	gtk_box_pack_start ( GTK_BOX(vb), main_da, TRUE, TRUE, 0 );
+	vp_info.da = gtk_drawing_area_new ();
+	gtk_box_pack_start ( GTK_BOX(vb), vp_info.da, TRUE, TRUE, 0 );
 
-	gtk_signal_connect ( GTK_OBJECT(main_da), "expose_event",
+	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "expose_event",
 			GTK_SIGNAL_FUNC(expose_handler), NULL );
-	gtk_signal_connect ( GTK_OBJECT(main_da), "configure_event",
+	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "configure_event",
 			GTK_SIGNAL_FUNC(configure_handler), NULL );
 
 	/* We never see the release event, unless we add the press
 	 * event to the mask.
 	 */
-	gtk_signal_connect ( GTK_OBJECT(main_da), "button_release_event",
+	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "button_release_event",
 			GTK_SIGNAL_FUNC(mouse_handler), NULL );
-	gtk_widget_add_events ( GTK_WIDGET(main_da), GDK_BUTTON_RELEASE_MASK );
-	gtk_widget_add_events ( GTK_WIDGET(main_da), GDK_BUTTON_PRESS_MASK );
+	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_BUTTON_RELEASE_MASK );
+	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_BUTTON_PRESS_MASK );
 
 	syscm = gdk_colormap_get_system ();
 
 	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
 	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
 
-#ifdef notdef
-	tpq_path = lookup_quad ( &cur_pos );
-	if ( ! tpq_path )
-	    error ("Cannot find your quad!\n", "" );
+	vp_info.vx = 350;
+	vp_info.vy = 350;
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), vp_info.vx, vp_info.vy );
 
-	xm = cur_pos.x_maplet;
-	ym = cur_pos.y_maplet;
-	printf ( "x,y maplet = %d %d\n", xm, ym );
-
-	map_buf[0] = load_tpq_maplet ( tpq_path, xm, ym );
-
-	/* what this will do is given the lat and long above,
-	 * will display a 2x2 maplet section that contains
-	 * the coordinate, but will not cross map sheets.
-	 */
-
-	if ( xm == 4 ) xm--;
-	if ( ym == 9 ) ym--;
-
-	map_buf[0] = load_tpq_maplet ( tpq_path, xm, ym );
-	map_buf[1] = load_tpq_maplet ( tpq_path, xm+1, ym );
-
-	map_buf[2] = load_tpq_maplet ( tpq_path, xm, ym+1 );
-	map_buf[3] = load_tpq_maplet ( tpq_path, xm+1, ym+1 );
-
-	w = gdk_pixbuf_get_width ( map_buf[0] );
-	h = gdk_pixbuf_get_height ( map_buf[0] );
-
-	/* big enough for four maplets */
-	gtk_drawing_area_size ( GTK_DRAWING_AREA(main_da), w*2, h*2 );
-#endif
-	gtk_drawing_area_size ( GTK_DRAWING_AREA(main_da), 350, 350 );
-
-	gtk_widget_show ( main_da );
+	gtk_widget_show ( vp_info.da );
 
 	if ( verbose_opt )
 	    printf ( "single maplet size: %d by %d\n", w, h );
