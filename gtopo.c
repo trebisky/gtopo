@@ -26,6 +26,9 @@
  *	split out tpq_io.c
  * version 0.7 - mouse events working, always displays central
  * 	maplet on image center  7/8/2007
+ *	add code to find neighboring maplets and roam around
+ *	an entire 7.5 minute sheet.  It will jump to new sheets
+ *	if you click on a white region, actually usable.  7/9/2007
  *
  *  TODO
  *   - add age field to maplet cache and expire/recycle
@@ -359,8 +362,8 @@ main ( int argc, char **argv )
 	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
 	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
 
-	vp_info.vx = 350;
-	vp_info.vy = 350;
+	vp_info.vx = 800;
+	vp_info.vy = 800;
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), vp_info.vx, vp_info.vy );
 
 	gtk_widget_show ( vp_info.da );
