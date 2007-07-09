@@ -63,6 +63,7 @@ GdkPixbuf *load_tpq_maplet ( char *, int, int );
 
 /* from maplet.c */
 struct maplet *load_maplet ( struct position * );
+struct maplet *load_maplet_nbr ( struct position *, int, int );
 
 /* from archive.c */
 int archive_init ( char **, int );
