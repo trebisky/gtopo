@@ -6,8 +6,16 @@ struct position {
 	/* This is where we are in plain old degrees */
 	double lat_deg;
 	double long_deg;
-	/* We need knowledge of the maplet size
-	 * to scale pixels during mouse motion.
+
+	/* the following give the postion within the
+	 * maplet containing it as a fraction in range [0,1]
+	 * origin is in NW corner of maplet.
+	 */
+	double fx;
+	double fy;
+
+	/* This is a pointer to the maplet which
+	 * contains the current position.
 	 */
 	struct maplet *maplet;
 };
@@ -19,41 +27,22 @@ struct position {
 struct maplet {
 	struct maplet *next;
 
-	/* Used to do cache lookups */
+	/* Unique indices used to do cache lookups */
 	int maplet_index_lat;
 	int maplet_index_long;
 
-	/* size of the maplet image in pixels */
-	int mxdim;
-	int mydim;
+	/* This is which maplet in the quad we are */
+	int x_maplet;
+	int y_maplet;
 
-	/* This is the fractional position (0.0-1.0) in the maplet
-	 * of the current position.
-	 */
-	double maplet_fx;	/* origin in West */
-	double maplet_fy;	/* origin in North */
+	/* size of the maplet image in pixels */
+	int xdim;
+	int ydim;
 
 	/* The pixels !! */
 	GdkPixbuf *pixbuf;
 
-	/* XXX - Potential junk to move follows */
-
-	/* This is where we are in plain old degrees */
-	double lat_deg;
-	double long_deg;
-
-	int latlong;	/* this is the 1x1 section we are in */
-
-	int lat_quad;	/* a-h for the 7.5 minute quad */
-	int long_quad;	/* 1-8 for the 7.5 minute quad */
-
-	double lat_deg_quad;	/* 0 to 0.138 degrees in the quad */
-	double long_deg_quad;	/* 0 to 0.138 degrees in the quad */
-
-	/* This is which maplet in the quad contain the position */
-	int x_maplet;
-	int y_maplet;
-
+	/* pathname that gave us this maplet */
 	char *tpq_path;
 };
 
@@ -67,6 +56,6 @@ struct maplet *load_maplet_nbr ( struct position *, int, int );
 
 /* from archive.c */
 int archive_init ( char **, int );
-int lookup_quad ( struct maplet * );
+int lookup_quad ( struct position *, struct maplet * );
 
 /* THE END */

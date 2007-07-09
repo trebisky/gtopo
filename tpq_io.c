@@ -15,6 +15,32 @@
 
 #define TPQ_HEADER_SIZE	1024
 
+/* We see 3 of these embedded in the header */
+struct _tpq_file {
+	char ext[4];		/* ".jpg" or ".png" */
+	long _xxx[2];
+	long nlat;
+	long nlong;
+	char _xx[12];
+};
+
+struct _tpq_header {
+	char _pad1[256];
+	char name[128];		/* quadrangle name */
+	char state[32];		/* typically "AZ" */
+	char source[32];	/* typically "USGS" */
+	char year1[4];		/* typically "1994" */
+	char year2[4];		/* typically "1994" */
+	char countour[8];	/* typically "20 ft" */
+	char _pad2[16];		/* ".tpq" "DAT" ... */
+	struct _tpq_file maplet;
+	char info[88];
+	struct _tpq_file png1;
+	char _pad3[28];
+	struct _tpq_file png2;
+	char _pad4[332];
+} tpq_header;
+
 /* We really see just 50 in the TPQ files we process,
  * but allocate a bit more room, for no particular reason.
  */
@@ -93,9 +119,14 @@ build_tpq_index ( char *name )
 	if ( fd < 0 )
 	    error ( "Cannot open: %s\n", name );
 
-	/* skip header */
-	if ( read( fd, buf, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
+	printf ( "TPQ header size: %d\n", sizeof(tpq_header) );
+
+	/* read header */
+	if ( read( fd, &tpq_header, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
 	    error ( "Bogus TPQ file size - 1\n", "" );
+
+	printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.name );
+
 	if ( read( fd, buf, BUFSIZE ) != BUFSIZE )
 	    error ( "Bogus TPQ file size - 2\n", "" );
 

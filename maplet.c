@@ -38,18 +38,13 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	cmp = pos->maplet;
 
     	/* First try cache */
-	maplet_index_lat = cmp->maplet_index_lat - x;
-	maplet_index_long = cmp->maplet_index_long - y;
+	maplet_index_lat = cmp->maplet_index_lat - y;
+	maplet_index_long = cmp->maplet_index_long - x;
 
 	for ( cp = maplet_head; cp; cp = cp->next ) {
 	    if ( cp->maplet_index_lat == maplet_index_lat &&
 	    	cp->maplet_index_long == maplet_index_long ) {
-		    printf ( "maplet cache hit: %d %d\n", maplet_index_lat, maplet_index_long );
-		    /* calculate a fraction (0-1.0) in the maplet
-		     * (with origin in the NW corner)
-		     */
-		    cp->maplet_fx = cmp->maplet_fx;
-		    cp->maplet_fy = cmp->maplet_fy;
+		    printf ( "maplet nbr cache hit: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
 		    return cp;
 	    }
 	}
@@ -57,11 +52,16 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	/* XXX - For now, we just stay on one 7.5 minute sheet
 	 */
 	x_maplet = cmp->x_maplet + x;
-	if ( x_maplet < 0 || x_maplet > 4 )
+	if ( x_maplet < 0 || x_maplet > 4 ) {
+	    printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
 	    return NULL;
+	}
+
 	y_maplet = cmp->y_maplet + y;
-	if ( y_maplet < 0 || y_maplet > 9 )
+	if ( y_maplet < 0 || y_maplet > 9 ) {
+	    printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
 	    return NULL;
+	}
 
 	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
 	if ( ! mp )
@@ -72,22 +72,22 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	 *   remember, this may be found in cache later
 	 *   and become cmp.
 	 */
-	mp->lat_deg = pos->lat_deg;	/* XXX */
-	mp->long_deg = pos->long_deg;	/* XXX */
-
 	mp->x_maplet = x_maplet;
 	mp->y_maplet = y_maplet;
 
-	printf ( "x,y maplet(%d) = %d %d\n", maplet_count, x_maplet, y_maplet );
+	printf ( "x,y maplet nbr(%d) = %d %d -- %d %d\n", maplet_count, x_maplet, y_maplet,
+	    maplet_index_lat, maplet_index_long );
 
-	/* works since this is a constant static string.
+	/* Each maplet from the same sheet has links to the same
+	 * path string, which is just fine.
 	 */
 	mp->tpq_path = cmp->tpq_path;
+
 	mp->pixbuf = load_tpq_maplet ( cmp->tpq_path, x_maplet, y_maplet );
 
 	/* get the maplet size */
-	mp->mxdim = gdk_pixbuf_get_width ( mp->pixbuf );
-	mp->mydim = gdk_pixbuf_get_height ( mp->pixbuf );
+	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
+	mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
 
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
@@ -103,12 +103,15 @@ load_maplet ( struct position *pos )
 {
     	struct maplet *mp;
     	struct maplet *cp;
-	int xm, ym;
+	int x_maplet, y_maplet;
 	double maplet_lat, maplet_long;
 	int maplet_index_lat;
 	int maplet_index_long;
 
+	printf ( "Load maplet for position %.4f %.4f\n", pos->lat_deg, pos->long_deg );
+
 	/* Convert from degrees to "maplet units"
+	 * (keep these as floating point).
 	 */
 	maplet_lat = pos->lat_deg * 8.0 * 10.0;
 	maplet_long = pos->long_deg * 8.0 * 5.0;
@@ -118,6 +121,9 @@ load_maplet ( struct position *pos )
 	 */
 	maplet_index_lat = maplet_lat;
 	maplet_index_long = maplet_long;
+
+	pos->fy = 1.0 - (maplet_lat - maplet_index_lat);
+	pos->fx = 1.0 - (maplet_long - maplet_index_long);
 
 	/* now search the cache for a maplet matching this.
 	 * We may have:
@@ -129,11 +135,6 @@ load_maplet ( struct position *pos )
 	    if ( cp->maplet_index_lat == maplet_index_lat &&
 	    	cp->maplet_index_long == maplet_index_long ) {
 		    printf ( "maplet cache hit: %d %d\n", maplet_index_lat, maplet_index_long );
-		    /* calculate a fraction (0-1.0) in the maplet
-		     * (with origin in the NW corner)
-		     */
-		    cp->maplet_fy = 1.0 - (maplet_lat - maplet_index_lat);
-		    cp->maplet_fx = 1.0 - (maplet_long - maplet_index_long);
 		    return cp;
 	    }
 	}
@@ -144,26 +145,28 @@ load_maplet ( struct position *pos )
 	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
 	if ( ! mp )
 	    error ("load maplet, out of mem\n", "" );
-
 	maplet_count++;
-	mp->lat_deg = pos->lat_deg;
-	mp->long_deg = pos->long_deg;
 
-	/* Try to find it in the archive */
-	if ( ! lookup_quad ( mp ) ) {
+	/* Try to find it in the archive
+	 * This will set tpq_path as well as
+	 * x_maplet and y_maplet in the maplet structure.
+	 */
+	if ( ! lookup_quad ( pos, mp ) ) {
 	    free ( (char *) mp );
 	    return NULL;
 	}
 
-	xm = mp->x_maplet;
-	ym = mp->y_maplet;
-	printf ( "x,y maplet(%d) = %d %d\n", maplet_count, xm, ym );
+	x_maplet = mp->x_maplet;
+	y_maplet = mp->y_maplet;
 
-	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, xm, ym );
+	printf ( "x,y maplet(%d) = %d %d -- %d %d\n", maplet_count, x_maplet, y_maplet,
+	    maplet_index_lat, maplet_index_long );
+
+	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, x_maplet, y_maplet );
 
 	/* get the maplet size */
-	mp->mxdim = gdk_pixbuf_get_width ( mp->pixbuf );
-	mp->mydim = gdk_pixbuf_get_height ( mp->pixbuf );
+	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
+	mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
 
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;

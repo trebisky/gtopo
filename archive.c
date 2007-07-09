@@ -191,29 +191,33 @@ lookup_section ( int lat_deg, int long_deg )
 	return NULL;
 }
 
-/* Correct for 7.5 minute quadrangles
- * Note that their "codes" follow the way that lat and long
+/* For some lat/long position, find the 7.5 minute quad file
+ * containing it, and the indices of the maplet within that
+ * file containing the position.
+ * returns mp->tpq_path and mp->x/y_maplet
+ *
+ * Note that the map "codes" follow the way that lat and long
  * increase.  There are 64 quads in a 1x1 "section".
  * a1 is in the southeast, h8 is in the northwest.
  * i.e longitude become 1-8, latitude a-h
  */
 int
-lookup_quad ( struct maplet *mp )
+lookup_quad ( struct position *pos, struct maplet *mp )
 {
 	struct stat stat_buf;
 	int lat_int, long_int;
 	int lat_index, long_index;
 	int lat_q, long_q;
 	double maplet_long, maplet_lat;
+	double lat_deg_quad;
+	double long_deg_quad;
 	char *section_path;
 	char path_buf[100];
 
-	lat_int = mp->lat_deg;
-	long_int = mp->long_deg;
+	lat_int = pos->lat_deg;
+	long_int = pos->long_deg;
 
-	mp->latlong = lat_int * 1000 + long_int;
-
-	printf ( "lookup for %.4f, %.4f\n", mp->lat_deg, mp->long_deg );
+	printf ( "lookup for %.4f, %.4f\n", pos->lat_deg, pos->long_deg );
 
 	section_path = lookup_section ( lat_int, long_int );
 	if ( ! section_path )
@@ -223,31 +227,25 @@ lookup_quad ( struct maplet *mp )
 	 * then a-h for latitude (a at the south)
 	 *  and 1-8 for longitude (1 at the east)
 	 */
-	lat_index = (mp->lat_deg  - (double)lat_int) * 8.0;
-	long_index = (mp->long_deg - (double)long_int) * 8.0;
+	lat_index = (pos->lat_deg  - (double)lat_int) * 8.0;
+	long_index = (pos->long_deg - (double)long_int) * 8.0;
 
-	mp->lat_quad = lat_q  = 'a' + lat_index;
-	mp->long_quad = long_q = '1' + long_index;
+	lat_q  = 'a' + lat_index;
+	long_q = '1' + long_index;
 
 	/* These are values in degrees that specify where on the quadrangle we are at.
 	 * Origin is 0,0 at the SE corner
 	 */
-	mp->lat_deg_quad = mp->lat_deg - (double)lat_int - ((double)lat_index) / 8.0;
-	mp->long_deg_quad = mp->long_deg - (double)long_int - ((double)long_index) / 8.0;
+	lat_deg_quad = pos->lat_deg - (double)lat_int - ((double)lat_index) / 8.0;
+	long_deg_quad = pos->long_deg - (double)long_int - ((double)long_index) / 8.0;
 
 	/* These count from E to W and from S to N */
-	maplet_long = mp->long_deg_quad * 8.0 * 5.0;
-	maplet_lat = mp->lat_deg_quad * 8.0 * 10.0;
+	maplet_long = long_deg_quad * 8.0 * 5.0;
+	maplet_lat = lat_deg_quad * 8.0 * 10.0;
 
 	/* flip the count to origin from the NW corner */
 	mp->x_maplet = 4 - (int) maplet_long;
 	mp->y_maplet = 9 - (int) maplet_lat;
-
-	/* calculate a fraction (0-1.0) in the maplet
-	 * (with origin in the NW corner)
-	 */
-	mp->maplet_fx = 5.0 - maplet_long - mp->x_maplet;
-	mp->maplet_fy = 10.0 - maplet_lat - mp->y_maplet;
 
 	sprintf ( path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
 	printf ( "Trying %s\n", path_buf );

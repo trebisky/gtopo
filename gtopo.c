@@ -159,10 +159,10 @@ void
 pixmap_redraw ( void )
 {
 	int vxdim, vydim;
-	int mxdim, mydim;
 	int vxcent, vycent;
 	int nx1, nx2, ny1, ny2;
 	int offx, offy;
+	int origx, origy;
 	int x, y;
 	struct maplet *mp;
 
@@ -179,26 +179,37 @@ pixmap_redraw ( void )
 
 	mp = load_maplet ( &cur_pos );
 	cur_pos.maplet = mp;
+
 	if ( mp ) {
-	    offx = mp->maplet_fx * mp->mxdim;
-	    offy = mp->maplet_fy * mp->mydim;;
-	    printf ( "Maplet offsets: %d %d\n", offx, offy );
+	    /* location of the center within the maplet */
+	    offx = cur_pos.fx * mp->xdim;
+	    offy = cur_pos.fy * mp->ydim;;
 
-	    draw_maplet ( mp->pixbuf, vxcent-offx, vycent-offy );
+	    origx = vxcent - offx;
+	    origy = vycent - offy;
+	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 
-	    nx1 = (offx + mp->mxdim - 1 ) / mp->mxdim;
-	    nx2 = (vxdim - (offx + mp->mxdim) + mp->mxdim - 1 ) / mp->mxdim;
-	    ny1 = (offy + mp->mydim - 1 ) / mp->mydim;
-	    ny2 = (vydim - (offy + mp->mydim) + mp->mydim - 1 ) / mp->mydim;
+	    draw_maplet ( mp->pixbuf, origx, origy );
+
+	    nx1 = (origx + mp->xdim - 1 ) / mp->xdim;
+	    nx2 = (vxdim - (origx + mp->xdim) + mp->xdim - 1 ) / mp->xdim;
+	    ny1 = (origy + mp->ydim - 1 ) / mp->ydim;
+	    ny2 = (vydim - (origy + mp->ydim) + mp->ydim - 1 ) / mp->ydim;
+
+	    printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
+	    	vxdim, vydim, mp->xdim, mp->ydim, offx, offy );
+	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
 
 	    for ( y = -ny1; y <= ny2; y++ )
 		for ( x = -nx1; x <= nx2; x++ ) {
+		    if ( x == 0 && y == 0 )
+		    	continue;
 		    mp = load_maplet_nbr ( &cur_pos, x, y );
 		    if ( ! mp )
 			continue;
 		    draw_maplet ( mp->pixbuf,
-			    vxcent-offx + mp->mxdim * x,
-			    vycent-offy + mp->mydim * y );
+			    vxcent-offx + mp->xdim * x,
+			    vycent-offy + mp->ydim * y );
 		}
 	}
 
@@ -255,8 +266,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 		cur_pos.lat_deg, cur_pos.long_deg );
 
 	if ( cur_pos.maplet ) {
-	    mxdim = cur_pos.maplet->mxdim;
-	    mydim = cur_pos.maplet->mydim;
+	    mxdim = cur_pos.maplet->xdim;
+	    mydim = cur_pos.maplet->ydim;
 	} else {
 	    /* allow mouse motion if over unmapped area */
 	    mxdim = 410;	/* close */
