@@ -28,6 +28,10 @@
  * 	maplet on image center  7/8/2007
  *
  *  TODO
+ *   - add age field to maplet cache and expire/recycle
+ *     if size grows beyond some limit.
+ *   - clean up maplet structure, and related stuff in
+ *     archive.c and maplet.c, maybe some common code.
  *   - generalize the 5x10 maplet business
  *   - display other than 7.5 minute quad maplets
  *   - handle maplet size discontinuity.
@@ -157,7 +161,9 @@ pixmap_redraw ( void )
 	int vxdim, vydim;
 	int mxdim, mydim;
 	int vxcent, vycent;
+	int nx1, nx2, ny1, ny2;
 	int offx, offy;
+	int x, y;
 	struct maplet *mp;
 
 	/* get the viewport size */
@@ -179,6 +185,21 @@ pixmap_redraw ( void )
 	    printf ( "Maplet offsets: %d %d\n", offx, offy );
 
 	    draw_maplet ( mp->pixbuf, vxcent-offx, vycent-offy );
+
+	    nx1 = (offx + mp->mxdim - 1 ) / mp->mxdim;
+	    nx2 = (vxdim - (offx + mp->mxdim) + mp->mxdim - 1 ) / mp->mxdim;
+	    ny1 = (offy + mp->mydim - 1 ) / mp->mydim;
+	    ny2 = (vydim - (offy + mp->mydim) + mp->mydim - 1 ) / mp->mydim;
+
+	    for ( y = -ny1; y <= ny2; y++ )
+		for ( x = -nx1; x <= nx2; x++ ) {
+		    mp = load_maplet_nbr ( &cur_pos, x, y );
+		    if ( ! mp )
+			continue;
+		    draw_maplet ( mp->pixbuf,
+			    vxcent-offx + mp->mxdim * x,
+			    vycent-offy + mp->mydim * y );
+		}
 	}
 
 	/* mark center */
