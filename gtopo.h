@@ -1,11 +1,28 @@
 /* gtopo.h
  */
 
+enum series { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+
 /* Structure to define our current position */
 struct position {
 	/* This is where we are in plain old degrees */
 	double lat_deg;
 	double long_deg;
+
+	/* What map series we are viewing */
+	enum series series;
+
+	/* How many maplets per TPQ file */
+	int lat_count;
+	int long_count;
+
+	/* size of the entire TPQ file */
+	double map_lat_deg;
+	double map_long_deg;
+
+	/* size of each maplet */
+	double maplet_lat_deg;
+	double maplet_long_deg;
 
 	/* the following give the postion within the
 	 * maplet containing it as a fraction in range [0,1]

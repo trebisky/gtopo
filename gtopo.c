@@ -47,6 +47,14 @@
  *     give it a .topo.tmp name.
  */
 
+/* Some notes on map series:
+ * The full state maps are found in
+ * /u1/topo/AZ_D01/AZ1_MAP1/AZ1_MAP1.TPQ
+ *  lat 31-38  long 108-115  422x549 jpeg
+ * /u1/topo/CA_D01/CA1_MAP1/CA1_MAP1.TPQ
+ *  lat 32-42  long 114-125  687x789 jpeg
+ */
+
 int verbose_opt = 0;
 
 struct position cur_pos;
@@ -113,13 +121,6 @@ destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 void
 pixmap_expose ( gint x, gint y, gint nx, gint ny )
 {
-	/*
-	gdk_draw_pixmap ( wp->window,
-		wp->style->fg_gc[GTK_WIDGET_STATE(wp)],
-		vp_info.pixels,
-		x, y, x, y, nx, ny );
-		*/
-
 	gdk_draw_pixmap ( vp_info.da->window,
 		vp_info.da->style->fg_gc[GTK_WIDGET_STATE(vp_info.da)],
 		vp_info.pixels,
@@ -131,10 +132,9 @@ static int expose_count = 0;
 gint
 expose_handler ( GtkWidget *wp, GdkEventExpose *ep, gpointer data )
 {
-	/*
-	if ( expose_count < 4 )
+	if ( verbose_opt && expose_count < 4 )
 	    printf ( "Expose event %d\n", expose_count++ );
-	    */
+
     	pixmap_expose ( ep->area.x, ep->area.y, ep->area.width, ep->area.height );
 
 	return FALSE;
@@ -361,6 +361,9 @@ main ( int argc, char **argv )
 
 	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
 	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
+	/* */
+	set_series ( &cur_pos, S_STATE );
+	set_series ( &cur_pos, S_24K );
 
 	vp_info.vx = 800;
 	vp_info.vy = 800;

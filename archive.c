@@ -36,6 +36,7 @@ static int verbose = 0;
 /* Prototypes ... */
 int add_archive ( char * );
 int add_disk ( char *, char * );
+char *lookup_section ( int, int );
 
 char *
 strhide ( char *data )
@@ -65,6 +66,121 @@ archive_init ( char *archives[], int verbose_arg )
 	}
 
 	return nar;
+}
+
+void
+set_series ( struct position *pos, enum series s )
+{
+	pos->series = s;
+
+	/* 7.5 minute quadrangle */
+	if ( s == S_24K ) {
+	    pos->lat_count = 10;
+	    pos->long_count = 5;
+	    pos->map_lat_deg = 1.0 / 8.0;
+	    pos->map_long_deg = 1.0 / 8.0;
+	    pos->maplet_lat_deg = 1.0 / (8.0 * pos->lat_count );
+	    pos->maplet_long_deg = 1.0 / (8.0 * pos->long_count );
+	}
+
+	/* The entire state */
+	if ( s == S_STATE ) {
+	    pos->lat_count = 1;
+	    pos->long_count = 1;
+
+	    /* XXX - true for arizona */
+	    pos->map_lat_deg = 7.0;
+	    pos->map_long_deg = 7.0;
+	    pos->maplet_lat_deg = 7.0;
+	    pos->maplet_long_deg = 7.0;
+
+	    /* XXX - true for california */
+	    pos->map_lat_deg = 10.0;
+	    pos->map_long_deg = 11.0;
+	    pos->maplet_lat_deg = 10.0;
+	    pos->maplet_long_deg = 11.0;
+	}
+}
+
+/* For some lat/long position, find the 7.5 minute quad file
+ * containing it, and the indices of the maplet within that
+ * file containing the position.
+ * returns mp->tpq_path and mp->x/y_maplet
+ *
+ * Note that the map "codes" follow the way that lat and long
+ * increase.  There are 64 quads in a 1x1 "section".
+ * a1 is in the southeast, h8 is in the northwest.
+ * i.e longitude become 1-8, latitude a-h
+ */
+int
+lookup_quad ( struct position *pos, struct maplet *mp )
+{
+	struct stat stat_buf;
+	int lat_int, long_int;
+	int lat_index, long_index;
+	int lat_q, long_q;
+	double maplet_long, maplet_lat;
+	double lat_deg_quad;
+	double long_deg_quad;
+	char *section_path;
+	char path_buf[100];
+
+	lat_int = pos->lat_deg;
+	long_int = pos->long_deg;
+
+	printf ( "lookup for %.4f, %.4f\n", pos->lat_deg, pos->long_deg );
+
+	section_path = lookup_section ( lat_int, long_int );
+	if ( ! section_path )
+	    return 0;
+
+	/* This will yield indexes from 0-7,
+	 * then a-h for latitude (a at the south)
+	 *  and 1-8 for longitude (1 at the east)
+	 */
+	lat_index = (pos->lat_deg  - (double)lat_int) / pos->map_lat_deg;
+	long_index = (pos->long_deg - (double)long_int) / pos->map_long_deg;
+
+	lat_q  = 'a' + lat_index;
+	long_q = '1' + long_index;
+
+	/* These are values in degrees that specify where on the quadrangle we are at.
+	 * Origin is 0,0 at the SE corner
+	 */
+	lat_deg_quad = pos->lat_deg - (double)lat_int - ((double)lat_index) * pos->map_lat_deg;
+	long_deg_quad = pos->long_deg - (double)long_int - ((double)long_index) * pos->map_long_deg;
+
+	/* These count from E to W and from S to N */
+	maplet_long = long_deg_quad / pos->maplet_long_deg;
+	maplet_lat = lat_deg_quad / pos->maplet_lat_deg;
+
+	/* flip the count to origin from the NW corner */
+	mp->x_maplet = pos->long_count - 1 - (int) maplet_long;
+	mp->y_maplet = pos->lat_count - 1 - (int) maplet_lat;
+
+	sprintf ( path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
+	printf ( "Trying %s\n", path_buf );
+
+	if ( stat ( path_buf, &stat_buf ) >=  0 ) {
+	    if ( S_ISREG(stat_buf.st_mode) ) {
+		mp->tpq_path = strhide ( path_buf );
+		return 1;
+	    }
+	}
+
+	/* Try upper case */
+	lat_q = toupper ( lat_q );
+	sprintf ( path_buf, "%s/Q%2d%03d%c%c.TPQ", section_path, lat_int, long_int, lat_q, long_q );
+	printf ( "Trying %s\n", path_buf );
+
+	if ( stat ( path_buf, &stat_buf ) >=  0 ) {
+	    if ( S_ISREG(stat_buf.st_mode) ) {
+		mp->tpq_path = strhide ( path_buf );
+		return 1;
+	    }
+	}
+
+	return 0;
 }
 
 int
@@ -189,87 +305,6 @@ lookup_section ( int lat_deg, int long_deg )
 	    	return sp->path;
 	}
 	return NULL;
-}
-
-/* For some lat/long position, find the 7.5 minute quad file
- * containing it, and the indices of the maplet within that
- * file containing the position.
- * returns mp->tpq_path and mp->x/y_maplet
- *
- * Note that the map "codes" follow the way that lat and long
- * increase.  There are 64 quads in a 1x1 "section".
- * a1 is in the southeast, h8 is in the northwest.
- * i.e longitude become 1-8, latitude a-h
- */
-int
-lookup_quad ( struct position *pos, struct maplet *mp )
-{
-	struct stat stat_buf;
-	int lat_int, long_int;
-	int lat_index, long_index;
-	int lat_q, long_q;
-	double maplet_long, maplet_lat;
-	double lat_deg_quad;
-	double long_deg_quad;
-	char *section_path;
-	char path_buf[100];
-
-	lat_int = pos->lat_deg;
-	long_int = pos->long_deg;
-
-	printf ( "lookup for %.4f, %.4f\n", pos->lat_deg, pos->long_deg );
-
-	section_path = lookup_section ( lat_int, long_int );
-	if ( ! section_path )
-	    return 0;
-
-	/* This will yield indexes from 0-7,
-	 * then a-h for latitude (a at the south)
-	 *  and 1-8 for longitude (1 at the east)
-	 */
-	lat_index = (pos->lat_deg  - (double)lat_int) * 8.0;
-	long_index = (pos->long_deg - (double)long_int) * 8.0;
-
-	lat_q  = 'a' + lat_index;
-	long_q = '1' + long_index;
-
-	/* These are values in degrees that specify where on the quadrangle we are at.
-	 * Origin is 0,0 at the SE corner
-	 */
-	lat_deg_quad = pos->lat_deg - (double)lat_int - ((double)lat_index) / 8.0;
-	long_deg_quad = pos->long_deg - (double)long_int - ((double)long_index) / 8.0;
-
-	/* These count from E to W and from S to N */
-	maplet_long = long_deg_quad * 8.0 * 5.0;
-	maplet_lat = lat_deg_quad * 8.0 * 10.0;
-
-	/* flip the count to origin from the NW corner */
-	mp->x_maplet = 4 - (int) maplet_long;
-	mp->y_maplet = 9 - (int) maplet_lat;
-
-	sprintf ( path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
-	printf ( "Trying %s\n", path_buf );
-
-	if ( stat ( path_buf, &stat_buf ) >=  0 ) {
-	    if ( S_ISREG(stat_buf.st_mode) ) {
-		mp->tpq_path = strhide ( path_buf );
-		return 1;
-	    }
-	}
-
-	/* Try upper case */
-	lat_q = toupper ( lat_q );
-	sprintf ( path_buf, "%s/Q%2d%03d%c%c.TPQ", section_path, lat_int, long_int, lat_q, long_q );
-	printf ( "Trying %s\n", path_buf );
-
-	if ( stat ( path_buf, &stat_buf ) >=  0 ) {
-	    if ( S_ISREG(stat_buf.st_mode) ) {
-		mp->tpq_path = strhide ( path_buf );
-		return 1;
-	    }
-	}
-
-	return 0;
 }
 
 /* THE END */
