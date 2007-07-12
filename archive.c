@@ -13,6 +13,7 @@
 #include "gtopo.h"
 
 extern struct position cur_pos;
+extern struct maplet *maplets[];
 
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
  * part of gtopo.c as of version 0.5.
@@ -74,6 +75,7 @@ void
 set_series ( struct position *pos, enum series s )
 {
 	pos->series = s;
+	pos->maplet_cache = maplets[s];
 
 	/* 7.5 minute quadrangle files
 	 * 64 of these in a square degree

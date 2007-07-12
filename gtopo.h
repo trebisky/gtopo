@@ -3,6 +3,8 @@
 
 enum series { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
+#define N_SERIES	5
+
 /* Structure to define our current position */
 struct position {
 	/* This is where we are in plain old degrees */
@@ -11,6 +13,11 @@ struct position {
 
 	/* What map series we are viewing */
 	enum series series;
+
+	/* pointer to the maplet cache for the
+	 * current series
+	 */
+	struct maplet *maplet_cache;
 
 	/* How many maplets per TPQ file */
 	int lat_count;
@@ -50,9 +57,6 @@ struct maplet {
 	/* Unique indices used to do cache lookups */
 	int maplet_index_lat;
 	int maplet_index_long;
-
-	/* better distinguish this in the cache */
-	enum series series;
 
 	/* Use for possible cache entry aging */
 	int time;

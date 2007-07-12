@@ -13,7 +13,7 @@
 extern struct position cur_pos;
 
 /* maplet cache */
-struct maplet *maplet_head;
+struct maplet *maplets[N_SERIES];;
 
 /* XXX - 
  * I have had this run up to 2500 or so without any trouble,
@@ -29,7 +29,10 @@ int maplet_count = 0;
 void
 maplet_init ( void )
 {
-    	maplet_head = (struct maplet *) NULL;
+	int i;
+
+	for ( i=0; i<N_SERIES; i++ )
+	    maplets[i] = (struct maplet *) NULL;
 }
 
 struct maplet *
@@ -42,8 +45,21 @@ maplet_new ( void )
 	    error ("load maplet_nbr, out of mem\n", "" );
 
 	mp->time = maplet_count++;
-	mp->series = cur_pos.series;
 	return mp;
+}
+
+struct maplet *
+maplet_lookup ( int maplet_index_lat, int maplet_index_long )
+{
+	struct maplet *cp;
+
+	for ( cp = cur_pos.maplet_cache; cp; cp = cp->next ) {
+	    if ( cp->maplet_index_lat == maplet_index_lat &&
+	    	cp->maplet_index_long == maplet_index_long ) {
+		    return cp;
+	    }
+	}
+	return ( struct maplet *) NULL;
 }
 
 /* New sheet (and not in cache)
@@ -73,8 +89,8 @@ load_maplet_quad ( struct position *pos, int maplet_lat, int maplet_long )
 	mp->maplet_index_lat = maplet_lat;
 	mp->maplet_index_long = maplet_long;
 
-	mp->next = maplet_head;
-	maplet_head = mp;
+	mp->next = pos->maplet_cache;
+	pos->maplet_cache = mp;
 
 	return mp;
 }
@@ -104,13 +120,10 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	maplet_index_lat = cmp->maplet_index_lat - y;
 	maplet_index_long = cmp->maplet_index_long - x;
 
-	for ( cp = maplet_head; cp; cp = cp->next ) {
-	    if ( cp->maplet_index_lat == maplet_index_lat &&
-	    	cp->maplet_index_long == maplet_index_long &&
-		    cp->series == cur_pos.series ) {
-		    printf ( "maplet nbr cache hit: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
-		    return cp;
-	    }
+	cp = maplet_lookup ( maplet_index_lat, maplet_index_long );
+	if ( cp ) {
+	    printf ( "maplet nbr cache hit: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
+	    return cp;
 	}
 
 	/* XXX - For now, we just stay on one 7.5 minute sheet
@@ -153,8 +166,8 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
 
-	mp->next = maplet_head;
-	maplet_head = mp;
+	mp->next = pos->maplet_cache;
+	pos->maplet_cache = mp;
 
 	return mp;
 }
@@ -192,15 +205,11 @@ load_maplet ( struct position *pos )
 	 *  2 - moved to an already visited maplet.
 	 *  3 - moved to an adjoining maplet.
 	 */
-	for ( cp = maplet_head; cp; cp = cp->next ) {
-	    if ( cp->maplet_index_lat == maplet_index_lat &&
-	    	cp->maplet_index_long == maplet_index_long &&
-		    cp->series == cur_pos.series ) {
-		    printf ( "maplet cache hit: %d %d\n", maplet_index_lat, maplet_index_long );
-		    return cp;
-	    }
+	cp = maplet_lookup ( maplet_index_lat, maplet_index_long );
+	if ( cp ) {
+	    printf ( "maplet cache hit: %d %d\n", maplet_index_lat, maplet_index_long );
+	    return cp;
 	}
-	printf ( "maplet cache lookup fails for: %d %d\n", maplet_index_lat, maplet_index_long );
 
 	/* Looks like we will be setting up a new entry.
 	 */
@@ -230,8 +239,8 @@ load_maplet ( struct position *pos )
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
 
-	mp->next = maplet_head;
-	maplet_head = mp;
+	mp->next = pos->maplet_cache;
+	pos->maplet_cache = mp;
 
 	return mp;
 }
