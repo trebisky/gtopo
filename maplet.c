@@ -10,6 +10,8 @@
 
 #include "gtopo.h"
 
+extern struct position cur_pos;
+
 /* maplet cache */
 struct maplet *maplet_head;
 
@@ -51,6 +53,8 @@ load_maplet_quad ( struct position *pos, int maplet_lat, int maplet_long )
 	mp->maplet_index_lat = maplet_lat;
 	mp->maplet_index_long = maplet_long;
 
+	mp->series = cur_pos.series;
+
 	mp->next = maplet_head;
 	maplet_head = mp;
 
@@ -84,7 +88,8 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 
 	for ( cp = maplet_head; cp; cp = cp->next ) {
 	    if ( cp->maplet_index_lat == maplet_index_lat &&
-	    	cp->maplet_index_long == maplet_index_long ) {
+	    	cp->maplet_index_long == maplet_index_long &&
+		    cp->series == cur_pos.series ) {
 		    printf ( "maplet nbr cache hit: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
 		    return cp;
 	    }
@@ -133,6 +138,8 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
 
+	mp->series = cur_pos.series;
+
 	mp->next = maplet_head;
 	maplet_head = mp;
 
@@ -174,7 +181,8 @@ load_maplet ( struct position *pos )
 	 */
 	for ( cp = maplet_head; cp; cp = cp->next ) {
 	    if ( cp->maplet_index_lat == maplet_index_lat &&
-	    	cp->maplet_index_long == maplet_index_long ) {
+	    	cp->maplet_index_long == maplet_index_long &&
+		    cp->series == cur_pos.series ) {
 		    printf ( "maplet cache hit: %d %d\n", maplet_index_lat, maplet_index_long );
 		    return cp;
 	    }
@@ -211,6 +219,8 @@ load_maplet ( struct position *pos )
 
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
+
+	mp->series = cur_pos.series;
 
 	mp->next = maplet_head;
 	maplet_head = mp;

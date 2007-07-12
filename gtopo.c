@@ -29,8 +29,11 @@
  *	add code to find neighboring maplets and roam around
  *	an entire 7.5 minute sheet.  It will jump to new sheets
  *	if you click on a white region, actually usable.  7/9/2007
+ *	jumps from sheet to sheet cleanly 7/11/2007
  *
  *  TODO
+ *   - fix bug where if you click on a white area, the center
+ *     maplet goes away, so all maplets go white.
  *   - add age field to maplet cache and expire/recycle
  *     if size grows beyond some limit.
  *   - clean up maplet structure, and related stuff in
@@ -38,10 +41,6 @@
  *   - generalize the 5x10 maplet business
  *   - display other than 7.5 minute quad maplets
  *   - handle maplet size discontinuity.
- *   - display more than center maplet in new scheme,
- *     need a routine to find maplet given maplet offset
- *     from center (will need to jump to new quads and
- *     sections as needed)
  *   - be able to run off of mounted CDrom
  *   - put temp file in cwd, home, then /tmp
  *     give it a .topo.tmp name.
@@ -301,8 +300,35 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	/* put the new pixmap on the screen */
 	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
 
+	return TRUE;
+}
+
+gint
+keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
+{
+	int button;
+	int vxcent, vycent;
+	int mxdim, mydim;
+	double dlat, dlong;
+	double x_pixel_scale, y_pixel_scale;
+	float x, y;
+
+	if ( event->length > 0 )
+		printf ("Keyboard event string: %s\n", event->string );
+
+	printf ( "Keyboard event %d %s)\n",
+		event->keyval, gdk_keyval_name(event->keyval) );
 
 	return TRUE;
+}
+
+/* Focus events are a funky business, but there is no way to
+ * get the keyboard involved without handling them.
+ */
+gint
+focus_handler ( GtkWidget *wp, GdkEventFocus *event, gpointer data )
+{
+	printf ( "Focus event %d\n", event->in );
 }
 
 int
@@ -357,13 +383,32 @@ main ( int argc, char **argv )
 	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_BUTTON_RELEASE_MASK );
 	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_BUTTON_PRESS_MASK );
 
+#ifdef notdef
+	/* XXX - doesn't work yet */
+	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "focus_event",
+			GTK_SIGNAL_FUNC(focus_handler), NULL );
+	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_FOCUS_CHANGE );
+
+	/* XXX - doesn't work yet */
+	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "key_press_event",
+			GTK_SIGNAL_FUNC(keyboard_handler), NULL );
+	GTK_WIDGET_SET_FLAGS ( GTK_WIDGET(vp_info.da), GTK_CAN_FOCUS );
+	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_KEY_PRESS );
+	/*
+	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_KEY_RELEASE );
+	*/
+#endif
+
 	syscm = gdk_colormap_get_system ();
 
 	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
 	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
-	/* */
+
 	set_series ( &cur_pos, S_STATE );
+	set_series ( &cur_pos, S_ATLAS );
+	set_series ( &cur_pos, S_500K );
 	set_series ( &cur_pos, S_24K );
+	set_series ( &cur_pos, S_100K );
 
 	vp_info.vx = 800;
 	vp_info.vy = 800;

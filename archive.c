@@ -12,6 +12,8 @@
 
 #include "gtopo.h"
 
+extern struct position cur_pos;
+
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
  * part of gtopo.c as of version 0.5.
  * 7/6/2007
@@ -73,20 +75,57 @@ set_series ( struct position *pos, enum series s )
 {
 	pos->series = s;
 
-	/* 7.5 minute quadrangle */
+	/* 7.5 minute quadrangle files
+	 * 64 of these in a square degree
+	 */
 	if ( s == S_24K ) {
 	    pos->lat_count = 10;
 	    pos->long_count = 5;
 	    pos->map_lat_deg = 1.0 / 8.0;
 	    pos->map_long_deg = 1.0 / 8.0;
-	    pos->maplet_lat_deg = 1.0 / (8.0 * pos->lat_count );
-	    pos->maplet_long_deg = 1.0 / (8.0 * pos->long_count );
+	    pos->maplet_lat_deg = pos->map_lat_deg / pos->lat_count;
+	    pos->maplet_long_deg = pos->map_long_deg / pos->long_count;
+	    pos->q_code = 'q';
+	}
+
+	/* 2 of these in a square degree
+	 * one of top of the other a1 and e1
+	 */
+	if ( s == S_100K ) {
+	    pos->lat_count = 10;
+	    pos->long_count = 10;
+	    pos->map_lat_deg = 1.0 / 2.0;
+	    pos->map_long_deg = 1.0;
+	    pos->maplet_lat_deg = pos->map_lat_deg / pos->lat_count;
+	    pos->maplet_long_deg = pos->map_long_deg / pos->long_count;
+	    pos->q_code = 'k';
+	}
+
+	if ( s == S_500K ) {
+	    pos->lat_count = 10;
+	    pos->long_count = 5;
+	    pos->map_lat_deg = 1.0 / 8.0;
+	    pos->map_long_deg = 1.0 / 8.0;
+	    pos->maplet_lat_deg = pos->map_lat_deg / pos->lat_count;
+	    pos->maplet_long_deg = pos->map_long_deg / pos->long_count;
+	    pos->q_code = 'X';
+	}
+
+	if ( s == S_ATLAS ) {
+	    pos->lat_count = 10;
+	    pos->long_count = 5;
+	    pos->map_lat_deg = 1.0 / 8.0;
+	    pos->map_long_deg = 1.0 / 8.0;
+	    pos->maplet_lat_deg = pos->map_lat_deg / pos->lat_count;
+	    pos->maplet_long_deg = pos->map_long_deg / pos->long_count;
+	    pos->q_code = 'X';
 	}
 
 	/* The entire state */
 	if ( s == S_STATE ) {
 	    pos->lat_count = 1;
 	    pos->long_count = 1;
+	    pos->q_code = 'X';
 
 	    /* XXX - true for arizona */
 	    pos->map_lat_deg = 7.0;
@@ -110,6 +149,7 @@ quad_path ( char *section_path, int lat_section, int long_section, int lat_quad,
 	char path_buf[100];
 	struct stat stat_buf;
 	int lat_q, long_q;
+	int series_q;
 
 	/* give a-h for latitude (a at the south)
 	 *  and 1-8 for longitude (1 at the east)
@@ -117,7 +157,9 @@ quad_path ( char *section_path, int lat_section, int long_section, int lat_quad,
 	lat_q  = 'a' + lat_quad;
 	long_q = '1' + long_quad;
 
-	sprintf ( path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_section, long_section, lat_q, long_q );
+	series_q = cur_pos.q_code;
+
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", section_path, series_q, lat_section, long_section, lat_q, long_q );
 	printf ( "Trying %s\n", path_buf );
 
 	if ( stat ( path_buf, &stat_buf ) >=  0 )
@@ -126,8 +168,9 @@ quad_path ( char *section_path, int lat_section, int long_section, int lat_quad,
 
 	/* Try upper case */
 	lat_q  = 'A' + lat_quad;
+	series_q = toupper(series_q);
 
-	sprintf ( path_buf, "%s/Q%2d%03d%c%c.TPQ", section_path, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", section_path, series_q, lat_section, long_section, lat_q, long_q );
 	printf ( "Trying %s\n", path_buf );
 
 	if ( stat ( path_buf, &stat_buf ) >=  0 )

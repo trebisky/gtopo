@@ -31,6 +31,9 @@ struct position {
 	double fx;
 	double fy;
 
+	/* first letter in a map name for this series 'q' for 7.5 */
+	int q_code;
+
 	/* This is a pointer to the maplet which
 	 * contains the current position.
 	 */
@@ -47,6 +50,9 @@ struct maplet {
 	/* Unique indices used to do cache lookups */
 	int maplet_index_lat;
 	int maplet_index_long;
+
+	/* better distinguish this in the cache */
+	enum series series;
 
 	/* This is which maplet in the quad we are */
 	int x_maplet;
