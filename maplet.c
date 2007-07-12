@@ -15,12 +15,35 @@ extern struct position cur_pos;
 /* maplet cache */
 struct maplet *maplet_head;
 
+/* XXX - 
+ * I have had this run up to 2500 or so without any trouble,
+ * but someday may want to monitor this and recycle entries
+ * with an old timestamp.
+ * Also, it may be possible to use a tree rather than a
+ * linked list to speed the lookup.
+ * Also, keep separate series in their own "hash" to
+ * help speed this up.
+ */
 int maplet_count = 0;
 
 void
 maplet_init ( void )
 {
     	maplet_head = (struct maplet *) NULL;
+}
+
+struct maplet *
+maplet_new ( void )
+{
+	struct maplet *mp;
+
+	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
+	if ( ! mp )
+	    error ("load maplet_nbr, out of mem\n", "" );
+
+	mp->time = maplet_count++;
+	mp->series = cur_pos.series;
+	return mp;
 }
 
 /* New sheet (and not in cache)
@@ -30,10 +53,7 @@ load_maplet_quad ( struct position *pos, int maplet_lat, int maplet_long )
 {
     	struct maplet *mp;
 
-	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
-	if ( ! mp )
-	    error ("load maplet_nbr, out of mem\n", "" );
-	maplet_count++;
+	mp = maplet_new ();
 
 	/* Try to find it in the archive
 	 * This will set tpq_path as well as
@@ -52,8 +72,6 @@ load_maplet_quad ( struct position *pos, int maplet_lat, int maplet_long )
 
 	mp->maplet_index_lat = maplet_lat;
 	mp->maplet_index_long = maplet_long;
-
-	mp->series = cur_pos.series;
 
 	mp->next = maplet_head;
 	maplet_head = mp;
@@ -109,10 +127,7 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	    return load_maplet_quad ( pos, maplet_index_lat, maplet_index_long );
 	}
 
-	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
-	if ( ! mp )
-	    error ("load maplet_nbr, out of mem\n", "" );
-	maplet_count++;
+	mp = maplet_new ();
 
 	/* XXX - do we need to copy more stuff from cmp ??
 	 *   remember, this may be found in cache later
@@ -137,8 +152,6 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
-
-	mp->series = cur_pos.series;
 
 	mp->next = maplet_head;
 	maplet_head = mp;
@@ -191,10 +204,7 @@ load_maplet ( struct position *pos )
 
 	/* Looks like we will be setting up a new entry.
 	 */
-	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
-	if ( ! mp )
-	    error ("load maplet, out of mem\n", "" );
-	maplet_count++;
+	mp = maplet_new ();
 
 	/* Try to find it in the archive
 	 * This will set tpq_path as well as
@@ -219,8 +229,6 @@ load_maplet ( struct position *pos )
 
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
-
-	mp->series = cur_pos.series;
 
 	mp->next = maplet_head;
 	maplet_head = mp;

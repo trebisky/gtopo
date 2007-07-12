@@ -30,6 +30,7 @@
  *	an entire 7.5 minute sheet.  It will jump to new sheets
  *	if you click on a white region, actually usable.  7/9/2007
  *	jumps from sheet to sheet cleanly 7/11/2007
+ * version 0.8 - add alternate series support.
  *
  *  TODO
  *   - fix bug where if you click on a white area, the center
@@ -409,6 +410,7 @@ main ( int argc, char **argv )
 	set_series ( &cur_pos, S_500K );
 	set_series ( &cur_pos, S_24K );
 	set_series ( &cur_pos, S_100K );
+	set_series ( &cur_pos, S_24K );
 
 	vp_info.vx = 800;
 	vp_info.vy = 800;

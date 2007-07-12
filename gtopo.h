@@ -54,6 +54,9 @@ struct maplet {
 	/* better distinguish this in the cache */
 	enum series series;
 
+	/* Use for possible cache entry aging */
+	int time;
+
 	/* This is which maplet in the quad we are */
 	int x_maplet;
 	int y_maplet;
