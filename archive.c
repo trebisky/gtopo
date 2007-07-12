@@ -102,6 +102,87 @@ set_series ( struct position *pos, enum series s )
 	}
 }
 
+/* Try both upper and lower case path names for the tpq file
+ */
+char *
+quad_path ( char *section_path, int lat_section, int long_section, int lat_quad, int long_quad )
+{
+	char path_buf[100];
+	struct stat stat_buf;
+	int lat_q, long_q;
+
+	/* give a-h for latitude (a at the south)
+	 *  and 1-8 for longitude (1 at the east)
+	 */
+	lat_q  = 'a' + lat_quad;
+	long_q = '1' + long_quad;
+
+	sprintf ( path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_section, long_section, lat_q, long_q );
+	printf ( "Trying %s\n", path_buf );
+
+	if ( stat ( path_buf, &stat_buf ) >=  0 )
+	    if ( S_ISREG(stat_buf.st_mode) )
+		return strhide ( path_buf );
+
+	/* Try upper case */
+	lat_q  = 'A' + lat_quad;
+
+	sprintf ( path_buf, "%s/Q%2d%03d%c%c.TPQ", section_path, lat_section, long_section, lat_q, long_q );
+	printf ( "Trying %s\n", path_buf );
+
+	if ( stat ( path_buf, &stat_buf ) >=  0 )
+	    if ( S_ISREG(stat_buf.st_mode) )
+		return strhide ( path_buf );
+
+	return NULL;
+}
+
+/* This gets called when we are looking for a neighboring
+ * maplet, have not found it in the cache, and it is not
+ * on the same sheet as the center maplet.
+ */
+int
+lookup_quad_nbr ( struct position *pos, struct maplet *mp, int maplet_lat, int maplet_long )
+{
+	int lat_section, long_section;
+	int lat_quad, long_quad;
+	int m_long, m_lat;
+	char *section_path;
+
+	lat_section = maplet_lat / (8 * pos->lat_count);
+	long_section = maplet_long / (8 * pos->long_count);
+
+	printf ( "lookup_quad_nbr: %d %d\n", lat_section, long_section );
+
+	section_path = lookup_section ( lat_section, long_section );
+	if ( ! section_path )
+	    return 0;
+
+	printf ("lookup_quad_nbr, found section: %s\n", section_path );
+
+	lat_quad = maplet_lat / pos->lat_count - lat_section * 8;
+	long_quad = maplet_long / pos->long_count - long_section * 8;
+
+	/* See if the map sheet is available.
+	 */
+	mp->tpq_path = quad_path ( section_path, lat_section, long_section, lat_quad, long_quad );
+	if ( ! mp->tpq_path )
+	    return 0;
+
+	/* Now figure which maplet within the sheet we need.
+	 */
+	m_long = maplet_long - long_quad * pos->long_count - long_section * pos->long_count * 8;
+	m_lat = maplet_lat - lat_quad * pos->lat_count - lat_section * pos->lat_count * 8;
+
+	printf ( "lat/long quad, lat/long maplet: %d %d  %d %d\n", lat_quad, long_quad, maplet_lat, maplet_long );
+
+	/* flip the count to origin from the NW corner */
+	mp->x_maplet = pos->long_count - m_long - 1;
+	mp->y_maplet = pos->lat_count - m_lat - 1;
+
+	return 1;
+}
+
 /* For some lat/long position, find the 7.5 minute quad file
  * containing it, and the indices of the maplet within that
  * file containing the position.
@@ -115,72 +196,51 @@ set_series ( struct position *pos, enum series s )
 int
 lookup_quad ( struct position *pos, struct maplet *mp )
 {
-	struct stat stat_buf;
-	int lat_int, long_int;
-	int lat_index, long_index;
-	int lat_q, long_q;
-	double maplet_long, maplet_lat;
+	int lat_section, long_section;
+	int lat_quad, long_quad;
+	double maplet_long;
+	double maplet_lat;
 	double lat_deg_quad;
 	double long_deg_quad;
 	char *section_path;
-	char path_buf[100];
 
-	lat_int = pos->lat_deg;
-	long_int = pos->long_deg;
+	/* section indices tell us which 1x1 degree chunk
+	 * of the world we are dealing with
+	 */
+	lat_section = pos->lat_deg;
+	long_section = pos->long_deg;
 
 	printf ( "lookup for %.4f, %.4f\n", pos->lat_deg, pos->long_deg );
 
-	section_path = lookup_section ( lat_int, long_int );
+	section_path = lookup_section ( lat_section, long_section );
 	if ( ! section_path )
 	    return 0;
 
 	/* This will yield indexes from 0-7,
-	 * then a-h for latitude (a at the south)
-	 *  and 1-8 for longitude (1 at the east)
 	 */
-	lat_index = (pos->lat_deg  - (double)lat_int) / pos->map_lat_deg;
-	long_index = (pos->long_deg - (double)long_int) / pos->map_long_deg;
+	lat_quad = (pos->lat_deg  - (double)lat_section) / pos->map_lat_deg;
+	long_quad = (pos->long_deg - (double)long_section) / pos->map_long_deg;
 
-	lat_q  = 'a' + lat_index;
-	long_q = '1' + long_index;
-
-	/* These are values in degrees that specify where on the quadrangle we are at.
-	 * Origin is 0,0 at the SE corner
+	/* See if the map sheet is available.
 	 */
-	lat_deg_quad = pos->lat_deg - (double)lat_int - ((double)lat_index) * pos->map_lat_deg;
-	long_deg_quad = pos->long_deg - (double)long_int - ((double)long_index) * pos->map_long_deg;
+	mp->tpq_path = quad_path ( section_path, lat_section, long_section, lat_quad, long_quad );
+	if ( ! mp->tpq_path )
+	    return 0;
+
+	/* Now figure which maplet within the sheet we need.
+	 */
+	lat_deg_quad = pos->lat_deg - (double)lat_section - ((double)lat_quad) * pos->map_lat_deg;
+	long_deg_quad = pos->long_deg - (double)long_section - ((double)long_quad) * pos->map_long_deg;
 
 	/* These count from E to W and from S to N */
 	maplet_long = long_deg_quad / pos->maplet_long_deg;
 	maplet_lat = lat_deg_quad / pos->maplet_lat_deg;
 
 	/* flip the count to origin from the NW corner */
-	mp->x_maplet = pos->long_count - 1 - (int) maplet_long;
-	mp->y_maplet = pos->lat_count - 1 - (int) maplet_lat;
+	mp->x_maplet = pos->long_count - (int) maplet_long - 1;
+	mp->y_maplet = pos->lat_count - (int) maplet_lat - 1;
 
-	sprintf ( path_buf, "%s/q%2d%03d%c%c.tpq", section_path, lat_int, long_int, lat_q, long_q );
-	printf ( "Trying %s\n", path_buf );
-
-	if ( stat ( path_buf, &stat_buf ) >=  0 ) {
-	    if ( S_ISREG(stat_buf.st_mode) ) {
-		mp->tpq_path = strhide ( path_buf );
-		return 1;
-	    }
-	}
-
-	/* Try upper case */
-	lat_q = toupper ( lat_q );
-	sprintf ( path_buf, "%s/Q%2d%03d%c%c.TPQ", section_path, lat_int, long_int, lat_q, long_q );
-	printf ( "Trying %s\n", path_buf );
-
-	if ( stat ( path_buf, &stat_buf ) >=  0 ) {
-	    if ( S_ISREG(stat_buf.st_mode) ) {
-		mp->tpq_path = strhide ( path_buf );
-		return 1;
-	    }
-	}
-
-	return 0;
+	return 1;
 }
 
 int
@@ -295,9 +355,9 @@ add_section ( char *disk, char *section )
 }
 
 char *
-lookup_section ( int lat_deg, int long_deg )
+lookup_section ( int lat_section, int long_section )
 {
-	int latlong = lat_deg * 1000 + long_deg;
+	int latlong = lat_section * 1000 + long_section;
 	struct _section *sp;
 
 	for ( sp = section_head; sp; sp = sp->next ) {

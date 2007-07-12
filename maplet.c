@@ -21,7 +21,45 @@ maplet_init ( void )
     	maplet_head = (struct maplet *) NULL;
 }
 
+/* New sheet (and not in cache)
+ */
+struct maplet *
+load_maplet_quad ( struct position *pos, int maplet_lat, int maplet_long )
+{
+    	struct maplet *mp;
+
+	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
+	if ( ! mp )
+	    error ("load maplet_nbr, out of mem\n", "" );
+	maplet_count++;
+
+	/* Try to find it in the archive
+	 * This will set tpq_path as well as
+	 * x_maplet and y_maplet in the maplet structure.
+	 */
+	if ( ! lookup_quad_nbr ( pos, mp, maplet_lat, maplet_long ) ) {
+	    free ( (char *) mp );
+	    return NULL;
+	}
+
+	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, mp->x_maplet, mp->y_maplet );
+
+	/* get the maplet size */
+	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
+	mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
+
+	mp->maplet_index_lat = maplet_lat;
+	mp->maplet_index_long = maplet_long;
+
+	mp->next = maplet_head;
+	maplet_head = mp;
+
+	return mp;
+}
+
 /* Given a center maplet, load a neighbor
+ * x and y are offsets in maplet units, with signs
+ * correct for indexing a maplet within a quad.
  */
 struct maplet *
 load_maplet_nbr ( struct position *pos, int x, int y )
@@ -37,7 +75,10 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	/* pointer to center maplet */
 	cmp = pos->maplet;
 
-    	/* First try cache */
+    	/* First try cache
+	 * flip sign to increase with lat and long
+	 * this gives a unique pair of numbers for the maplet.
+	 */
 	maplet_index_lat = cmp->maplet_index_lat - y;
 	maplet_index_long = cmp->maplet_index_long - x;
 
@@ -52,15 +93,15 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	/* XXX - For now, we just stay on one 7.5 minute sheet
 	 */
 	x_maplet = cmp->x_maplet + x;
-	if ( x_maplet < 0 || x_maplet > 4 ) {
+	if ( x_maplet < 0 || x_maplet >= pos->long_count ) {
 	    printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
-	    return NULL;
+	    return load_maplet_quad ( pos, maplet_index_lat, maplet_index_long );
 	}
 
 	y_maplet = cmp->y_maplet + y;
-	if ( y_maplet < 0 || y_maplet > 9 ) {
+	if ( y_maplet < 0 || y_maplet >= pos->lat_count ) {
 	    printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
-	    return NULL;
+	    return load_maplet_quad ( pos, maplet_index_lat, maplet_index_long );
 	}
 
 	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
@@ -113,8 +154,8 @@ load_maplet ( struct position *pos )
 	/* Convert from degrees to "maplet units"
 	 * (keep these as floating point).
 	 */
-	maplet_lat = pos->lat_deg * 8.0 * 10.0;
-	maplet_long = pos->long_deg * 8.0 * 5.0;
+	maplet_lat = pos->lat_deg / pos->maplet_lat_deg;
+	maplet_long = pos->long_deg / pos->maplet_long_deg;
 
 	/* Truncate these to integers unique to a maplet
 	 * assuming 7.5 minute quads and 5x10 maplets
