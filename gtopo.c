@@ -8,6 +8,7 @@
 #include "gtopo.h"
 
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
+ *
  * version 0.1 - really just a JPG file display gizmo, but
  *	a starting point for what is to follow.  Did not get
  *	any bits displayed until I moved the draw calls into
@@ -31,6 +32,7 @@
  *	if you click on a white region, actually usable.  7/9/2007
  *	jumps from sheet to sheet cleanly 7/11/2007
  * version 0.8 - add alternate series support.
+ 	works for 100K series 7/12/2007
  *
  *  TODO
  *   - fix bug where if you click on a white area, the center
@@ -39,8 +41,6 @@
  *     if size grows beyond some limit.
  *   - clean up maplet structure, and related stuff in
  *     archive.c and maplet.c, maybe some common code.
- *   - generalize the 5x10 maplet business
- *   - display other than 7.5 minute quad maplets
  *   - handle maplet size discontinuity.
  *   - be able to run off of mounted CDrom
  *   - put temp file in cwd, home, then /tmp
@@ -203,7 +203,9 @@ pixmap_redraw ( void )
 	    	vxdim, vydim, mp->xdim, mp->ydim, offx, offy );
 	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
 
-	    for ( y = -ny1; y <= ny2; y++ )
+#define DRAW_AROUND
+#ifdef DRAW_AROUND
+	    for ( y = -ny1; y <= ny2; y++ ) {
 		for ( x = -nx1; x <= nx2; x++ ) {
 		    if ( x == 0 && y == 0 )
 		    	continue;
@@ -214,6 +216,8 @@ pixmap_redraw ( void )
 			    vxcent-offx + mp->xdim * x,
 			    vycent-offy + mp->ydim * y );
 		}
+	    }
+#endif
 	}
 
 	/* mark center */
@@ -273,15 +277,13 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	    mydim = cur_pos.maplet->ydim;
 	} else {
 	    /* allow mouse motion if over unmapped area */
+	    /* XXX - OK only for 24K maps */
 	    mxdim = 410;	/* close */
 	    mydim = 256;
 	}
 
-	/* We break a 7.5 minute quadrangle (1/8 of a degree)
-	 * into 10 maplets in latitude, (5 in longitude).
-	 */
-	x_pixel_scale = 1.0 / (8.0 * 5.0 * (double)mxdim);
-	y_pixel_scale = 1.0 / (8.0 * 10.0 * (double)mydim);
+	x_pixel_scale = cur_pos.maplet_long_deg / (double)mxdim;
+	y_pixel_scale = cur_pos.maplet_lat_deg / (double)mydim;
 
 	dlat  = (event->y - (double)vycent) * y_pixel_scale;
 	dlong = (event->x - (double)vxcent) * x_pixel_scale;
@@ -410,7 +412,6 @@ main ( int argc, char **argv )
 	set_series ( &cur_pos, S_500K );
 	set_series ( &cur_pos, S_24K );
 	set_series ( &cur_pos, S_100K );
-	set_series ( &cur_pos, S_24K );
 
 	vp_info.vx = 800;
 	vp_info.vy = 800;

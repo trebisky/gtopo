@@ -126,6 +126,7 @@ build_tpq_index ( char *name )
 	    error ( "Bogus TPQ file size - 1\n", "" );
 
 	printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.name );
+	printf ( "TPQ file maplet counts lat/long: %d %d\n", tpq_header.maplet.nlat, tpq_header.maplet.nlong );
 
 	if ( read( fd, buf, BUFSIZE ) != BUFSIZE )
 	    error ( "Bogus TPQ file size - 2\n", "" );
@@ -142,23 +143,16 @@ char *tmpname = "gtopo.tmp";
  * returns NULL if trouble.
  */
 GdkPixbuf *
-load_tpq_maplet ( char *name, int x_index, int y_index )
+load_tpq_maplet ( char *name, int index )
 {
 	char buf[BUFSIZE];
 	int fd, ofd;
 	int size;
 	int nw;
 	int nlong;
-	int who;
 	GdkPixbuf *rv;
 
 	build_tpq_index ( name );
-
-	nlong = 5;
-	if ( num_index == 100 )
-	    nlong = 10;
-
-	who = y_index * nlong + x_index;
 
 	/* open a temp file for R/W */
 	ofd = open ( tmpname, O_CREAT | O_TRUNC | O_WRONLY, 0600 );
@@ -169,8 +163,8 @@ load_tpq_maplet ( char *name, int x_index, int y_index )
 	if ( fd < 0 )
 	    error ( "Cannot open: %s\n", name );
 
-	lseek ( fd, tpq_index[who].offset, SEEK_SET );
-	size = tpq_index[who].size;
+	lseek ( fd, tpq_index[index].offset, SEEK_SET );
+	size = tpq_index[index].size;
 
 	while ( size > 0 ) {
 	    if ( read( fd, buf, BUFSIZE ) != BUFSIZE )

@@ -23,6 +23,14 @@ struct position {
 	int lat_count;
 	int long_count;
 
+	/* How many maps per section */
+	int lat_count_d;
+	int long_count_d;
+
+	/* How many 7.5 minute units per map */
+	int quad_lat_count;
+	int quad_long_count;
+
 	/* size of the entire TPQ file */
 	double map_lat_deg;
 	double map_long_deg;
@@ -78,7 +86,7 @@ struct maplet {
 
 /* from tpq_io.c */
 void build_tpq_index ( char * );
-GdkPixbuf *load_tpq_maplet ( char *, int, int );
+GdkPixbuf *load_tpq_maplet ( char *, int );
 
 /* from maplet.c */
 struct maplet *load_maplet ( struct position * );

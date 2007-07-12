@@ -80,7 +80,7 @@ load_maplet_quad ( struct position *pos, int maplet_lat, int maplet_long )
 	    return NULL;
 	}
 
-	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, mp->x_maplet, mp->y_maplet );
+	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, mp->y_maplet * pos->long_count + mp->x_maplet );
 
 	/* get the maplet size */
 	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
@@ -126,7 +126,7 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	    return cp;
 	}
 
-	/* XXX - For now, we just stay on one 7.5 minute sheet
+	/* See if this maplet is on same sheet as center.
 	 */
 	x_maplet = cmp->x_maplet + x;
 	if ( x_maplet < 0 || x_maplet >= pos->long_count ) {
@@ -157,7 +157,7 @@ load_maplet_nbr ( struct position *pos, int x, int y )
 	 */
 	mp->tpq_path = cmp->tpq_path;
 
-	mp->pixbuf = load_tpq_maplet ( cmp->tpq_path, x_maplet, y_maplet );
+	mp->pixbuf = load_tpq_maplet ( cmp->tpq_path, y_maplet * pos->long_count + x_maplet );
 
 	/* get the maplet size */
 	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
@@ -191,7 +191,6 @@ load_maplet ( struct position *pos )
 	maplet_long = pos->long_deg / pos->maplet_long_deg;
 
 	/* Truncate these to integers unique to a maplet
-	 * assuming 7.5 minute quads and 5x10 maplets
 	 */
 	maplet_index_lat = maplet_lat;
 	maplet_index_long = maplet_long;
@@ -230,7 +229,7 @@ load_maplet ( struct position *pos )
 	printf ( "x,y maplet(%d) = %d %d -- %d %d\n", maplet_count, x_maplet, y_maplet,
 	    maplet_index_lat, maplet_index_long );
 
-	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, x_maplet, y_maplet );
+	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, y_maplet * pos->long_count + x_maplet );
 
 	/* get the maplet size */
 	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
