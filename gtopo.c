@@ -45,14 +45,27 @@
  *   - be able to run off of mounted CDrom
  *   - put temp file in cwd, home, then /tmp
  *     give it a .topo.tmp name.
+ *   - show lat and long of current point
+ *   - positioner manager window to save positions
  */
 
 /* Some notes on map series:
+ *  I have only the California and Arizona sets to work from.
+ *  There are some unique differences in these sets on levels
+ *  1 thru 3, levels 4 and 5 seem uniform, but we shall see.
+ *
  * The full state maps are found in
  * /u1/topo/AZ_D01/AZ1_MAP1/AZ1_MAP1.TPQ
  *  lat 31-38  long 108-115  422x549 jpeg
  * /u1/topo/CA_D01/CA1_MAP1/CA1_MAP1.TPQ
  *  lat 32-42  long 114-125  687x789 jpeg
+ *
+ * And then there is series 3 (the 500K series)
+ *  for California it is a single file
+ *  with 22 in latitude, 20 in longitude
+ *  (440 maplets).
+ * - for Arizona, we get 4 tpq files:
+ *   F30105.tpq, F30110, F35105, F35110
  */
 
 int verbose_opt = 0;
@@ -411,8 +424,13 @@ main ( int argc, char **argv )
 
 	syscm = gdk_colormap_get_system ();
 
+	/* In California west of Taboose Pass */
 	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
 	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
+
+	/* Mt. Hopkins, Arizona */
+	cur_pos.lat_deg = 31.69;
+	cur_pos.long_deg = 110.88;
 
 	set_series ( S_STATE );
 	set_series ( S_ATLAS );

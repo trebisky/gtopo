@@ -41,10 +41,10 @@ struct _tpq_header {
 	char _pad4[332];
 } tpq_header;
 
-/* We really see just 50 in the TPQ files we process,
- * but allocate a bit more room, for no particular reason.
+/* The biggest thing I have seen yet was in the california
+ * level 3 map (22x20), which is 440 !!
  */
-#define TPQ_MAX_MAPLETS	200
+#define TPQ_MAX_MAPLETS	500
 
 struct tpq_index_e {
 	long	offset;
@@ -64,9 +64,11 @@ int num_index = 0;
  * For a F series TPQ file representing a 5x5 degree area,
  * there are 100 maplets in the file in a 10x10 pattern,
  * the same order as above.
+ * (For the California level 3, it is one huge TPQ file
+ *  with 440 maplets). 440x4 is 1760 bytes.
  */
 
-#define BUFSIZE	1024
+#define INDEX_BUFSIZE	2048
 
 #ifdef BIG_ENDIAN_HACK
 #define JPEG_SOI_TAG	0xffd8
@@ -110,7 +112,7 @@ void
 build_tpq_index ( char *name )
 {
 	int fd;
-	char buf[BUFSIZE];
+	char buf[INDEX_BUFSIZE];
 
 	if ( num_index > 0 && strcmp ( tpq_index_filename, name ) == 0 )
 	    return;
@@ -123,19 +125,21 @@ build_tpq_index ( char *name )
 
 	/* read header */
 	if ( read( fd, &tpq_header, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
-	    error ( "Bogus TPQ file size - 1\n", "" );
+	    error ( "Bad TPQ header read\n", name );
 
 	printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.name );
 	printf ( "TPQ file maplet counts lat/long: %d %d\n", tpq_header.maplet.nlat, tpq_header.maplet.nlong );
 
-	if ( read( fd, buf, BUFSIZE ) != BUFSIZE )
-	    error ( "Bogus TPQ file size - 2\n", "" );
+	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
+	    error ( "Bad TPQ index read\n", name );
 
 	wonk_index ( fd, (long *) buf );
 	strcpy ( tpq_index_filename, name );
 
 	close ( fd );
 }
+
+#define BUFSIZE	1024
 
 char *tmpname = "gtopo.tmp";
 

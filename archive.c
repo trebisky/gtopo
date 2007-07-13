@@ -205,7 +205,7 @@ quad_path ( char *section_path, int lat_section, int long_section, int lat_quad,
 		return strhide ( path_buf );
 
 	/* Try upper case */
-	lat_q  = 'A' + lat_quad;
+	lat_q  = toupper(lat_q);
 	series_q = toupper(series_q);
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", section_path, series_q, lat_section, long_section, lat_q, long_q );
