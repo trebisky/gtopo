@@ -35,6 +35,7 @@
  	works for 100K series 7/12/2007
  *
  *  TODO
+ *   - fix bug that warps map NS in Arizona.
  *   - fix bug where if you click on a white area, the center
  *     maplet goes away, so all maplets go white.
  *   - add age field to maplet cache and expire/recycle
@@ -47,6 +48,8 @@
  *     give it a .topo.tmp name.
  *   - show lat and long of current point
  *   - positioner manager window to save positions
+ *   ** emit .jpg image of selected region
+ *   ** print postscript on 8.5 by 11 paper
  */
 
 /* Some notes on map series:
@@ -70,7 +73,7 @@
 
 int verbose_opt = 0;
 
-struct position cur_pos;
+struct topo_info info;
 
 /* This is a list of "root directories" where images of the
  * CDROMS may be found.  It is used as a kind of search path,
@@ -193,13 +196,13 @@ pixmap_redraw ( void )
 	/* clear the whole pixmap to white */
 	gdk_draw_rectangle ( vp_info.pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
 
-	mp = load_maplet ( &cur_pos );
-	cur_pos.maplet = mp;
+	mp = load_maplet ();
+	info.series->center = mp;
 
 	if ( mp ) {
 	    /* location of the center within the maplet */
-	    offx = cur_pos.fx * mp->xdim;
-	    offy = cur_pos.fy * mp->ydim;;
+	    offx = info.series->fx * mp->xdim;
+	    offy = info.series->fy * mp->ydim;;
 
 	    origx = vxcent - offx;
 	    origy = vycent - offy;
@@ -222,7 +225,7 @@ pixmap_redraw ( void )
 		for ( x = -nx1; x <= nx2; x++ ) {
 		    if ( x == 0 && y == 0 )
 		    	continue;
-		    mp = load_maplet_nbr ( &cur_pos, x, y );
+		    mp = load_maplet_nbr ( x, y );
 		    if ( ! mp )
 			continue;
 		    draw_maplet ( mp->pixbuf,
@@ -290,11 +293,11 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	vycent = vp_info.vy / 2;
 
 	printf ( "Orig position (lat/long) %.4f %.4f\n",
-		cur_pos.lat_deg, cur_pos.long_deg );
+		info.lat_deg, info.long_deg );
 
-	if ( cur_pos.maplet ) {
-	    mxdim = cur_pos.maplet->xdim;
-	    mydim = cur_pos.maplet->ydim;
+	if ( info.series->center ) {
+	    mxdim = info.series->center->xdim;
+	    mydim = info.series->center->ydim;
 	} else {
 	    /* allow mouse motion if over unmapped area */
 	    /* XXX - OK only for 24K maps */
@@ -302,8 +305,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	    mydim = 256;
 	}
 
-	x_pixel_scale = cur_pos.maplet_long_deg / (double)mxdim;
-	y_pixel_scale = cur_pos.maplet_lat_deg / (double)mydim;
+	x_pixel_scale = info.series->maplet_long_deg / (double)mxdim;
+	y_pixel_scale = info.series->maplet_lat_deg / (double)mydim;
 
 	dlat  = (event->y - (double)vycent) * y_pixel_scale;
 	dlong = (event->x - (double)vxcent) * x_pixel_scale;
@@ -311,11 +314,11 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 		dlat, dlong );
 
 	/* Make location of the mouse click be the current position */
-	cur_pos.lat_deg -= dlat;
-	cur_pos.long_deg -= dlong;
+	info.lat_deg -= dlat;
+	info.long_deg -= dlong;
 
 	printf ( "New position (lat/long) %.4f %.4f\n",
-		cur_pos.lat_deg, cur_pos.long_deg );
+		info.lat_deg, info.long_deg );
 
 	/* redraw on the new center */
 	pixmap_redraw ();
@@ -425,12 +428,12 @@ main ( int argc, char **argv )
 	syscm = gdk_colormap_get_system ();
 
 	/* In California west of Taboose Pass */
-	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
-	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
+	info.lat_deg = dms2deg ( 37, 1, 0 );
+	info.long_deg = dms2deg ( 118, 31, 0 );
 
 	/* Mt. Hopkins, Arizona */
-	cur_pos.lat_deg = 31.69;
-	cur_pos.long_deg = 110.88;
+	info.lat_deg = 31.69;
+	info.long_deg = 110.88;
 
 	set_series ( S_STATE );
 	set_series ( S_ATLAS );

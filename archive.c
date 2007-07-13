@@ -12,8 +12,9 @@
 
 #include "gtopo.h"
 
-extern struct position cur_pos;
-extern struct maplet *maplets[];
+extern struct topo_info info;
+
+struct series series_info[N_SERIES];
 
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
  * part of gtopo.c as of version 0.5.
@@ -57,9 +58,107 @@ archive_init ( char *archives[], int verbose_arg )
 {
 	char **p;
 	int nar = 0;
+	struct series *sp;
 
 	section_head = (struct _section *) NULL;
 	verbose = verbose_arg;
+
+	/* 7.5 minute quadrangle files
+	 * 64 of these in a square degree
+	 */
+	sp = &series_info[S_24K];
+	    sp->series = S_24K;
+	    sp->cache = (struct maplet *) NULL;
+	    sp->cache_count = 0;
+	    sp->lat_count = 10;
+	    sp->long_count = 5;
+	    sp->lat_count_d = 8;
+	    sp->long_count_d = 8;
+	    sp->map_lat_deg = 1.0 / 8.0;
+	    sp->map_long_deg = 1.0 / 8.0;
+	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
+	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	    sp->quad_lat_count = 1;
+	    sp->quad_long_count = 1;
+	    sp->q_code = 'q';
+
+	/* 2 of these in a square degree
+	 * one of top of the other a1 and e1
+	 */
+	sp = &series_info[S_100K];
+	    sp->series = S_100K;
+	    sp->cache = (struct maplet *) NULL;
+	    sp->cache_count = 0;
+	    sp->lat_count = 8;
+	    sp->long_count = 16;
+	    sp->lat_count_d = 2;
+	    sp->long_count_d = 1;
+	    sp->map_lat_deg = 1.0 / 2.0;
+	    sp->map_long_deg = 1.0;
+	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
+	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	    sp->quad_lat_count = 4;
+	    sp->quad_long_count = 8;
+	    sp->q_code = 'k';
+
+	/* XXX */
+	sp = &series_info[S_500K];
+	    sp->series = S_500K;
+	    sp->cache = (struct maplet *) NULL;
+	    sp->cache_count = 0;
+	    sp->lat_count = 10;
+	    sp->long_count = 5;
+	    sp->lat_count_d = 1;
+	    sp->long_count_d = 1;
+	    sp->map_lat_deg = 1.0 / 8.0;
+	    sp->map_long_deg = 1.0 / 8.0;
+	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
+	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	    sp->q_code = 'X';
+	    sp->quad_lat_count = 1;
+	    sp->quad_long_count = 1;
+
+	/* XXX */
+	sp = &series_info[S_ATLAS];
+	    sp->series = S_ATLAS;
+	    sp->cache = (struct maplet *) NULL;
+	    sp->cache_count = 0;
+	    sp->lat_count = 10;
+	    sp->long_count = 5;
+	    sp->lat_count_d = 1;
+	    sp->long_count_d = 1;
+	    sp->map_lat_deg = 1.0 / 8.0;
+	    sp->map_long_deg = 1.0 / 8.0;
+	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
+	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	    sp->q_code = 'X';
+	    sp->quad_lat_count = 1;
+	    sp->quad_long_count = 1;
+
+	/* XXX - The entire state */
+	sp = &series_info[S_STATE];
+	    sp->series = S_STATE;
+	    sp->cache = (struct maplet *) NULL;
+	    sp->cache_count = 0;
+	    sp->lat_count = 1;
+	    sp->long_count = 1;
+	    sp->lat_count_d = 1;
+	    sp->long_count_d = 1;
+	    sp->q_code = 'X';
+	    sp->quad_lat_count = 1;
+	    sp->quad_long_count = 1;
+
+	    /* XXX - true for arizona */
+	    sp->map_lat_deg = 7.0;
+	    sp->map_long_deg = 7.0;
+	    sp->maplet_lat_deg = 7.0;
+	    sp->maplet_long_deg = 7.0;
+
+	    /* XXX - true for california */
+	    sp->map_lat_deg = 10.0;
+	    sp->map_long_deg = 11.0;
+	    sp->maplet_lat_deg = 10.0;
+	    sp->maplet_long_deg = 11.0;
 
 	for ( p=archives; *p; p++ ) {
 	    if ( add_archive ( *p ) )
@@ -74,106 +173,16 @@ archive_init ( char *archives[], int verbose_arg )
 void
 toggle_series ( void )
 {
-	if ( cur_pos.series == S_24K )
+	if ( info.series->series == S_24K )
 	    set_series ( S_100K );
 	else
 	    set_series ( S_24K );
 }
 
 void
-set_series ( enum series s )
+set_series ( enum s_type s )
 {
-	struct position *pos;
-
-	pos = &cur_pos;
-
-	pos->series = s;
-	pos->maplet_cache = maplets[s];
-
-	/* 7.5 minute quadrangle files
-	 * 64 of these in a square degree
-	 */
-	if ( s == S_24K ) {
-	    pos->lat_count = 10;
-	    pos->long_count = 5;
-	    pos->lat_count_d = 8;
-	    pos->long_count_d = 8;
-	    pos->map_lat_deg = 1.0 / 8.0;
-	    pos->map_long_deg = 1.0 / 8.0;
-	    pos->maplet_lat_deg = pos->map_lat_deg / pos->lat_count;
-	    pos->maplet_long_deg = pos->map_long_deg / pos->long_count;
-	    pos->quad_lat_count = 1;
-	    pos->quad_long_count = 1;
-	    pos->q_code = 'q';
-	}
-
-	/* 2 of these in a square degree
-	 * one of top of the other a1 and e1
-	 */
-	if ( s == S_100K ) {
-	    pos->lat_count = 8;
-	    pos->long_count = 16;
-	    pos->lat_count_d = 2;
-	    pos->long_count_d = 1;
-	    pos->map_lat_deg = 1.0 / 2.0;
-	    pos->map_long_deg = 1.0;
-	    pos->maplet_lat_deg = pos->map_lat_deg / pos->lat_count;
-	    pos->maplet_long_deg = pos->map_long_deg / pos->long_count;
-	    pos->quad_lat_count = 4;
-	    pos->quad_long_count = 8;
-	    pos->q_code = 'k';
-	}
-
-	if ( s == S_500K ) {
-	    pos->lat_count = 10;
-	    pos->long_count = 5;
-	    pos->lat_count_d = 1;
-	    pos->long_count_d = 1;
-	    pos->map_lat_deg = 1.0 / 8.0;
-	    pos->map_long_deg = 1.0 / 8.0;
-	    pos->maplet_lat_deg = pos->map_lat_deg / pos->lat_count;
-	    pos->maplet_long_deg = pos->map_long_deg / pos->long_count;
-	    pos->q_code = 'X';
-	    pos->quad_lat_count = 1;
-	    pos->quad_long_count = 1;
-	}
-
-	if ( s == S_ATLAS ) {
-	    pos->lat_count = 10;
-	    pos->long_count = 5;
-	    pos->lat_count_d = 1;
-	    pos->long_count_d = 1;
-	    pos->map_lat_deg = 1.0 / 8.0;
-	    pos->map_long_deg = 1.0 / 8.0;
-	    pos->maplet_lat_deg = pos->map_lat_deg / pos->lat_count;
-	    pos->maplet_long_deg = pos->map_long_deg / pos->long_count;
-	    pos->q_code = 'X';
-	    pos->quad_lat_count = 1;
-	    pos->quad_long_count = 1;
-	}
-
-	/* The entire state */
-	if ( s == S_STATE ) {
-	    pos->lat_count = 1;
-	    pos->long_count = 1;
-	    pos->lat_count_d = 1;
-	    pos->long_count_d = 1;
-	    pos->q_code = 'X';
-	    pos->quad_lat_count = 1;
-	    pos->quad_long_count = 1;
-
-	    /* XXX - true for arizona */
-	    pos->map_lat_deg = 7.0;
-	    pos->map_long_deg = 7.0;
-	    pos->maplet_lat_deg = 7.0;
-	    pos->maplet_long_deg = 7.0;
-
-	    /* XXX - true for california */
-	    pos->map_lat_deg = 10.0;
-	    pos->map_long_deg = 11.0;
-	    pos->maplet_lat_deg = 10.0;
-	    pos->maplet_long_deg = 11.0;
-	}
+	info.series = &series_info[s];
 }
 
 /* Try both upper and lower case path names for the tpq file
@@ -192,10 +201,10 @@ quad_path ( char *section_path, int lat_section, int long_section, int lat_quad,
 	 * For the 100K series, within a section, we only get 
 	 *  k37118a1 and k37118e1
 	 */
-	lat_q  = 'a' + lat_quad * cur_pos.quad_lat_count;
-	long_q = '1' + long_quad * cur_pos.quad_long_count;
+	lat_q  = 'a' + lat_quad * info.series->quad_lat_count;
+	long_q = '1' + long_quad * info.series->quad_long_count;
 
-	series_q = cur_pos.q_code;
+	series_q = info.series->q_code;
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", section_path, series_q, lat_section, long_section, lat_q, long_q );
 	printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
@@ -223,15 +232,18 @@ quad_path ( char *section_path, int lat_section, int long_section, int lat_quad,
  * on the same sheet as the center maplet.
  */
 int
-lookup_quad_nbr ( struct position *pos, struct maplet *mp, int maplet_lat, int maplet_long )
+lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 {
+	struct series *sp;
 	int lat_section, long_section;
 	int lat_quad, long_quad;
 	int m_long, m_lat;
 	char *section_path;
 
-	lat_section = maplet_lat / (pos->lat_count_d * pos->lat_count);
-	long_section = maplet_long / (pos->long_count_d * pos->long_count);
+	sp = info.series;
+
+	lat_section = maplet_lat / (sp->lat_count_d * sp->lat_count);
+	long_section = maplet_long / (sp->long_count_d * sp->long_count);
 
 	printf ( "lookup_quad_nbr: %d %d\n", lat_section, long_section );
 
@@ -241,8 +253,8 @@ lookup_quad_nbr ( struct position *pos, struct maplet *mp, int maplet_lat, int m
 
 	printf ("lookup_quad_nbr, found section: %s\n", section_path );
 
-	lat_quad = maplet_lat / pos->lat_count - lat_section * pos->lat_count_d;
-	long_quad = maplet_long / pos->long_count - long_section * pos->long_count_d;
+	lat_quad = maplet_lat / sp->lat_count - lat_section * sp->lat_count_d;
+	long_quad = maplet_long / sp->long_count - long_section * sp->long_count_d;
 
 	/* See if the map sheet is available.
 	 */
@@ -252,14 +264,14 @@ lookup_quad_nbr ( struct position *pos, struct maplet *mp, int maplet_lat, int m
 
 	/* Now figure which maplet within the sheet we need.
 	 */
-	m_long = maplet_long - long_quad * pos->long_count - long_section * pos->long_count * pos->long_count_d;
-	m_lat = maplet_lat - lat_quad * pos->lat_count - lat_section * pos->lat_count * pos->lat_count_d;
+	m_long = maplet_long - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
+	m_lat = maplet_lat - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
 
 	printf ( "lat/long quad, lat/long maplet: %d %d  %d %d\n", lat_quad, long_quad, maplet_lat, maplet_long );
 
 	/* flip the count to origin from the NW corner */
-	mp->x_maplet = pos->long_count - m_long - 1;
-	mp->y_maplet = pos->lat_count - m_lat - 1;
+	mp->x_maplet = sp->long_count - m_long - 1;
+	mp->y_maplet = sp->lat_count - m_lat - 1;
 
 	return 1;
 }
@@ -275,8 +287,9 @@ lookup_quad_nbr ( struct position *pos, struct maplet *mp, int maplet_lat, int m
  * i.e longitude become 1-8, latitude a-h
  */
 int
-lookup_quad ( struct position *pos, struct maplet *mp )
+lookup_quad ( struct maplet *mp )
 {
+	struct series *sp;
 	int lat_section, long_section;
 	int lat_quad, long_quad;
 	double maplet_long;
@@ -285,13 +298,15 @@ lookup_quad ( struct position *pos, struct maplet *mp )
 	double long_deg_quad;
 	char *section_path;
 
+	sp = info.series;
+
 	/* section indices tell us which 1x1 degree chunk
 	 * of the world we are dealing with
 	 */
-	lat_section = pos->lat_deg;
-	long_section = pos->long_deg;
+	lat_section = info.lat_deg;
+	long_section = info.long_deg;
 
-	printf ( "lookup for %.4f, %.4f\n", pos->lat_deg, pos->long_deg );
+	printf ( "lookup for %.4f, %.4f\n", info.lat_deg, info.long_deg );
 
 	section_path = lookup_section ( lat_section, long_section );
 	if ( ! section_path )
@@ -300,8 +315,8 @@ lookup_quad ( struct position *pos, struct maplet *mp )
 	/* This gives a unique index for the map.
 	 * (0-7 for 7.5 minute quads).
 	 */
-	lat_quad = (pos->lat_deg  - (double)lat_section) / pos->map_lat_deg;
-	long_quad = (pos->long_deg - (double)long_section) / pos->map_long_deg;
+	lat_quad = (info.lat_deg  - (double)lat_section) / sp->map_lat_deg;
+	long_quad = (info.long_deg - (double)long_section) / sp->map_long_deg;
 
 	/* See if the map sheet is available.
 	 */
@@ -311,16 +326,16 @@ lookup_quad ( struct position *pos, struct maplet *mp )
 
 	/* Now figure which maplet within the sheet we need.
 	 */
-	lat_deg_quad = pos->lat_deg - (double)lat_section - ((double)lat_quad) * pos->map_lat_deg;
-	long_deg_quad = pos->long_deg - (double)long_section - ((double)long_quad) * pos->map_long_deg;
+	lat_deg_quad = info.lat_deg - (double)lat_section - ((double)lat_quad) * sp->map_lat_deg;
+	long_deg_quad = info.long_deg - (double)long_section - ((double)long_quad) * sp->map_long_deg;
 
 	/* These count from E to W and from S to N */
-	maplet_long = long_deg_quad / pos->maplet_long_deg;
-	maplet_lat = lat_deg_quad / pos->maplet_lat_deg;
+	maplet_long = long_deg_quad / sp->maplet_long_deg;
+	maplet_lat = lat_deg_quad / sp->maplet_lat_deg;
 
 	/* flip the count to origin from the NW corner */
-	mp->x_maplet = pos->long_count - (int) maplet_long - 1;
-	mp->y_maplet = pos->lat_count - (int) maplet_lat - 1;
+	mp->x_maplet = sp->long_count - (int) maplet_long - 1;
+	mp->y_maplet = sp->lat_count - (int) maplet_lat - 1;
 
 	return 1;
 }

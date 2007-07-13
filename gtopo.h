@@ -1,23 +1,24 @@
 /* gtopo.h
  */
 
-enum series { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
 #define N_SERIES	5
 
-/* Structure to define our current position */
-struct position {
-	/* This is where we are in plain old degrees */
-	double lat_deg;
-	double long_deg;
-
-	/* What map series we are viewing */
-	enum series series;
+struct series {
+	/* What series this is */
+	enum s_type series;
 
 	/* pointer to the maplet cache for the
 	 * current series
 	 */
-	struct maplet *maplet_cache;
+	struct maplet *cache;
+	int cache_count;
+
+	/* This is a pointer to the maplet which
+	 * contains the current position.
+	 */
+	struct maplet *center;
 
 	/* How many maplets per TPQ file */
 	int lat_count;
@@ -48,11 +49,18 @@ struct position {
 
 	/* first letter in a map name for this series 'q' for 7.5 */
 	int q_code;
+};
 
-	/* This is a pointer to the maplet which
-	 * contains the current position.
-	 */
-	struct maplet *maplet;
+/* Structure to hold our current position */
+struct topo_info {
+	/* This is where we are in plain old degrees */
+	double lat_deg;
+	double long_deg;
+
+	/* what series we be lookin' at */
+	struct series *series;
+
+	int verbose;
 };
 
 /* This is set up by load_maplet() and lookup_quad()
@@ -89,12 +97,13 @@ void build_tpq_index ( char * );
 GdkPixbuf *load_tpq_maplet ( char *, int );
 
 /* from maplet.c */
-struct maplet *load_maplet ( struct position * );
-struct maplet *load_maplet_nbr ( struct position *, int, int );
+struct maplet *load_maplet ( void );
+struct maplet *load_maplet_nbr ( int, int );
 
 /* from archive.c */
 int archive_init ( char **, int );
-int lookup_quad ( struct position *, struct maplet * );
-void set_series ( enum series );
+int lookup_quad ( struct maplet * );
+int lookup_quad_nbr ( struct maplet *, int, int );
+void set_series ( enum s_type );
 
 /* THE END */
