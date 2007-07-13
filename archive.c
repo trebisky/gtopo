@@ -72,8 +72,21 @@ archive_init ( char *archives[], int verbose_arg )
 }
 
 void
-set_series ( struct position *pos, enum series s )
+toggle_series ( void )
 {
+	if ( cur_pos.series == S_24K )
+	    set_series ( S_100K );
+	else
+	    set_series ( S_24K );
+}
+
+void
+set_series ( enum series s )
+{
+	struct position *pos;
+
+	pos = &cur_pos;
+
 	pos->series = s;
 	pos->maplet_cache = maplets[s];
 

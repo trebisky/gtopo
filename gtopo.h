@@ -95,5 +95,6 @@ struct maplet *load_maplet_nbr ( struct position *, int, int );
 /* from archive.c */
 int archive_init ( char **, int );
 int lookup_quad ( struct position *, struct maplet * );
+void set_series ( enum series );
 
 /* THE END */

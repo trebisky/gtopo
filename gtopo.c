@@ -265,6 +265,13 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	printf ( "Button event %d %.3f %.3f in (%d %d)\n",
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
+	if ( event->button != 1 ) {
+	    toggle_series ();
+	    pixmap_redraw ();
+	    pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+	    return TRUE;
+	}
+
 	/* viewport center */
 	vxcent = vp_info.vx / 2;
 	vycent = vp_info.vy / 2;
@@ -407,11 +414,13 @@ main ( int argc, char **argv )
 	cur_pos.lat_deg = dms2deg ( 37, 1, 0 );
 	cur_pos.long_deg = dms2deg ( 118, 31, 0 );
 
-	set_series ( &cur_pos, S_STATE );
-	set_series ( &cur_pos, S_ATLAS );
-	set_series ( &cur_pos, S_500K );
-	set_series ( &cur_pos, S_24K );
-	set_series ( &cur_pos, S_100K );
+	set_series ( S_STATE );
+	set_series ( S_ATLAS );
+	set_series ( S_500K );
+	set_series ( S_24K );
+	set_series ( S_100K );
+
+	set_series ( S_24K );
 
 	vp_info.vx = 800;
 	vp_info.vy = 800;
