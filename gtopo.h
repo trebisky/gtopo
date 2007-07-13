@@ -15,6 +15,12 @@ struct series {
 	struct maplet *cache;
 	int cache_count;
 
+	/* pixmap for this series */
+	GdkPixmap *pixels;
+
+	/* boolean, true if pixmap content is OK */
+	int content;
+
 	/* This is a pointer to the maplet which
 	 * contains the current position.
 	 */

@@ -14,7 +14,7 @@
 
 extern struct topo_info info;
 
-struct series series_info[N_SERIES];
+static struct series series_info[N_SERIES];
 
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
  * part of gtopo.c as of version 0.5.
@@ -53,6 +53,30 @@ strhide ( char *data )
 	return rv;
 }
 
+/* What we want here are a couple of interators.
+ * This is kinda goofy, but I like having the series
+ * structure local to this file only ...
+ */
+void
+invalidate_pixels ( void )
+{
+	int i;
+
+	for ( i=0; i<N_SERIES; i++ ) {
+	    free_pixels ( &series_info[i] );
+	    series_info[i].content = 0;
+	}
+}
+
+void
+invalidate_pixel_content ( void )
+{
+	int i;
+
+	for ( i=0; i<N_SERIES; i++ )
+	    series_info[i].content = 0;
+}
+
 int
 archive_init ( char *archives[], int verbose_arg )
 {
@@ -70,6 +94,9 @@ archive_init ( char *archives[], int verbose_arg )
 	    sp->series = S_24K;
 	    sp->cache = (struct maplet *) NULL;
 	    sp->cache_count = 0;
+	    sp->pixels = NULL;
+	    sp->content = 0;
+
 	    sp->lat_count = 10;
 	    sp->long_count = 5;
 	    sp->lat_count_d = 8;
@@ -89,6 +116,9 @@ archive_init ( char *archives[], int verbose_arg )
 	    sp->series = S_100K;
 	    sp->cache = (struct maplet *) NULL;
 	    sp->cache_count = 0;
+	    sp->pixels = NULL;
+	    sp->content = 0;
+
 	    sp->lat_count = 8;
 	    sp->long_count = 16;
 	    sp->lat_count_d = 2;
@@ -106,6 +136,9 @@ archive_init ( char *archives[], int verbose_arg )
 	    sp->series = S_500K;
 	    sp->cache = (struct maplet *) NULL;
 	    sp->cache_count = 0;
+	    sp->pixels = NULL;
+	    sp->content = 0;
+
 	    sp->lat_count = 10;
 	    sp->long_count = 5;
 	    sp->lat_count_d = 1;
@@ -123,6 +156,9 @@ archive_init ( char *archives[], int verbose_arg )
 	    sp->series = S_ATLAS;
 	    sp->cache = (struct maplet *) NULL;
 	    sp->cache_count = 0;
+	    sp->pixels = NULL;
+	    sp->content = 0;
+
 	    sp->lat_count = 10;
 	    sp->long_count = 5;
 	    sp->lat_count_d = 1;
@@ -140,6 +176,9 @@ archive_init ( char *archives[], int verbose_arg )
 	    sp->series = S_STATE;
 	    sp->cache = (struct maplet *) NULL;
 	    sp->cache_count = 0;
+	    sp->pixels = NULL;
+	    sp->content = 0;
+
 	    sp->lat_count = 1;
 	    sp->long_count = 1;
 	    sp->lat_count_d = 1;

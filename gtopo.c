@@ -33,6 +33,7 @@
  *	jumps from sheet to sheet cleanly 7/11/2007
  * version 0.8 - add alternate series support.
  	works for 100K series 7/12/2007
+	add series structure and reorganize 7/13/2007
  *
  *  TODO
  *   - fix bug that warps map NS in Arizona.
@@ -103,7 +104,6 @@ struct viewport {
 	int vx;
 	int vy;
 	GtkWidget *da;
-	GdkPixmap *pixels;
 } vp_info;
 
 /* Prototypes ..........
@@ -139,7 +139,7 @@ pixmap_expose ( gint x, gint y, gint nx, gint ny )
 {
 	gdk_draw_pixmap ( vp_info.da->window,
 		vp_info.da->style->fg_gc[GTK_WIDGET_STATE(vp_info.da)],
-		vp_info.pixels,
+		info.series->pixels,
 		x, y, x, y, nx, ny );
 }
 
@@ -168,7 +168,7 @@ expose_handler ( GtkWidget *wp, GdkEventExpose *ep, gpointer data )
 void
 draw_maplet ( GdkPixbuf *map, int x, int y )
 {
-	gdk_draw_pixbuf ( vp_info.pixels, NULL, map,
+	gdk_draw_pixbuf ( info.series->pixels, NULL, map,
 		SRC_X, SRC_Y, x, y, -1, -1,
 		GDK_RGB_DITHER_NONE, 0, 0 );
 }
@@ -194,7 +194,9 @@ pixmap_redraw ( void )
 	vycent = vydim / 2;
 
 	/* clear the whole pixmap to white */
-	gdk_draw_rectangle ( vp_info.pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
+	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
+
+	info.series->content = 1;
 
 	mp = load_maplet ();
 	info.series->center = mp;
@@ -237,7 +239,7 @@ pixmap_redraw ( void )
 	}
 
 	/* mark center */
-	gdk_draw_rectangle ( vp_info.pixels, vp_info.da->style->black_gc, TRUE, vxcent-1, vycent-1, 3, 3 );
+	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE, vxcent-1, vycent-1, 3, 3 );
 }
 
 static int config_count = 0;
@@ -257,15 +259,21 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	if ( verbose_opt )
 	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
 
-	/* Avoid memory leak */
-	if ( vp_info.pixels )
-	    gdk_pixmap_unref ( vp_info.pixels );
+	invalidate_pixels ();
 
-	vp_info.pixels = gdk_pixmap_new ( wp->window, vxdim, vydim, -1 );
-
+	info.series->pixels = gdk_pixmap_new ( wp->window, vxdim, vydim, -1 );
 	pixmap_redraw ();
 
 	return TRUE;
+}
+
+void
+free_pixels ( struct series *sp )
+{
+	/* Avoid memory leak */
+	if ( sp->pixels )
+	    gdk_pixmap_unref ( sp->pixels );
+	sp->pixels = NULL;
 }
 
 gint
@@ -281,9 +289,13 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	printf ( "Button event %d %.3f %.3f in (%d %d)\n",
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
+	/* flip to new series, may be able to avoid redrawing the pixmap */
 	if ( event->button != 1 ) {
 	    toggle_series ();
-	    pixmap_redraw ();
+	    if ( ! info.series->pixels )
+		info.series->pixels = gdk_pixmap_new ( wp->window, vp_info.vx, vp_info.vy, -1 );
+	    if ( ! info.series->content )
+		pixmap_redraw ();
 	    pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
 	    return TRUE;
 	}
@@ -319,6 +331,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 
 	printf ( "New position (lat/long) %.4f %.4f\n",
 		info.lat_deg, info.long_deg );
+
+	invalidate_pixel_content ();
 
 	/* redraw on the new center */
 	pixmap_redraw ();
