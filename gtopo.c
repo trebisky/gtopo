@@ -445,9 +445,11 @@ main ( int argc, char **argv )
 	info.lat_deg = dms2deg ( 37, 1, 0 );
 	info.long_deg = dms2deg ( 118, 31, 0 );
 
+#ifdef notdef
 	/* Mt. Hopkins, Arizona */
 	info.lat_deg = 31.69;
 	info.long_deg = 110.88;
+#endif
 
 	set_series ( S_STATE );
 	set_series ( S_ATLAS );
