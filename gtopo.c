@@ -7,6 +7,11 @@
 
 #include "gtopo.h"
 
+#define CENTER_ONLY
+
+#define MINIMUM_VIEW	100
+#define INITIAL_VIEW	800
+
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
  *
  * version 0.1 - really just a JPG file display gizmo, but
@@ -71,8 +76,6 @@
  * - for Arizona, we get 4 tpq files:
  *   F30105.tpq, F30110, F35105, F35110
  */
-
-int verbose_opt = 0;
 
 struct topo_info info;
 
@@ -148,7 +151,7 @@ static int expose_count = 0;
 gint
 expose_handler ( GtkWidget *wp, GdkEventExpose *ep, gpointer data )
 {
-	if ( verbose_opt && expose_count < 4 )
+	if ( info.verbose && expose_count < 4 )
 	    printf ( "Expose event %d\n", expose_count++ );
 
     	pixmap_expose ( ep->area.x, ep->area.y, ep->area.width, ep->area.height );
@@ -166,10 +169,11 @@ expose_handler ( GtkWidget *wp, GdkEventExpose *ep, gpointer data )
 #define SRC_Y	0
 
 void
-draw_maplet ( GdkPixbuf *map, int x, int y )
+draw_maplet ( struct maplet *mp, int x, int y )
 {
-	gdk_draw_pixbuf ( info.series->pixels, NULL, map,
-		SRC_X, SRC_Y, x, y, -1, -1,
+	gdk_draw_pixbuf ( info.series->pixels, NULL, mp->pixbuf,
+/*		SRC_X, SRC_Y, x, y, -1, -1,	*/
+		SRC_X, SRC_Y, x, y, mp->xdim, mp->ydim,
 		GDK_RGB_DITHER_NONE, 0, 0 );
 }
 
@@ -204,13 +208,13 @@ pixmap_redraw ( void )
 	if ( mp ) {
 	    /* location of the center within the maplet */
 	    offx = info.series->fx * mp->xdim;
-	    offy = info.series->fy * mp->ydim;;
+	    offy = info.series->fy * mp->ydim;
 
 	    origx = vxcent - offx;
 	    origy = vycent - offy;
 	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 
-	    draw_maplet ( mp->pixbuf, origx, origy );
+	    draw_maplet ( mp, origx, origy );
 
 	    nx1 = (origx + mp->xdim - 1 ) / mp->xdim;
 	    nx2 = (vxdim - (origx + mp->xdim) + mp->xdim - 1 ) / mp->xdim;
@@ -221,8 +225,7 @@ pixmap_redraw ( void )
 	    	vxdim, vydim, mp->xdim, mp->ydim, offx, offy );
 	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
 
-#define DRAW_AROUND
-#ifdef DRAW_AROUND
+#ifndef CENTER_ONLY
 	    for ( y = -ny1; y <= ny2; y++ ) {
 		for ( x = -nx1; x <= nx2; x++ ) {
 		    if ( x == 0 && y == 0 )
@@ -230,7 +233,7 @@ pixmap_redraw ( void )
 		    mp = load_maplet_nbr ( x, y );
 		    if ( ! mp )
 			continue;
-		    draw_maplet ( mp->pixbuf,
+		    draw_maplet ( mp,
 			    vxcent-offx + mp->xdim * x,
 			    vycent-offy + mp->ydim * y );
 		}
@@ -252,11 +255,18 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 {
 	int vxdim, vydim;
 
+	/* XXX - at this point we would like to resize ourself
+	 * to INITIAL_VIEW.
+	 */
+	if ( info.initial ) {
+	    info.initial = 0;
+	}
+
 	/* get the viewport size */
 	vp_info.vx = vxdim = wp->allocation.width;
 	vp_info.vy = vydim = wp->allocation.height;
 
-	if ( verbose_opt )
+	if ( info.verbose )
 	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
 
 	invalidate_pixels ();
@@ -388,13 +398,16 @@ main ( int argc, char **argv )
 	argc--;
 	argv++;
 
+	info.verbose = 0;
+	info.initial = 1;
+
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-v" ) == 0 )
-	    	verbose_opt = 1;
+	    	info.verbose = 1;
 	}
 
-	archive_init ( topo_archives, verbose_opt );
+	archive_init ( topo_archives );
 
 	main_window = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
 
@@ -446,10 +459,10 @@ main ( int argc, char **argv )
 	info.long_deg = dms2deg ( 118, 31, 0 );
 
 #ifdef notdef
+#endif
 	/* Mt. Hopkins, Arizona */
 	info.lat_deg = 31.69;
 	info.long_deg = 110.88;
-#endif
 
 	set_series ( S_STATE );
 	set_series ( S_ATLAS );
@@ -459,13 +472,13 @@ main ( int argc, char **argv )
 
 	set_series ( S_24K );
 
-	vp_info.vx = 800;
-	vp_info.vy = 800;
+	vp_info.vx = MINIMUM_VIEW;
+	vp_info.vy = MINIMUM_VIEW;
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), vp_info.vx, vp_info.vy );
 
 	gtk_widget_show ( vp_info.da );
 
-	if ( verbose_opt )
+	if ( info.verbose )
 	    printf ( "single maplet size: %d by %d\n", w, h );
 
 	gtk_main ();

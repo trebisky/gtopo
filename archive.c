@@ -35,8 +35,6 @@ struct _section {
 
 struct _section *section_head;
 
-static int verbose = 0;
-
 /* Prototypes ... */
 int add_archive ( char * );
 int add_disk ( char *, char * );
@@ -78,14 +76,13 @@ invalidate_pixel_content ( void )
 }
 
 int
-archive_init ( char *archives[], int verbose_arg )
+archive_init ( char *archives[] )
 {
 	char **p;
 	int nar = 0;
 	struct series *sp;
 
 	section_head = (struct _section *) NULL;
-	verbose = verbose_arg;
 
 	/* 7.5 minute quadrangle files
 	 * 64 of these in a square degree
@@ -202,7 +199,7 @@ archive_init ( char *archives[], int verbose_arg )
 	for ( p=archives; *p; p++ ) {
 	    if ( add_archive ( *p ) )
 		nar++;
-	    else if ( verbose )
+	    else if ( info.verbose )
 	    	printf ( "Not a topo archive: %s\n", *p );
 	}
 
@@ -432,7 +429,7 @@ add_disk ( char *archive, char *disk )
 	if ( ! (dd = opendir ( disk_path )) )
 	    return 0;
 
-	if ( verbose )
+	if ( info.verbose )
 	    printf ( "Found disk: %s\n", disk_path );
 
 	/* Loop through this disk image.
@@ -484,7 +481,7 @@ add_section ( char *disk, char *section )
 	sp->next = section_head;
 	section_head = sp;
 
-	if ( verbose )
+	if ( info.verbose )
 	    printf ( "Added section: %d  %s\n", sp->latlong, section_path );
 
 	return 1;

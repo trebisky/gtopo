@@ -67,6 +67,8 @@ struct topo_info {
 	struct series *series;
 
 	int verbose;
+
+	int initial;
 };
 
 /* This is set up by load_maplet() and lookup_quad()
@@ -107,7 +109,7 @@ struct maplet *load_maplet ( void );
 struct maplet *load_maplet_nbr ( int, int );
 
 /* from archive.c */
-int archive_init ( char **, int );
+int archive_init ( char ** );
 int lookup_quad ( struct maplet * );
 int lookup_quad_nbr ( struct maplet *, int, int );
 void set_series ( enum s_type );
