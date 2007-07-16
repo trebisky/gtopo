@@ -7,7 +7,9 @@
 
 #include "gtopo.h"
 
+/*
 #define CENTER_ONLY
+*/
 
 #define MINIMUM_VIEW	100
 #define INITIAL_VIEW	800
@@ -172,8 +174,7 @@ void
 draw_maplet ( struct maplet *mp, int x, int y )
 {
 	gdk_draw_pixbuf ( info.series->pixels, NULL, mp->pixbuf,
-/*		SRC_X, SRC_Y, x, y, -1, -1,	*/
-		SRC_X, SRC_Y, x, y, mp->xdim, mp->ydim,
+		SRC_X, SRC_Y, x, y, -1, -1,
 		GDK_RGB_DITHER_NONE, 0, 0 );
 }
 

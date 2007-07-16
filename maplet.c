@@ -12,6 +12,8 @@
 
 extern struct topo_info info;
 
+static void load_maplet_scale ( struct maplet *, int );
+
 /* XXX - 
  * I have had the maplet cache get up to 2500 entries without
  * any trouble, but someday may want to monitor the size and
@@ -70,7 +72,7 @@ load_maplet_quad ( int maplet_lat, int maplet_long )
 	    return NULL;
 	}
 
-	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, mp->y_maplet * sp->long_count + mp->x_maplet );
+	load_maplet_scale ( mp, mp->y_maplet * sp->long_count + mp->x_maplet );
 
 	/* get the maplet size */
 	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
@@ -148,7 +150,7 @@ load_maplet_nbr ( int x, int y )
 	 */
 	mp->tpq_path = cmp->tpq_path;
 
-	mp->pixbuf = load_tpq_maplet ( cmp->tpq_path, y_maplet * sp->long_count + x_maplet );
+	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
 
 	/* get the maplet size */
 	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
@@ -223,7 +225,7 @@ load_maplet ( void )
 	printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count, x_maplet, y_maplet,
 	    maplet_index_lat, maplet_index_long );
 
-	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, y_maplet * sp->long_count + x_maplet );
+	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
 
 	/* get the maplet size */
 	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
@@ -236,6 +238,37 @@ load_maplet ( void )
 	sp->cache = mp;
 
 	return mp;
+}
+
+#define SCALE_HACK
+
+/* This need to scale popped up with the Mt. Hopkins quadrangle
+ * which has 330x256 maplets, and to have equal x/y pixel scales
+ * ought to have 436x256 maplets or so.  Most quadrangles do have
+ * maplets that give square pixels in ground distances, but this
+ * one doesn't, and perhaps others don't as well.
+ * XXX - just wired in the hack for this quadrangle.
+ * What is needed is some kind of test against 512*cos(lat).
+ * For two areas where the pixel scale is correct, we see:
+ *
+ * Taboose pass area (has 410x256 maplets), 512*cos(37.017) = 408.8
+ * O'Neill Hills (has 436x256 maplets), 512*cos(32) = 434.2
+ * Mt. Hopkins (has 330x256 maplets), 512*cos(31.69) = 435.66
+ *
+ * Bilinear interpolation looks flawless by the way ...
+ */
+void
+load_maplet_scale ( struct maplet *mp, int index )
+{
+#ifdef SCALE_HACK
+	GdkPixbuf *tmp;
+
+	tmp = load_tpq_maplet ( mp->tpq_path, index );
+        mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, 436, 256, GDK_INTERP_BILINEAR );
+        gdk_pixbuf_unref ( tmp );
+#else
+	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, index );
+#endif
 }
 
 /* THE END */
