@@ -5,6 +5,9 @@ enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
 #define N_SERIES	5
 
+#define PI		3.141592654
+#define DEGTORAD	(PI/180.0)
+
 struct series {
 	/* What series this is */
 	enum s_type series;

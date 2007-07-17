@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <math.h>
 
 #include "gtopo.h"
 
@@ -72,14 +73,10 @@ load_maplet_quad ( int maplet_lat, int maplet_long )
 	    return NULL;
 	}
 
-	load_maplet_scale ( mp, mp->y_maplet * sp->long_count + mp->x_maplet );
-
-	/* get the maplet size */
-	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
-	mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
-
 	mp->maplet_index_lat = maplet_lat;
 	mp->maplet_index_long = maplet_long;
+
+	load_maplet_scale ( mp, mp->y_maplet * sp->long_count + mp->x_maplet );
 
 	mp->next = sp->cache;
 	sp->cache = mp;
@@ -150,14 +147,10 @@ load_maplet_nbr ( int x, int y )
 	 */
 	mp->tpq_path = cmp->tpq_path;
 
-	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
-
-	/* get the maplet size */
-	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
-	mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
-
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
+
+	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
 
 	mp->next = sp->cache;
 	sp->cache = mp;
@@ -225,14 +218,10 @@ load_maplet ( void )
 	printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count, x_maplet, y_maplet,
 	    maplet_index_lat, maplet_index_long );
 
-	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
-
-	/* get the maplet size */
-	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
-	mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
-
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
+
+	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
 
 	mp->next = sp->cache;
 	sp->cache = mp;
@@ -260,15 +249,40 @@ load_maplet ( void )
 void
 load_maplet_scale ( struct maplet *mp, int index )
 {
-#ifdef SCALE_HACK
 	GdkPixbuf *tmp;
+	double lat_deg;
+	double pixel_width;
+	int pixel_norm;
+	struct series *sp;
+
+	sp = info.series;
+
+	lat_deg = mp->maplet_index_lat * sp->maplet_lat_deg;
 
 	tmp = load_tpq_maplet ( mp->tpq_path, index );
-        mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, 436, 256, GDK_INTERP_BILINEAR );
-        gdk_pixbuf_unref ( tmp );
-#else
-	mp->pixbuf = load_tpq_maplet ( mp->tpq_path, index );
-#endif
+
+	/* get the maplet size */
+	mp->xdim = gdk_pixbuf_get_width ( tmp );
+	mp->ydim = gdk_pixbuf_get_height ( tmp );
+
+	/* The usual situation here with a 7.5 minute quad is that the
+	 * maplets are 256 tall by 512 wide, before fussing with cos(lat)
+	 */
+	pixel_width = mp->ydim * sp->maplet_long_deg / sp->maplet_lat_deg;
+	pixel_width *= cos ( lat_deg * DEGTORAD );
+	pixel_norm = pixel_width;
+	printf ( "maplet scale: %d %d --> %d %d\n", mp->xdim, mp->ydim, pixel_norm, mp->ydim );
+
+	if ( mp->xdim < pixel_norm - 8 || mp->xdim > pixel_norm + 8 ) {
+	    printf ( "SCALING\n" );
+	    mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, pixel_norm, mp->ydim, GDK_INTERP_BILINEAR );
+	    gdk_pixbuf_unref ( tmp );
+	    mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
+	    mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
+	} else {
+	    printf ( "NOT -- SCALING\n" );
+	    mp->pixbuf = tmp;
+	}
 }
 
 /* THE END */
