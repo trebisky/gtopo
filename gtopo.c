@@ -460,10 +460,10 @@ main ( int argc, char **argv )
 	info.long_deg = dms2deg ( 118, 31, 0 );
 
 #ifdef notdef
-#endif
 	/* Mt. Hopkins, Arizona */
 	info.lat_deg = 31.69;
 	info.long_deg = 110.88;
+#endif
 
 	set_series ( S_STATE );
 	set_series ( S_ATLAS );
