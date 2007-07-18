@@ -1,3 +1,8 @@
+/* Tom Trebisky  MMT Observatory, Tucson, Arizona
+ * archive.c -- navigate the directory structure
+ *  to find individual TPQ files.
+ * part of gtopo  7/6/2007
+ */
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>
 
@@ -16,9 +21,32 @@ extern struct topo_info info;
 
 static struct series series_info[N_SERIES];
 
-/* Tom Trebisky  MMT Observatory, Tucson, Arizona
- * part of gtopo.c as of version 0.5.
- * 7/6/2007
+/* There are 5 map series,
+ * level 1 is the state as a whole on the screen
+ * level 2 "national atlas"
+ * level 3 500K
+ * level 4 100K
+ * level 5 24K 7.5 minute quads in each TPQ file
+ *
+ * For California, level 3 is a single TPQ file
+ * with 440 maplets.  22 wide and 20 tall.
+ * Each maplet is 0.5 degrees square and is
+ * 384 pixels wide by 480 pixels tall.
+ * The pixel scale is true at latitude 36.87 degrees north
+ * Level 3 covers 114W to 125W and 32N to 42N.
+ *
+ * For Arizona, level 3 is 4 TPQ files, each
+ * covering a 5x5 degree area:
+ *	F30105 F30110 F35105 F35110
+ * Each tpq file holds 100 maplets (10x10),
+ * The lower two have 382x480 pixel maplets
+ * The upper two have 406x480 pixel maplets
+ *  each maplet is 0.5 degrees square.
+ * Level 3 covers 108W to 115W and 31N to 38N
+ *
+ * The Arizona set also has a directory that collects
+ * all the level 4 maps (AZ1_MAP4), which is unlike
+ * the California set.
  */
 
 /* This subsystem keeps a linked list of "sections"
@@ -26,6 +54,9 @@ static struct series series_info[N_SERIES];
  * to the nearest degree and be able to get a path to
  * the directory holding the stuff for that 1x1 degree
  * chunk of the world.
+ * XXX - when we are on a section on the edge of two
+ * states we may need to search two (or more) of these
+ * directories to find all the maps along the border.
  */
 struct _section {
 	struct _section *next;

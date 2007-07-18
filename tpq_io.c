@@ -19,8 +19,8 @@
 struct _tpq_file {
 	char ext[4];		/* ".jpg" or ".png" */
 	long _xxx[2];
-	long nlat;
 	long nlong;
+	long nlat;
 	char _xx[12];
 };
 
@@ -128,7 +128,7 @@ build_tpq_index ( char *name )
 	    error ( "Bad TPQ header read\n", name );
 
 	printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.name );
-	printf ( "TPQ file maplet counts lat/long: %d %d\n", tpq_header.maplet.nlat, tpq_header.maplet.nlong );
+	printf ( "TPQ file maplet counts lat/long: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
 
 	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
 	    error ( "Bad TPQ index read\n", name );
