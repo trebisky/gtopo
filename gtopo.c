@@ -476,6 +476,7 @@ main ( int argc, char **argv )
 	set_series ( S_100K );
 
 	set_series ( S_24K );
+	set_series ( S_500K );
 
 	vp_info.vx = MINIMUM_VIEW;
 	vp_info.vy = MINIMUM_VIEW;

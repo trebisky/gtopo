@@ -47,6 +47,16 @@ static struct series series_info[N_SERIES];
  * The Arizona set also has a directory that collects
  * all the level 4 maps (AZ1_MAP4), which is unlike
  * the California set.
+ *
+ * My really new Nevada set is different yet.
+ *  for level 3, there is a g41117a1 file that
+ *  contains 4 maplets.  The maplets for all of
+ *  the 3 states I have are 0.5 by 0.5 degrees.
+ *  For nevada there is one file per section,
+ *  with 4 maplets in it.  Arizona has the big
+ *  5x5 degree files with 100 maplets,
+ *  California has the one monster file for
+ *  the entire state.
  */
 
 /* This subsystem keeps a linked list of "sections"
@@ -54,12 +64,10 @@ static struct series series_info[N_SERIES];
  * to the nearest degree and be able to get a path to
  * the directory holding the stuff for that 1x1 degree
  * chunk of the world.
- * XXX - when we are on a section on the edge of two
- * states we may need to search two (or more) of these
- * directories to find all the maps along the border.
  */
 struct section {
 	struct section *next;
+	struct section *next_ll;
 	int	latlong;
 	char	*path;
 	int	q_code;
@@ -70,7 +78,7 @@ struct section *section_head;
 /* Prototypes ... */
 int add_archive ( char * );
 int add_disk ( char *, char * );
-static struct section *lookup_section ( int, int );
+static struct section *lookup_section ( int );
 
 char *
 strhide ( char *data )
@@ -117,6 +125,7 @@ archive_init ( char *archives[] )
 	section_head = (struct section *) NULL;
 
 	/* 7.5 minute quadrangle files
+	 * each in a single .tpq file
 	 * 64 of these in a square degree
 	 */
 	sp = &series_info[S_24K];
@@ -158,7 +167,10 @@ archive_init ( char *archives[] )
 	    sp->quad_lat_count = 4;
 	    sp->quad_long_count = 8;
 
-	/* XXX */
+	/* This varies from state to state, and the only
+	 * thing that seems constant is that the maplets
+	 * are 0.5 by 0.5 degrees on a side.
+	 */
 	sp = &series_info[S_500K];
 	    sp->series = S_500K;
 	    sp->cache = (struct maplet *) NULL;
@@ -166,16 +178,19 @@ archive_init ( char *archives[] )
 	    sp->pixels = NULL;
 	    sp->content = 0;
 
-	    sp->lat_count = 10;
-	    sp->long_count = 5;
+	    /* The following is only correct for Nevada
+	     * for nevada these are g-files
+	     */
+	    sp->lat_count = 2;
+	    sp->long_count = 2;
 	    sp->lat_count_d = 1;
 	    sp->long_count_d = 1;
-	    sp->map_lat_deg = 1.0 / 8.0;
-	    sp->map_long_deg = 1.0 / 8.0;
-	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
-	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
-	    sp->quad_lat_count = 1;
-	    sp->quad_long_count = 1;
+	    sp->map_lat_deg = 1.0;
+	    sp->map_long_deg = 1.0;
+	    sp->maplet_lat_deg = 0.5;
+	    sp->maplet_long_deg = 0.5;
+	    sp->quad_lat_count = 8;
+	    sp->quad_long_count = 8;
 
 	/* XXX */
 	sp = &series_info[S_ATLAS];
@@ -269,11 +284,15 @@ quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad,
 
 	/* XXX */
 	series_letter = ep->q_code;
-	if ( info.series->series != S_24K ) {
+	if ( info.series->series == S_100K ) {
 	    if ( series_letter == 'q' )
 		series_letter = 'k';
-	    else
+	    else /* Nevada */
 		series_letter = 'c';
+	}
+	if ( info.series->series == S_500K ) {
+		/* Nevada */
+		series_letter = 'g';
 	}
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
@@ -297,6 +316,27 @@ quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad,
 	return NULL;
 }
 
+static char *
+find_quad ( int lat_section, int long_section, int lat_quad, int long_quad )
+{
+	struct section *ep;
+	char *rv;
+
+	ep = lookup_section ( lat_section * 1000 + long_section );
+	if ( ! ep )
+	    return 0;
+
+	/* Handle the case along state boundaries where multiple section
+	 * directories cover the same area
+	 */
+	for ( ; ep; ep = ep->next_ll ) {
+	    rv = quad_path ( ep, lat_section, long_section, lat_quad, long_quad );
+	    if ( rv )
+	    	return rv;
+	}
+	return NULL;
+}
+
 /* This gets called when we are looking for a neighboring
  * maplet, have not found it in the cache, and it is not
  * on the same sheet as the center maplet.
@@ -317,18 +357,12 @@ lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 
 	printf ( "lookup_quad_nbr: %d %d\n", lat_section, long_section );
 
-	ep = lookup_section ( lat_section, long_section );
-	if ( ! ep )
-	    return 0;
-
-	printf ("lookup_quad_nbr, found section: %s\n", ep->path );
-
 	lat_quad = maplet_lat / sp->lat_count - lat_section * sp->lat_count_d;
 	long_quad = maplet_long / sp->long_count - long_section * sp->long_count_d;
 
 	/* See if the map sheet is available.
 	 */
-	mp->tpq_path = quad_path ( ep, lat_section, long_section, lat_quad, long_quad );
+	mp->tpq_path = find_quad ( lat_section, long_section, lat_quad, long_quad );
 	if ( ! mp->tpq_path )
 	    return 0;
 
@@ -378,19 +412,12 @@ lookup_quad ( struct maplet *mp )
 
 	printf ( "lookup for %.4f, %.4f\n", info.lat_deg, info.long_deg );
 
-	ep = lookup_section ( lat_section, long_section );
-	if ( ! ep )
-	    return 0;
-
-	/* This gives a unique index for the map.
-	 * (0-7 for 7.5 minute quads).
-	 */
 	lat_quad = (info.lat_deg  - (double)lat_section) / sp->map_lat_deg;
 	long_quad = (info.long_deg - (double)long_section) / sp->map_long_deg;
 
 	/* See if the map sheet is available.
 	 */
-	mp->tpq_path = quad_path ( ep, lat_section, long_section, lat_quad, long_quad );
+	mp->tpq_path = find_quad ( lat_section, long_section, lat_quad, long_quad );
 	if ( ! mp->tpq_path )
 	    return 0;
 
@@ -539,12 +566,15 @@ scan_section ( char *path )
  * piece of land, NOT a section in the one square mile land survey
  * nomenclature.  It is a directory that actually holds TPQ files
  * which represent individual 7.5 minute maps (and more!)
+ * Note that the same section can be covered by more than one path
+ * if it is on the boundary of several states.
  */
 int
 add_section ( char *disk, char *section )
 {
 	char section_path[100];
 	struct section *ep;
+	struct section *eep;
 	int quad_code;
 
 	sprintf ( section_path, "%s/%s", disk, section );
@@ -559,9 +589,25 @@ add_section ( char *disk, char *section )
 
 	ep->latlong = atol ( &section[1] );
 	ep->path = strhide ( section_path );
-	ep->next = section_head;
+	ep->next_ll = (struct section *) NULL;
+	ep->next = (struct section *) NULL;
 	ep->q_code = quad_code;
 
+	eep = lookup_section ( ep->latlong );
+
+	/* already have an entry on the main list,
+	 * so add this onto that entries sublist
+	 */
+	if ( eep ) {
+	    ep->next_ll = eep->next_ll;
+	    eep->next_ll = ep;
+	    if ( info.verbose )
+		printf ( "Added section (on border): %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );
+	    return 1;
+	}
+
+	/* entirely new entry, add to main list */
+	ep->next = section_head;
 	section_head = ep;
 
 	if ( info.verbose )
@@ -571,9 +617,8 @@ add_section ( char *disk, char *section )
 }
 
 static struct section *
-lookup_section ( int lat_section, int long_section )
+lookup_section ( int latlong )
 {
-	int latlong = lat_section * 1000 + long_section;
 	struct section *ep;
 
 	for ( ep = section_head; ep; ep = ep->next ) {
