@@ -253,6 +253,8 @@ toggle_series ( void )
 {
 	if ( info.series->series == S_24K )
 	    set_series ( S_100K );
+	else if ( info.series->series == S_100K )
+	    set_series ( S_500K );
 	else
 	    set_series ( S_24K );
 }
@@ -345,7 +347,6 @@ int
 lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 {
 	struct series *sp;
-	struct section *ep;
 	int lat_section, long_section;
 	int lat_quad, long_quad;
 	int m_long, m_lat;
@@ -394,7 +395,22 @@ int
 lookup_quad ( struct maplet *mp )
 {
 	struct series *sp;
-	struct section *ep;
+	int maplet_long;
+	int maplet_lat;
+
+	sp = info.series;
+
+	maplet_lat = info.lat_deg * sp->lat_count_d * sp->lat_count;
+	maplet_long = info.long_deg * sp->long_count_d * sp->long_count;
+
+	return lookup_quad_nbr ( mp, maplet_lat, maplet_long );
+}
+
+#ifdef notdef
+int
+lookup_quad ( struct maplet *mp )
+{
+	struct series *sp;
 	int lat_section, long_section;
 	int lat_quad, long_quad;
 	double maplet_long;
@@ -436,6 +452,7 @@ lookup_quad ( struct maplet *mp )
 
 	return 1;
 }
+#endif
 
 int
 add_archive ( char *archive )

@@ -37,7 +37,7 @@ struct series {
 	int lat_count_d;
 	int long_count_d;
 
-	/* How many 7.5 minute units per map */
+	/* How many 7.5 minute units per TPQ */
 	int quad_lat_count;
 	int quad_long_count;
 
