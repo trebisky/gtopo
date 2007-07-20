@@ -55,9 +55,6 @@ struct series {
 	 */
 	double fx;
 	double fy;
-
-	/* first letter in a map name for this series 'q' for 7.5 */
-	int q_code;
 };
 
 /* Structure to hold our current position */
