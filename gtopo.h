@@ -8,6 +8,12 @@ enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
 
+/* XXX - we need to introduce a tpq structure and link to it
+ * from other appropriate structures (probably just the maplet
+ * structure).  This is necessitated at level 3 where the TPQ
+ * file format changes from state to state.
+ */
+
 struct series {
 	/* What series this is */
 	enum s_type series;
