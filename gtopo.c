@@ -460,10 +460,14 @@ main ( int argc, char **argv )
 	info.long_deg = dms2deg ( 118, 31, 0 );
 
 #ifdef notdef
+#endif
 	/* Mt. Hopkins, Arizona */
 	info.lat_deg = 31.69;
 	info.long_deg = 110.88;
-#endif
+
+	/* Nevada */
+	info.lat_deg = 36.2338;
+	info.long_deg = 114.9894;
 
 	set_series ( S_STATE );
 	set_series ( S_ATLAS );
@@ -475,6 +479,9 @@ main ( int argc, char **argv )
 
 	vp_info.vx = MINIMUM_VIEW;
 	vp_info.vy = MINIMUM_VIEW;
+
+	vp_info.vx = INITIAL_VIEW;
+	vp_info.vy = INITIAL_VIEW;
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), vp_info.vx, vp_info.vy );
 
 	gtk_widget_show ( vp_info.da );

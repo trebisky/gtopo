@@ -58,18 +58,19 @@ static struct series series_info[N_SERIES];
  * states we may need to search two (or more) of these
  * directories to find all the maps along the border.
  */
-struct _section {
-	struct _section *next;
+struct section {
+	struct section *next;
 	int	latlong;
 	char	*path;
+	int	q_code;
 };
 
-struct _section *section_head;
+struct section *section_head;
 
 /* Prototypes ... */
 int add_archive ( char * );
 int add_disk ( char *, char * );
-char *lookup_section ( int, int );
+static struct section *lookup_section ( int, int );
 
 char *
 strhide ( char *data )
@@ -113,7 +114,7 @@ archive_init ( char *archives[] )
 	int nar = 0;
 	struct series *sp;
 
-	section_head = (struct _section *) NULL;
+	section_head = (struct section *) NULL;
 
 	/* 7.5 minute quadrangle files
 	 * 64 of these in a square degree
@@ -135,7 +136,6 @@ archive_init ( char *archives[] )
 	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
-	    sp->q_code = 'q';
 
 	/* 2 of these in a square degree
 	 * one of top of the other a1 and e1
@@ -157,7 +157,6 @@ archive_init ( char *archives[] )
 	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
 	    sp->quad_lat_count = 4;
 	    sp->quad_long_count = 8;
-	    sp->q_code = 'k';
 
 	/* XXX */
 	sp = &series_info[S_500K];
@@ -175,7 +174,6 @@ archive_init ( char *archives[] )
 	    sp->map_long_deg = 1.0 / 8.0;
 	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
 	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
-	    sp->q_code = 'X';
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 
@@ -195,7 +193,6 @@ archive_init ( char *archives[] )
 	    sp->map_long_deg = 1.0 / 8.0;
 	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
 	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
-	    sp->q_code = 'X';
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 
@@ -211,7 +208,6 @@ archive_init ( char *archives[] )
 	    sp->long_count = 1;
 	    sp->lat_count_d = 1;
 	    sp->long_count_d = 1;
-	    sp->q_code = 'X';
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 
@@ -254,13 +250,13 @@ set_series ( enum s_type s )
 
 /* Try both upper and lower case path names for the tpq file
  */
-char *
-quad_path ( char *section_path, int lat_section, int long_section, int lat_quad, int long_quad )
+static char *
+quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad, int long_quad )
 {
 	char path_buf[100];
 	struct stat stat_buf;
 	int lat_q, long_q;
-	int series_q;
+	int series_letter;
 
 	/* give a-h for latitude (a at the south)
 	 *  and 1-8 for longitude (1 at the east)
@@ -271,9 +267,16 @@ quad_path ( char *section_path, int lat_section, int long_section, int lat_quad,
 	lat_q  = 'a' + lat_quad * info.series->quad_lat_count;
 	long_q = '1' + long_quad * info.series->quad_long_count;
 
-	series_q = info.series->q_code;
+	/* XXX */
+	series_letter = ep->q_code;
+	if ( info.series->series != S_24K ) {
+	    if ( series_letter == 'q' )
+		series_letter = 'k';
+	    else
+		series_letter = 'c';
+	}
 
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", section_path, series_q, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
 	printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( stat ( path_buf, &stat_buf ) >=  0 )
@@ -282,9 +285,9 @@ quad_path ( char *section_path, int lat_section, int long_section, int lat_quad,
 
 	/* Try upper case */
 	lat_q  = toupper(lat_q);
-	series_q = toupper(series_q);
+	series_letter = toupper(series_letter);
 
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", section_path, series_q, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
 	printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( stat ( path_buf, &stat_buf ) >=  0 )
@@ -302,10 +305,10 @@ int
 lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 {
 	struct series *sp;
+	struct section *ep;
 	int lat_section, long_section;
 	int lat_quad, long_quad;
 	int m_long, m_lat;
-	char *section_path;
 
 	sp = info.series;
 
@@ -314,18 +317,18 @@ lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 
 	printf ( "lookup_quad_nbr: %d %d\n", lat_section, long_section );
 
-	section_path = lookup_section ( lat_section, long_section );
-	if ( ! section_path )
+	ep = lookup_section ( lat_section, long_section );
+	if ( ! ep )
 	    return 0;
 
-	printf ("lookup_quad_nbr, found section: %s\n", section_path );
+	printf ("lookup_quad_nbr, found section: %s\n", ep->path );
 
 	lat_quad = maplet_lat / sp->lat_count - lat_section * sp->lat_count_d;
 	long_quad = maplet_long / sp->long_count - long_section * sp->long_count_d;
 
 	/* See if the map sheet is available.
 	 */
-	mp->tpq_path = quad_path ( section_path, lat_section, long_section, lat_quad, long_quad );
+	mp->tpq_path = quad_path ( ep, lat_section, long_section, lat_quad, long_quad );
 	if ( ! mp->tpq_path )
 	    return 0;
 
@@ -357,13 +360,13 @@ int
 lookup_quad ( struct maplet *mp )
 {
 	struct series *sp;
+	struct section *ep;
 	int lat_section, long_section;
 	int lat_quad, long_quad;
 	double maplet_long;
 	double maplet_lat;
 	double lat_deg_quad;
 	double long_deg_quad;
-	char *section_path;
 
 	sp = info.series;
 
@@ -375,8 +378,8 @@ lookup_quad ( struct maplet *mp )
 
 	printf ( "lookup for %.4f, %.4f\n", info.lat_deg, info.long_deg );
 
-	section_path = lookup_section ( lat_section, long_section );
-	if ( ! section_path )
+	ep = lookup_section ( lat_section, long_section );
+	if ( ! ep )
 	    return 0;
 
 	/* This gives a unique index for the map.
@@ -387,7 +390,7 @@ lookup_quad ( struct maplet *mp )
 
 	/* See if the map sheet is available.
 	 */
-	mp->tpq_path = quad_path ( section_path, lat_section, long_section, lat_quad, long_quad );
+	mp->tpq_path = quad_path ( ep, lat_section, long_section, lat_quad, long_quad );
 	if ( ! mp->tpq_path )
 	    return 0;
 
@@ -478,6 +481,60 @@ add_disk ( char *archive, char *disk )
 	return 1;
 }
 
+#define N_LETTERS	26
+static int letter_count[N_LETTERS];
+
+/* We have a directory that looks like a section.
+ * Open and scan it, doing a tally of the TPQ files inside
+ * and what the lead letters are in this directory.
+ * For old 2.7 version TOPO directories the 7.5 minute
+ * quads have the lead letter 'q', but in version 4.2
+ * this changed to 'n'
+ * XXX - a lot could be changed and improved here
+ */
+int
+scan_section ( char *path )
+{
+	struct stat stat_buf;
+	DIR *dd;
+	struct dirent *dp;
+	int i;
+	int ch;
+	int rv = 'q';
+
+	if ( stat ( path, &stat_buf ) < 0 )
+	    return 0;
+	if ( ! S_ISDIR(stat_buf.st_mode) )
+	    return 0;
+
+	if ( ! (dd = opendir ( path )) )
+	    return 0;
+
+	for ( i=0; i< N_LETTERS; i++ )
+	    letter_count[i] = 0;
+
+	for ( ;; ) {
+	    if ( ! (dp = readdir ( dd )) )
+	    	break;
+	    if ( strlen(dp->d_name) != 12 )
+	    	continue;
+	    if ( dp->d_name[9] != 't' && dp->d_name[9] != 'T' )
+	    	continue;
+	    ch = dp->d_name[0];
+	    if ( ch >= 'a' && ch <= 'z' )
+	    	letter_count[ch-'a']++;
+	    if ( ch >= 'A' && ch <= 'Z' )
+	    	letter_count[ch-'A']++;
+	}
+
+	closedir ( dd );
+
+	if ( letter_count['n'-'a'] > 0 )
+	    rv = 'n';
+
+	return rv;
+}
+
 /* A section is a term we use only in this program for a 1x1 degree
  * piece of land, NOT a section in the one square mile land survey
  * nomenclature.  It is a directory that actually holds TPQ files
@@ -486,47 +543,42 @@ add_disk ( char *archive, char *disk )
 int
 add_section ( char *disk, char *section )
 {
-	struct stat stat_buf;
-	DIR *dd;
 	char section_path[100];
-	struct _section *sp;
+	struct section *ep;
+	int quad_code;
 
 	sprintf ( section_path, "%s/%s", disk, section );
 
-	if ( stat ( section_path, &stat_buf ) < 0 )
-	    return 0;
-	if ( ! S_ISDIR(stat_buf.st_mode) )
+	quad_code = scan_section ( section_path );
+	if ( ! quad_code )
 	    return 0;
 
-	/* Just verify we can open it */
-	if ( ! (dd = opendir ( section_path )) )
-	    return 0;
-	closedir ( dd );
-
-	sp = (struct _section *) malloc ( sizeof(struct _section) );
-	if ( ! sp )
+	ep = (struct section *) malloc ( sizeof(struct section) );
+	if ( ! ep )
 	    error ("Section new - out of memory\n", "" );
 
-	sp->latlong = atol ( &section[1] );
-	sp->path = strhide ( section_path );
-	sp->next = section_head;
-	section_head = sp;
+	ep->latlong = atol ( &section[1] );
+	ep->path = strhide ( section_path );
+	ep->next = section_head;
+	ep->q_code = quad_code;
+
+	section_head = ep;
 
 	if ( info.verbose )
-	    printf ( "Added section: %d  %s\n", sp->latlong, section_path );
+	    printf ( "Added section: %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );
 
 	return 1;
 }
 
-char *
+static struct section *
 lookup_section ( int lat_section, int long_section )
 {
 	int latlong = lat_section * 1000 + long_section;
-	struct _section *sp;
+	struct section *ep;
 
-	for ( sp = section_head; sp; sp = sp->next ) {
-	    if ( sp->latlong == latlong )
-	    	return sp->path;
+	for ( ep = section_head; ep; ep = ep->next ) {
+	    if ( ep->latlong == latlong )
+	    	return ep;
 	}
 	return NULL;
 }
