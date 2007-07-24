@@ -298,7 +298,8 @@ quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad,
 	}
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
-	printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
+	if ( info.verbose )
+	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( stat ( path_buf, &stat_buf ) >=  0 )
 	    if ( S_ISREG(stat_buf.st_mode) )
@@ -309,7 +310,8 @@ quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad,
 	series_letter = toupper(series_letter);
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
-	printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
+	if ( info.verbose )
+	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( stat ( path_buf, &stat_buf ) >=  0 )
 	    if ( S_ISREG(stat_buf.st_mode) )
@@ -364,7 +366,8 @@ lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 	lat_section = maplet_lat / (sp->lat_count_d * sp->lat_count);
 	long_section = maplet_long / (sp->long_count_d * sp->long_count);
 
-	printf ( "lookup_quad_nbr: %d %d\n", lat_section, long_section );
+	if ( info.verbose )
+	    printf ( "lookup_quad_nbr: %d %d\n", lat_section, long_section );
 
 	lat_quad = maplet_lat / sp->lat_count - lat_section * sp->lat_count_d;
 	long_quad = maplet_long / sp->long_count - long_section * sp->long_count_d;
@@ -380,7 +383,8 @@ lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 	m_long = maplet_long - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
 	m_lat = maplet_lat - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
 
-	printf ( "lat/long quad, lat/long maplet: %d %d  %d %d\n", lat_quad, long_quad, maplet_lat, maplet_long );
+	if ( info.verbose )
+	    printf ( "lat/long quad, lat/long maplet: %d %d  %d %d\n", lat_quad, long_quad, maplet_lat, maplet_long );
 
 	/* flip the count to origin from the NW corner */
 	mp->x_maplet = sp->long_count - m_long - 1;
@@ -434,7 +438,8 @@ lookup_quad ( struct maplet *mp )
 	lat_section = info.lat_deg;
 	long_section = info.long_deg;
 
-	printf ( "lookup for %.4f, %.4f\n", info.lat_deg, info.long_deg );
+	if ( info.verbose )
+	    printf ( "lookup for %.4f, %.4f\n", info.lat_deg, info.long_deg );
 
 	lat_quad = (info.lat_deg  - (double)lat_section) / sp->map_lat_deg;
 	long_quad = (info.long_deg - (double)long_section) / sp->map_long_deg;
@@ -526,6 +531,10 @@ add_disk ( char *archive, char *disk )
 	for ( ;; ) {
 	    if ( ! (dp = readdir ( dd )) )
 	    	break;
+	    if ( strcmp(dp->d_name,"SI_D01") == 0 ) {
+	    	add_full_usa ( disk_path, dp->d_name );
+		continue;
+	    }
 	    if ( strlen(dp->d_name) != 6 )
 	    	continue;
 	    if ( dp->d_name[0] == 'D' || dp->d_name[0] == 'd' )
@@ -654,6 +663,16 @@ lookup_section ( int latlong )
 	    	return ep;
 	}
 	return NULL;
+}
+
+int
+add_full_usa ( char *disk, char *section )
+{
+	char si_path[100];
+
+	sprintf ( si_path, "%s/%s", disk, section );
+
+	printf ( "Found level 123 for full USA (cool!) at %s\n", si_path );
 }
 
 /* THE END */

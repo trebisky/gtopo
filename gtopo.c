@@ -45,6 +45,10 @@
  *	add support for Nevada (version 4.2 of TOPO!)
  *
  *  TODO
+ *   - add a mode where this can be pointed at any TPQ file
+ *	and it will view it. (Use the -f switch).
+ *  - use tree rather than linear linked list for section
+ *	stuff and for maplet cache.
  *   - fix bug where if you click on a white area, the center
  *     maplet goes away, so all maplets go white.
  *   - add age field to maplet cache and expire/recycle
@@ -65,6 +69,7 @@
  *  which had some significant changes.
  *  There are some unique differences in these sets on levels
  *  1 thru 3, levels 4 and 5 seem uniform, but we shall see.
+ *  The nevada set has the entire USA on levels 1,2,3
  *
  * The full state maps are found in
  * /u1/topo/AZ_D01/AZ1_MAP1/AZ1_MAP1.TPQ
@@ -202,7 +207,8 @@ pixmap_redraw ( void )
 
 	    origx = vxcent - offx;
 	    origy = vycent - offy;
-	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
+	    if ( info.verbose )
+		printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 
 	    draw_maplet ( mp, origx, origy );
 
@@ -211,9 +217,11 @@ pixmap_redraw ( void )
 	    ny1 = (origy + mp->ydim - 1 ) / mp->ydim;
 	    ny2 = (vydim - (origy + mp->ydim) + mp->ydim - 1 ) / mp->ydim;
 
-	    printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
-	    	vxdim, vydim, mp->xdim, mp->ydim, offx, offy );
-	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
+	    if ( info.verbose ) {
+		printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
+		    vxdim, vydim, mp->xdim, mp->ydim, offx, offy );
+		printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
+	    }
 
 #ifndef CENTER_ONLY
 	    for ( y = -ny1; y <= ny2; y++ ) {

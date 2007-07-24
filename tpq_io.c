@@ -7,6 +7,8 @@
 
 #include "gtopo.h"
 
+extern struct topo_info info;
+
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
  */
 /* ---------------------------------------------------------------- */
@@ -128,14 +130,17 @@ build_tpq_index ( char *name )
 	if ( fd < 0 )
 	    error ( "Cannot open: %s\n", name );
 
-	printf ( "TPQ header size: %d\n", sizeof(tpq_header) );
+	if ( info.verbose > 2 )
+	    printf ( "TPQ header size: %d\n", sizeof(tpq_header) );
 
 	/* read header */
 	if ( read( fd, &tpq_header, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
 	    error ( "Bad TPQ header read\n", name );
 
-	printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.name );
-	printf ( "TPQ file maplet counts lat/long: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
+	if ( info.verbose ) {
+	    printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.name );
+	    printf ( "TPQ file maplet counts lat/long: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
+	}
 
 	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
 	    error ( "Bad TPQ index read\n", name );
@@ -190,7 +195,7 @@ load_tpq_maplet ( char *name, int index )
 	close ( ofd );
 
 	rv = gdk_pixbuf_new_from_file ( tmpname, NULL );
-	if ( ! rv )
+	if ( ! rv && info.verbose )
 	    printf ("Cannot open %s\n", tmpname );
 
 	remove ( tmpname );

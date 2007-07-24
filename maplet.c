@@ -112,7 +112,8 @@ load_maplet_nbr ( int x, int y )
 
 	cp = maplet_lookup ( maplet_index_lat, maplet_index_long );
 	if ( cp ) {
-	    printf ( "maplet nbr cache hit: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
+	    if ( info.verbose > 1 )
+		printf ( "maplet nbr cache hit: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
 	    return cp;
 	}
 
@@ -120,13 +121,15 @@ load_maplet_nbr ( int x, int y )
 	 */
 	x_maplet = cmp->x_maplet + x;
 	if ( x_maplet < 0 || x_maplet >= sp->long_count ) {
-	    printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
+	    if ( info.verbose > 1 )
+		printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
 	    return load_maplet_quad ( maplet_index_lat, maplet_index_long );
 	}
 
 	y_maplet = cmp->y_maplet + y;
 	if ( y_maplet < 0 || y_maplet >= sp->lat_count ) {
-	    printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
+	    if ( info.verbose > 1 )
+		printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
 	    return load_maplet_quad ( maplet_index_lat, maplet_index_long );
 	}
 
@@ -139,8 +142,9 @@ load_maplet_nbr ( int x, int y )
 	mp->x_maplet = x_maplet;
 	mp->y_maplet = y_maplet;
 
-	printf ( "x,y maplet nbr(%d) = %d %d -- %d %d\n", sp->cache_count, x_maplet, y_maplet,
-	    maplet_index_lat, maplet_index_long );
+	if ( info.verbose > 1 )
+	    printf ( "x,y maplet nbr(%d) = %d %d -- %d %d\n", sp->cache_count, x_maplet, y_maplet,
+		maplet_index_lat, maplet_index_long );
 
 	/* Each maplet from the same sheet has links to the same
 	 * path string, which is just fine.
@@ -171,7 +175,8 @@ load_maplet ( void )
 
 	sp = info.series;
 
-	printf ( "Load maplet for position %.4f %.4f\n", info.lat_deg, info.long_deg );
+	if ( info.verbose > 1 )
+	    printf ( "Load maplet for position %.4f %.4f\n", info.lat_deg, info.long_deg );
 
 	/* Convert from degrees to "maplet units"
 	 * (keep these as floating point).
@@ -195,7 +200,8 @@ load_maplet ( void )
 	 */
 	cp = maplet_lookup ( maplet_index_lat, maplet_index_long );
 	if ( cp ) {
-	    printf ( "maplet cache hit: %d %d\n", maplet_index_lat, maplet_index_long );
+	    if ( info.verbose > 1 )
+		printf ( "maplet cache hit: %d %d\n", maplet_index_lat, maplet_index_long );
 	    return cp;
 	}
 
@@ -215,8 +221,9 @@ load_maplet ( void )
 	x_maplet = mp->x_maplet;
 	y_maplet = mp->y_maplet;
 
-	printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count, x_maplet, y_maplet,
-	    maplet_index_lat, maplet_index_long );
+	if ( info.verbose > 1 )
+	    printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count, x_maplet, y_maplet,
+		maplet_index_lat, maplet_index_long );
 
 	mp->maplet_index_lat = maplet_index_lat;
 	mp->maplet_index_long = maplet_index_long;
@@ -269,16 +276,19 @@ load_maplet_scale ( struct maplet *mp, int index )
 	pixel_width = mp->ydim * sp->maplet_long_deg / sp->maplet_lat_deg;
 	pixel_width *= cos ( lat_deg * DEGTORAD );
 	pixel_norm = pixel_width;
-	printf ( "maplet scale: %d %d --> %d %d\n", mp->xdim, mp->ydim, pixel_norm, mp->ydim );
+	if ( info.verbose > 1 )
+	    printf ( "maplet scale: %d %d --> %d %d\n", mp->xdim, mp->ydim, pixel_norm, mp->ydim );
 
 	if ( mp->xdim < pixel_norm - 8 || mp->xdim > pixel_norm + 8 ) {
-	    printf ( "SCALING\n" );
+	    if ( info.verbose > 1 )
+		printf ( "SCALING\n" );
 	    mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, pixel_norm, mp->ydim, GDK_INTERP_BILINEAR );
 	    gdk_pixbuf_unref ( tmp );
 	    mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
 	    mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
 	} else {
-	    printf ( "NOT -- SCALING\n" );
+	    if ( info.verbose > 1 )
+		printf ( "NOT -- SCALING\n" );
 	    mp->pixbuf = tmp;
 	}
 }
