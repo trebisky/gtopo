@@ -19,6 +19,10 @@ all:	gtopo
 clean:
 	rm -f gtopo $(OBJS)
 
+install:
+	scp gtopo hacksaw:/mmt/bin
+	cp gtopo /home/tom/bin
+
 .c.o:	
 	cc -c -g $< $(CFLAGS)
 

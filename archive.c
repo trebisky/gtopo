@@ -318,6 +318,14 @@ quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad,
 	return NULL;
 }
 
+/* In the current scheme of things (which is handling equal sized maps
+ * at each level), this find the TPQ file containing the point in question.
+ * This will need to be generalized for level 3 (as well as levels 1 and 2)
+ * because those levels may have collections of randomly sized TPQ files).
+ * For example, Arizona has 4 files for level 3 covering 5x5 degrees.
+ * California has one monster level 3 file, Nevada has 1x1 degree files
+ * within the usual degree section setup.  Other states, who knows.
+ */
 static char *
 find_quad ( int lat_section, int long_section, int lat_quad, int long_quad )
 {
@@ -460,6 +468,7 @@ add_archive ( char *archive )
 	struct stat stat_buf;
 	DIR *dd;
 	struct dirent *dp;
+	int rv = 0;
 
 	if ( stat ( archive, &stat_buf ) < 0 )
 	    return 0;
@@ -481,12 +490,14 @@ add_archive ( char *archive )
 	    	continue;
 	    if ( dp->d_name[2] != '_' )
 	    	continue;
-	    if ( dp->d_name[3] == 'D' || dp->d_name[3] == 'd' )
+	    if ( dp->d_name[3] == 'D' || dp->d_name[3] == 'd' ) {
 	    	add_disk ( archive, dp->d_name );
+		rv = 1;
+	    }
 	}
 
 	closedir ( dd );
-	return 1;
+	return rv;
 }
 
 int

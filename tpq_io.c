@@ -16,7 +16,7 @@
 #define TPQ_HEADER_SIZE	1024
 
 /* We see 3 of these embedded in the header */
-struct _tpq_file {
+struct tpq_file {
 	char ext[4];		/* ".jpg" or ".png" */
 	long _xxx[2];
 	long nlong;
@@ -24,8 +24,15 @@ struct _tpq_file {
 	char _xx[12];
 };
 
-struct _tpq_header {
-	char _pad1[256];
+struct tpq_header {
+	long version;
+	double west_long;
+	double north_long;
+	double east_long;
+	double south_long;
+	char topo_name[12];
+
+	char _pad1[208];
 	char name[128];		/* quadrangle name */
 	char state[32];		/* typically "AZ" */
 	char source[32];	/* typically "USGS" */
@@ -33,11 +40,11 @@ struct _tpq_header {
 	char year2[4];		/* typically "1994" */
 	char countour[8];	/* typically "20 ft" */
 	char _pad2[16];		/* ".tpq" "DAT" ... */
-	struct _tpq_file maplet;
+	struct tpq_file maplet;
 	char info[88];
-	struct _tpq_file png1;
+	struct tpq_file png1;
 	char _pad3[28];
-	struct _tpq_file png2;
+	struct tpq_file png2;
 	char _pad4[332];
 } tpq_header;
 

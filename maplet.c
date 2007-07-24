@@ -229,8 +229,6 @@ load_maplet ( void )
 	return mp;
 }
 
-#define SCALE_HACK
-
 /* This need to scale popped up with the Mt. Hopkins quadrangle
  * which has 330x256 maplets, and to have equal x/y pixel scales
  * ought to have 436x256 maplets or so.  Most quadrangles do have

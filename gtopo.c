@@ -39,17 +39,16 @@
  *	if you click on a white region, actually usable.  7/9/2007
  *	jumps from sheet to sheet cleanly 7/11/2007
  * version 0.8 - add alternate series support.
- 	works for 100K series 7/12/2007
-	add series structure and reorganize 7/13/2007
+ * 	works for 100K series 7/12/2007
+ *	add series structure and reorganize 7/13/2007
+ * version 0.8.2 - work on series 3 support. 7/24/2007
+ *	add support for Nevada (version 4.2 of TOPO!)
  *
  *  TODO
- *   - fix bug that warps map NS in Arizona.
  *   - fix bug where if you click on a white area, the center
  *     maplet goes away, so all maplets go white.
  *   - add age field to maplet cache and expire/recycle
  *     if size grows beyond some limit.
- *   - clean up maplet structure, and related stuff in
- *     archive.c and maplet.c, maybe some common code.
  *   - handle maplet size discontinuity.
  *   - be able to run off of mounted CDrom
  *   - put temp file in cwd, home, then /tmp
@@ -61,7 +60,9 @@
  */
 
 /* Some notes on map series:
- *  I have only the California and Arizona sets to work from.
+ *  I began work with only the California and Arizona sets
+ *  to work from.  In July, 2007 I added the Nevada set,
+ *  which had some significant changes.
  *  There are some unique differences in these sets on levels
  *  1 thru 3, levels 4 and 5 seem uniform, but we shall see.
  *
@@ -89,19 +90,7 @@ struct topo_info info;
  * This allows a path to be set up that will work on multiple
  * machines that keep the topos in different places.
  */
-char *topo_archives[] = { "/u1/topo", "/u2/topo", NULL };
-
-#ifdef notdef
-/* This one has 50 jpeg maplets in a 5x10 pattern */
-char *tpq_path = "../q36117h8.tpq";
-
-/* This one has 100 jpeg maplets in a 10x10 pattern */
-/*  each is 406x480 */
-/* These are found on every CD as:
- *  /u1/topo/AZ_D05/AZ1_MAP3/F30105A1.TPQ
- */
-char *tpq_path = "../F30105A1.TPQ";
-#endif
+char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", NULL };
 
 GdkColormap *syscm;
 
@@ -408,7 +397,10 @@ main ( int argc, char **argv )
 	    	info.verbose = 1;
 	}
 
-	archive_init ( topo_archives );
+	if ( ! archive_init ( topo_archives ) ) {
+	    printf ( "No topo archives found\n" );
+	    return 1;
+	}
 
 	main_window = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
 
