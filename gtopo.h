@@ -1,9 +1,9 @@
 /* gtopo.h
  */
 
-enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+enum s_type { S_NADA, S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
-#define N_SERIES	5
+#define N_SERIES	6
 
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
