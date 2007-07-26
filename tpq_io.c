@@ -27,15 +27,15 @@ struct tpq_file {
 };
 
 struct tpq_header {
-	long version;
+	long version;		/* maybe, I always see 1 */
 	double west_long;
-	double north_long;
+	double north_lat;
 	double east_long;
-	double south_long;
-	char topo_name[12];
-
+	double south_lat;
+	char topo_name[12];	/* string TOPO! */
 	char _pad1[208];
-	char name[128];		/* quadrangle name */
+
+	char quad_name[128];	/* quadrangle name */
 	char state[32];		/* typically "AZ" */
 	char source[32];	/* typically "USGS" */
 	char year1[4];		/* typically "1994" */
@@ -48,21 +48,39 @@ struct tpq_header {
 	char _pad3[28];
 	struct tpq_file png2;
 	char _pad4[332];
-} tpq_header;
+};
+
+/* The above is the format of the TPQ file as found on disk.
+ * what follows are my internal datastructures to hold info that
+ * has been extracted from a TPQ file.
+ */
+
+struct tpq_info {
+	struct tpq_info *next;
+	char *path;
+
+	double w_long;
+	double e_long;
+	double s_lat;
+	double n_lat;
+
+	int lat_count;
+	int long_count;
+
+	int index_size;
+	struct tpq_index_e *index;
+};
 
 /* The biggest thing I have seen yet was in the california
  * level 3 map (22x20), which is 440 !!
  */
 #define TPQ_MAX_MAPLETS	500
+#define INDEX_BUFSIZE	2048
 
 struct tpq_index_e {
 	long	offset;
 	long	size;
 };
-
-struct tpq_index_e tpq_index[TPQ_MAX_MAPLETS];
-char tpq_index_filename[100];
-int num_index = 0;
 
 /* For a q-series TPQ file representing a 7.5 minute quadrangle,
  * there are 50 maplets within the file.  These begin in the upper
@@ -77,32 +95,31 @@ int num_index = 0;
  *  with 440 maplets). 440x4 is 1760 bytes.
  */
 
-#define INDEX_BUFSIZE	2048
-
 #ifdef BIG_ENDIAN_HACK
 #define JPEG_SOI_TAG	0xffd8
 #else
 #define JPEG_SOI_TAG	0xd8ff
 #endif
 
-void
-wonk_index ( int fd, long *info )
+static void
+build_index ( struct tpq_info *tp, int fd, long *info )
 {
 	int i;
 	unsigned short tag;
+	int num_index;
 	int num_jpeg;
+	struct tpq_index_e proto_index[TPQ_MAX_MAPLETS];
+	struct tpq_index_e *index;
 
 	num_index = (info[0] - 1024)/4 - 4;
-	/*
-	printf ( "table entries: %d\n", num_index );
-	*/
 	if ( num_index > TPQ_MAX_MAPLETS )
 	    error ("Whoa! too many maplets\n", "" );
 
 	num_jpeg = 0;
 	for ( i=0; i<num_index; i++ ) {
-	    tpq_index[i].offset = info[i];
-	    tpq_index[i].size = info[i+1] - info[i];
+	    proto_index[i].offset = info[i];
+	    proto_index[i].size = info[i+1] - info[i];
+
 	    lseek ( fd, info[i], SEEK_SET );
 	    if ( read( fd, &tag, sizeof(tag) ) != sizeof(tag) )
 		error ( "tag read fails!\n", "" );
@@ -111,44 +128,91 @@ wonk_index ( int fd, long *info )
 	    num_jpeg++;
 	}
 
-	num_index = num_jpeg;
-	/*
-	printf ( "jpeg table entries: %d\n", num_index );
-	*/
+        index = (struct tpq_index_e *) malloc ( num_jpeg * sizeof(struct tpq_index_e) );
+        if ( ! index )
+            error ("build_index, out of mem\n", "" );
+
+	memcpy ( index, proto_index, num_jpeg * sizeof(struct tpq_index_e) );
+	tp->index = index;
+	tp->index_size = num_jpeg;
 }
 
-void
-build_tpq_index ( char *name )
+static int
+read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 {
-	int fd;
-	char buf[INDEX_BUFSIZE];
+	struct tpq_header tpq_header;
 
-	if ( num_index > 0 && strcmp ( tpq_index_filename, name ) == 0 )
-	    return;
-
-	fd = open ( name, O_RDONLY );
-	if ( fd < 0 )
-	    error ( "Cannot open: %s\n", name );
-
-	if ( info.verbose > 2 )
-	    printf ( "TPQ header size: %d\n", sizeof(tpq_header) );
+	if ( sizeof(struct tpq_header) != TPQ_HEADER_SIZE )
+	    error ( "Malformed TPQ file header structure (my bug)\n", "" );
 
 	/* read header */
 	if ( read( fd, &tpq_header, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
-	    error ( "Bad TPQ header read\n", name );
+	    return 0;
 
-	if ( info.verbose ) {
-	    printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.name );
+	if ( verbose ) {
+	    printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.quad_name );
 	    printf ( "TPQ file maplet counts lat/long: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
+	    printf ( "TPQ file long range: %.3f %3f\n", tpq_header.west_long, tpq_header.east_long );
+	    printf ( "TPQ file lat range: %.3f %3f\n", tpq_header.south_lat, tpq_header.north_lat );
 	}
 
-	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
-	    error ( "Bad TPQ index read\n", name );
+	tp->w_long = tpq_header.west_long;
+	tp->e_long = tpq_header.east_long;
+	tp->n_lat = tpq_header.north_lat;
+	tp->s_lat = tpq_header.south_lat;
 
-	wonk_index ( fd, (long *) buf );
-	strcpy ( tpq_index_filename, name );
+	tp->lat_count = tpq_header.maplet.nlat;
+	tp->long_count = tpq_header.maplet.nlong;
+
+	return 1;
+}
+
+struct tpq_info *tpq_head = NULL;
+
+struct tpq_info *
+tpq_new ( char *path )
+{
+        struct tpq_info *tp;
+	char buf[INDEX_BUFSIZE];
+	int fd;
+
+        tp = (struct tpq_info *) malloc ( sizeof(struct tpq_info) );
+        if ( ! tp )
+            error ("tpq_new, out of mem\n", "" );
+
+	tp->path = strhide(path);
+
+	fd = open ( path, O_RDONLY );
+	if ( fd < 0 )
+	    error ( "Cannot open: %s\n", path );
+
+	if ( ! read_tpq_header ( tp, fd, 1 ) )
+	    error ( "Bad TPQ header read\n", path );
+
+	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
+	    error ( "Bad TPQ index read\n", path );
+
+	build_index ( tp, fd, (long *) buf );
 
 	close ( fd );
+
+        return tp;
+}
+
+struct tpq_info *
+tpq_lookup ( char *path )
+{
+	struct tpq_info *tp;
+
+	for ( tp = tpq_head; tp; tp = tp->next )
+	    if ( strcmp(tp->path,path) == 0 )
+	    	return tp;
+
+	tp = tpq_new ( path );
+	tp->next = tpq_head;
+	tpq_head = tp;
+
+	return tp;
 }
 
 #define BUFSIZE	1024
@@ -167,8 +231,14 @@ load_tpq_maplet ( char *name, int index )
 	int nw;
 	int nlong;
 	GdkPixbuf *rv;
+	struct tpq_info *tp;
 
-	build_tpq_index ( name );
+	tp = tpq_lookup ( name );
+	if ( ! tp )
+	    return NULL;
+
+	if ( index < 0 || index >=tp->index_size )
+	    return NULL;
 
 	/* open a temp file for R/W */
 	ofd = open ( tmpname, O_CREAT | O_TRUNC | O_WRONLY, 0600 );
@@ -179,8 +249,8 @@ load_tpq_maplet ( char *name, int index )
 	if ( fd < 0 )
 	    error ( "Cannot open: %s\n", name );
 
-	lseek ( fd, tpq_index[index].offset, SEEK_SET );
-	size = tpq_index[index].size;
+	lseek ( fd, tp->index[index].offset, SEEK_SET );
+	size = tp->index[index].size;
 
 	while ( size > 0 ) {
 	    if ( read( fd, buf, BUFSIZE ) != BUFSIZE )

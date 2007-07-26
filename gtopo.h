@@ -107,7 +107,6 @@ struct maplet {
 };
 
 /* from tpq_io.c */
-void build_tpq_index ( char * );
 GdkPixbuf *load_tpq_maplet ( char *, int );
 
 /* from maplet.c */
@@ -115,6 +114,7 @@ struct maplet *load_maplet ( void );
 struct maplet *load_maplet_nbr ( int, int );
 
 /* from archive.c */
+char *strhide ( char * );
 int archive_init ( char ** );
 int lookup_quad ( struct maplet * );
 int lookup_quad_nbr ( struct maplet *, int, int );
