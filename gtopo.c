@@ -7,10 +7,6 @@
 
 #include "gtopo.h"
 
-/*
-#define CENTER_ONLY
-*/
-
 #define MINIMUM_VIEW	100
 #define INITIAL_VIEW	800
 
@@ -197,25 +193,33 @@ pixmap_redraw ( void )
 
 	info.series->content = 1;
 
-	mp = load_maplet ();
+	/* load the maplet containing the current position so
+	 * we have some information we need
+	 */
+	mp = load_maplet ( info.long_maplet, info.lat_maplet );
+
+	/* XXX */
 	info.series->center = mp;
 
 	if ( mp ) {
 	    /* location of the center within the maplet */
-	    offx = info.series->fx * mp->xdim;
-	    offy = info.series->fy * mp->ydim;
+	    offx = info.fx * mp->xdim;
+	    offy = info.fy * mp->ydim;
 
 	    origx = vxcent - offx;
 	    origy = vycent - offy;
 	    if ( info.verbose )
 		printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 
-	    draw_maplet ( mp, origx, origy );
-
-	    nx1 = (origx + mp->xdim - 1 ) / mp->xdim;
-	    nx2 = (vxdim - (origx + mp->xdim) + mp->xdim - 1 ) / mp->xdim;
-	    ny1 = (origy + mp->ydim - 1 ) / mp->ydim;
-	    ny2 = (vydim - (origy + mp->ydim) + mp->ydim - 1 ) / mp->ydim;
+	    if ( info.center_only ) {
+		nx1 = nx2 = 0;
+		ny1 = ny2 = 0;
+	    } else {
+		nx1 = - (vxdim - (origx + mp->xdim) + mp->xdim - 1 ) / mp->xdim;
+		nx2 = + (origx + mp->xdim - 1 ) / mp->xdim;
+		ny1 = - (vydim - (origy + mp->ydim) + mp->ydim - 1 ) / mp->ydim;
+		ny2 = + (origy + mp->ydim - 1 ) / mp->ydim;
+	    }
 
 	    if ( info.verbose ) {
 		printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
@@ -223,20 +227,27 @@ pixmap_redraw ( void )
 		printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
 	    }
 
-#ifndef CENTER_ONLY
+	    /*
+	    draw_maplet ( mp, origx, origy );
 	    for ( y = -ny1; y <= ny2; y++ ) {
 		for ( x = -nx1; x <= nx2; x++ ) {
-		    if ( x == 0 && y == 0 )
-		    	continue;
 		    mp = load_maplet_nbr ( x, y );
-		    if ( ! mp )
+	    */
+
+	    for ( y = ny1; y <= ny2; y++ ) {
+		for ( x = nx1; x <= nx2; x++ ) {
+		    printf ( "redraw, load maplet  %d %d\n", x, y );
+		    mp = load_maplet ( info.long_maplet + x, info.lat_maplet + y );
+		    if ( ! mp ) {
+			printf ( "Nope\n");
 			continue;
+		    }
+		    printf ( "OK, draw at %d %d\n", origx + mp->xdim*x, origy + mp->ydim*y );
 		    draw_maplet ( mp,
-			    vxcent-offx + mp->xdim * x,
-			    vycent-offy + mp->ydim * y );
+			    origx - mp->xdim * x,
+			    origy - mp->ydim * y );
 		}
 	    }
-#endif
 	}
 
 	/* mark center */
@@ -295,7 +306,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	double x_pixel_scale, y_pixel_scale;
 	float x, y;
 
-	printf ( "Button event %d %.3f %.3f in (%d %d)\n",
+	if ( info.verbose )
+	    printf ( "Button event %d %.3f %.3f in (%d %d)\n",
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
 	/* flip to new series, may be able to avoid redrawing the pixmap */
@@ -313,8 +325,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	vxcent = vp_info.vx / 2;
 	vycent = vp_info.vy / 2;
 
-	printf ( "Orig position (lat/long) %.4f %.4f\n",
-		info.lat_deg, info.long_deg );
+	if ( info.verbose )
+	    printf ( "Orig position (lat/long) %.4f %.4f\n", info.lat_deg, info.long_deg );
 
 	if ( info.series->center ) {
 	    mxdim = info.series->center->xdim;
@@ -331,15 +343,12 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 
 	dlat  = (event->y - (double)vycent) * y_pixel_scale;
 	dlong = (event->x - (double)vxcent) * x_pixel_scale;
-	printf ( "Delta position (lat/long) %.4f %.4f\n",
-		dlat, dlong );
+
+	if ( info.verbose )
+	    printf ( "Delta position (lat/long) %.4f %.4f\n", dlat, dlong );
 
 	/* Make location of the mouse click be the current position */
-	info.long_deg -= dlong;
-	info.lat_deg -= dlat;
-
-	printf ( "New position (lat/long) %.4f %.4f\n",
-		info.lat_deg, info.long_deg );
+	set_position ( info.long_deg - dlong, info.lat_deg - dlat );
 
 	invalidate_pixel_content ();
 
@@ -381,11 +390,34 @@ focus_handler ( GtkWidget *wp, GdkEventFocus *event, gpointer data )
 }
 
 void
+synch_position ( void )
+{
+    	double m_lat, m_long;
+
+    	m_lat = info.lat_deg / info.series->maplet_lat_deg;
+    	m_long = info.long_deg / info.series->maplet_long_deg;
+
+	/* indices of the maplet we are in
+	 */
+    	info.lat_maplet = m_lat;
+    	info.long_maplet = m_long;
+
+	/* fractional offset of our position in that maplet
+	 */
+	info.fy = 1.0 - (m_lat - info.lat_maplet);
+	info.fx = 1.0 - (m_long - info.long_maplet);
+}
+
+void
 set_position ( double long_deg, double lat_deg )
 {
 	info.long_deg = long_deg;
 	info.lat_deg = lat_deg;
-	printf ("Set position: long/lat = %.3f %.3f\n", long_deg, lat_deg );
+
+	if ( info.verbose )
+	    printf ("Set position: long/lat = %.3f %.3f\n", long_deg, lat_deg );
+
+	synch_position ();
 }
 
 void
@@ -413,11 +445,14 @@ main ( int argc, char **argv )
 	info.verbose = 0;
 	info.initial = 1;
 	info.file_opt = 0;
+	info.center_only = 0;
 
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-v" ) == 0 )
 	    	info.verbose = 1;
+	    if ( strcmp ( p, "-c" ) == 0 )
+	    	info.center_only = 1;
 	    if ( strcmp ( p, "-f" ) == 0 ) {
 		if ( argc < 1 )
 		    usage ();
@@ -485,8 +520,22 @@ main ( int argc, char **argv )
 	syscm = gdk_colormap_get_system ();
 
 	if ( ! info.file_opt ) {
-	    /* In California west of Taboose Pass */
-	    set_position ( dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
+
+	    /* not strictly needed, but set_series will access
+	     * these values.
+	     */
+	    info.long_deg = 0.0;
+	    info.lat_deg = 0.0;
+
+	    /*
+	    set_series ( S_STATE );
+	    set_series ( S_ATLAS );
+	    set_series ( S_500K );
+	    set_series ( S_24K );
+	    set_series ( S_100K );
+	    */
+
+	    set_series ( S_24K );
 
 	    /* Mt. Hopkins, Arizona */
 	    set_position ( 110.88, 31.69 );
@@ -494,21 +543,17 @@ main ( int argc, char **argv )
 	    /* Nevada */
 	    set_position ( 114.9894, 36.2338 );
 
-	    set_series ( S_STATE );
-	    set_series ( S_ATLAS );
-	    set_series ( S_500K );
-	    set_series ( S_24K );
-	    set_series ( S_100K );
-
-	    set_series ( S_24K );
-	    set_series ( S_500K );
+	    /* In California west of Taboose Pass */
+	    set_position ( dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
 	}
 
 	vp_info.vx = MINIMUM_VIEW;
 	vp_info.vy = MINIMUM_VIEW;
 
+	/* XXX would like to do this later */
 	vp_info.vx = INITIAL_VIEW;
 	vp_info.vy = INITIAL_VIEW;
+
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), vp_info.vx, vp_info.vy );
 
 	gtk_widget_show ( vp_info.da );

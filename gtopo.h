@@ -14,12 +14,25 @@ struct topo_info {
 	double lat_deg;
 	double long_deg;
 
+	/* This is the maplet containing the above,
+	 * this changes every time we change series.
+	 */
+	long	lat_maplet;
+	long	long_maplet;
+
+	/* fractional offset in the maplet */
+	double 	fx;
+	double	fy;
+
 	/* what series we be lookin' at */
 	struct series *series;
 
-	int verbose;
 	int initial;
+
+	/* stuff from command line options */
+	int verbose;
 	int file_opt;
+	int center_only;
 };
 
 /* XXX - we need to introduce a tpq structure and link to it
@@ -73,13 +86,6 @@ struct series {
 	/* size of each maplet */
 	double maplet_lat_deg;
 	double maplet_long_deg;
-
-	/* the following give the postion within the
-	 * maplet containing it as a fraction in range [0,1]
-	 * origin is in NW corner of maplet.
-	 */
-	double fx;
-	double fy;
 };
 
 /* This is set up by load_maplet() and lookup_quad()
@@ -134,13 +140,16 @@ struct tpq_index_e {
 	long	size;
 };
 
+/* from gtopo.c */
+void synch_position ( void );
+void set_position ( double, double );
 
 /* from tpq_io.c */
 GdkPixbuf *load_tpq_maplet ( char *, int );
 struct tpq_info *tpq_lookup ( char * );
 
 /* from maplet.c */
-struct maplet *load_maplet ( void );
+struct maplet *load_maplet ( int, int );
 struct maplet *load_maplet_nbr ( int, int );
 
 /* from archive.c */

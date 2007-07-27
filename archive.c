@@ -291,7 +291,7 @@ archive_init ( char *archives[] )
 void
 toggle_series ( void )
 {
-	if ( info.file_opt )
+	if ( info.series->series == S_FILE )
 	    return;
 
 	if ( info.series->series == S_24K )
@@ -305,10 +305,8 @@ toggle_series ( void )
 void
 set_series ( enum s_type s )
 {
-	if ( info.file_opt )
-	    return;
-
 	info.series = &series_info[s];
+	synch_position ();
 }
 
 /* Try both upper and lower case path names for the tpq file
@@ -483,6 +481,7 @@ lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 	return 1;
 }
 
+#ifdef notdef
 /* For some lat/long position, find the 7.5 minute quad file
  * containing it, and the indices of the maplet within that
  * file containing the position.
@@ -507,6 +506,7 @@ lookup_quad ( struct maplet *mp )
 
 	return lookup_quad_nbr ( mp, maplet_lat, maplet_long );
 }
+#endif
 
 int
 add_archive ( char *archive )

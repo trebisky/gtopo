@@ -162,21 +162,23 @@ load_maplet_nbr ( int x, int y )
 	return mp;
 }
 
+/* Overhauled 7-27-2007 to be the main deal */
 struct maplet *
-load_maplet ( void )
+load_maplet ( int long_maplet, int lat_maplet )
 {
     	struct series *sp;
     	struct maplet *mp;
-    	struct maplet *cp;
 	int x_maplet, y_maplet;
-	double maplet_lat, maplet_long;
-	int maplet_index_lat;
-	int maplet_index_long;
 
 	sp = info.series;
 
 	if ( info.verbose > 1 )
 	    printf ( "Load maplet for position %.4f %.4f\n", info.lat_deg, info.long_deg );
+
+#ifdef notdef
+	double maplet_lat, maplet_long;
+	int maplet_index_lat;
+	int maplet_index_long;
 
 	/* Convert from degrees to "maplet units"
 	 * (keep these as floating point).
@@ -188,9 +190,7 @@ load_maplet ( void )
 	 */
 	maplet_index_lat = maplet_lat;
 	maplet_index_long = maplet_long;
-
-	sp->fy = 1.0 - (maplet_lat - maplet_index_lat);
-	sp->fx = 1.0 - (maplet_long - maplet_index_long);
+#endif
 
 	/* now search the cache for a maplet matching this.
 	 * We may have:
@@ -198,11 +198,11 @@ load_maplet ( void )
 	 *  2 - moved to an already visited maplet.
 	 *  3 - moved to an adjoining maplet.
 	 */
-	cp = maplet_lookup ( maplet_index_lat, maplet_index_long );
-	if ( cp ) {
+	mp = maplet_lookup ( lat_maplet, long_maplet );
+	if ( mp ) {
 	    if ( info.verbose > 1 )
-		printf ( "maplet cache hit: %d %d\n", maplet_index_lat, maplet_index_long );
-	    return cp;
+		printf ( "maplet cache hit: %d %d\n", long_maplet, lat_maplet );
+	    return mp;
 	}
 
 	/* Looks like we will be setting up a new entry.
@@ -213,7 +213,7 @@ load_maplet ( void )
 	 * This will set tpq_path as well as
 	 * x_maplet and y_maplet in the maplet structure.
 	 */
-	if ( ! lookup_quad ( mp ) ) {
+	if ( ! lookup_quad_nbr ( mp, lat_maplet, long_maplet ) ) {
 	    free ( (char *) mp );
 	    return NULL;
 	}
@@ -222,11 +222,11 @@ load_maplet ( void )
 	y_maplet = mp->y_maplet;
 
 	if ( info.verbose > 1 )
-	    printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count, x_maplet, y_maplet,
-		maplet_index_lat, maplet_index_long );
+	    printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count,
+		    x_maplet, y_maplet, long_maplet, lat_maplet );
 
-	mp->maplet_index_lat = maplet_index_lat;
-	mp->maplet_index_long = maplet_index_long;
+	mp->maplet_index_lat = lat_maplet;
+	mp->maplet_index_long = long_maplet;
 
 	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
 
