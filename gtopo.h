@@ -106,8 +106,33 @@ struct maplet {
 	char *tpq_path;
 };
 
+/* Stuff extracted from a TPQ file header
+ */
+struct tpq_info {
+	struct tpq_info *next;
+	char *path;
+
+	double w_long;
+	double e_long;
+	double s_lat;
+	double n_lat;
+
+	int lat_count;
+	int long_count;
+
+	int index_size;
+	struct tpq_index_e *index;
+};
+
+struct tpq_index_e {
+	long	offset;
+	long	size;
+};
+
+
 /* from tpq_io.c */
 GdkPixbuf *load_tpq_maplet ( char *, int );
+struct tpq_info *tpq_lookup ( char * );
 
 /* from maplet.c */
 struct maplet *load_maplet ( void );

@@ -115,6 +115,22 @@ invalidate_pixel_content ( void )
 	    series_info[i].content = 0;
 }
 
+/* This is called when we are initializing to view just
+ * a single TPQ file.
+ */
+int
+file_init ( char *path )
+{
+	struct tpq_info *tp;
+
+	tp = tpq_lookup ( path );
+
+	return 0;
+}
+
+/* This is the usual initialization when we want to setup to
+ * view a whole collection of potentially multiple states.
+ */
 int
 archive_init ( char *archives[] )
 {

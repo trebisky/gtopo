@@ -51,36 +51,13 @@ struct tpq_header {
 };
 
 /* The above is the format of the TPQ file as found on disk.
- * what follows are my internal datastructures to hold info that
- * has been extracted from a TPQ file.
  */
-
-struct tpq_info {
-	struct tpq_info *next;
-	char *path;
-
-	double w_long;
-	double e_long;
-	double s_lat;
-	double n_lat;
-
-	int lat_count;
-	int long_count;
-
-	int index_size;
-	struct tpq_index_e *index;
-};
 
 /* The biggest thing I have seen yet was in the california
  * level 3 map (22x20), which is 440 !!
  */
 #define TPQ_MAX_MAPLETS	500
 #define INDEX_BUFSIZE	2048
-
-struct tpq_index_e {
-	long	offset;
-	long	size;
-};
 
 /* For a q-series TPQ file representing a 7.5 minute quadrangle,
  * there are 50 maplets within the file.  These begin in the upper
@@ -184,13 +161,13 @@ tpq_new ( char *path )
 
 	fd = open ( path, O_RDONLY );
 	if ( fd < 0 )
-	    error ( "Cannot open: %s\n", path );
+	    return NULL;
 
 	if ( ! read_tpq_header ( tp, fd, 1 ) )
-	    error ( "Bad TPQ header read\n", path );
+	    return NULL;
 
 	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
-	    error ( "Bad TPQ index read\n", path );
+	    return NULL;
 
 	build_index ( tp, fd, (long *) buf );
 
@@ -209,15 +186,32 @@ tpq_lookup ( char *path )
 	    	return tp;
 
 	tp = tpq_new ( path );
-	tp->next = tpq_head;
-	tpq_head = tp;
+
+	if ( tp ) {
+	    tp->next = tpq_head;
+	    tpq_head = tp;
+	}
 
 	return tp;
 }
 
-#define BUFSIZE	1024
+static char tmpname[128];
 
-char *tmpname = "gtopo.tmp";
+/* XXX - should use /tmp for ramdisk speed */
+static int
+temp_file_open ( void )
+{
+	int tfd;
+
+	strcpy ( tmpname, "gtopo.tmp" );
+	tfd = open ( tmpname, O_CREAT | O_TRUNC | O_WRONLY, 0600 );
+	if ( tfd < 0 )
+	    error ( "Cannot open tempfile: %s\n", tmpname );
+
+	return tfd;
+}
+
+#define BUFSIZE	1024
 
 /* Pull a maplet out of a TPQ file.
  * returns NULL if trouble.
@@ -241,9 +235,7 @@ load_tpq_maplet ( char *name, int index )
 	    return NULL;
 
 	/* open a temp file for R/W */
-	ofd = open ( tmpname, O_CREAT | O_TRUNC | O_WRONLY, 0600 );
-	if ( ofd < 0 )
-	    error ( "Cannot open tempfile: %s\n", tmpname );
+	ofd = temp_file_open ();
 
 	fd = open ( name, O_RDONLY );
 	if ( fd < 0 )

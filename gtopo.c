@@ -334,8 +334,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 		dlat, dlong );
 
 	/* Make location of the mouse click be the current position */
-	info.lat_deg -= dlat;
 	info.long_deg -= dlong;
+	info.lat_deg -= dlat;
 
 	printf ( "New position (lat/long) %.4f %.4f\n",
 		info.lat_deg, info.long_deg );
@@ -379,6 +379,21 @@ focus_handler ( GtkWidget *wp, GdkEventFocus *event, gpointer data )
 	printf ( "Focus event %d\n", event->in );
 }
 
+void
+set_position ( double long_deg, double lat_deg )
+{
+	info.long_deg = long_deg;
+	info.lat_deg = lat_deg;
+	printf ("Set position: long/lat = %.3f %.3f\n", long_deg, lat_deg );
+}
+
+void
+usage ( void )
+{
+	printf ( "Usage: gtopo [-f <file>]\n" );
+	exit ( 1 );
+}
+
 int
 main ( int argc, char **argv )
 {
@@ -388,6 +403,8 @@ main ( int argc, char **argv )
 	char *tpq_path;
 	int xm, ym;
 	char *p;
+	int file_option = 0;
+	char *file_name;
 
 	/* Let gtk strip off any of its arguments first
 	 */
@@ -403,11 +420,25 @@ main ( int argc, char **argv )
 	    p = *argv++;
 	    if ( strcmp ( p, "-v" ) == 0 )
 	    	info.verbose = 1;
+	    if ( strcmp ( p, "-f" ) == 0 ) {
+		if ( argc < 1 )
+		    usage ();
+		argc--;
+		file_name = *argv++;
+		file_option = 1;
+	    }
 	}
 
-	if ( ! archive_init ( topo_archives ) ) {
-	    printf ( "No topo archives found\n" );
-	    return 1;
+	if ( file_option ) {
+	    if ( ! file_init ( file_name ) ) {
+		printf ( "No TOPO file: %s\n", file_name );
+		return 1;
+	    }
+	} else {
+	    if ( ! archive_init ( topo_archives ) ) {
+		printf ( "No topo archives found\n" );
+		return 1;
+	    }
 	}
 
 	main_window = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
@@ -455,28 +486,28 @@ main ( int argc, char **argv )
 
 	syscm = gdk_colormap_get_system ();
 
-	/* In California west of Taboose Pass */
-	info.lat_deg = dms2deg ( 37, 1, 0 );
-	info.long_deg = dms2deg ( 118, 31, 0 );
-
 #ifdef notdef
 #endif
-	/* Mt. Hopkins, Arizona */
-	info.lat_deg = 31.69;
-	info.long_deg = 110.88;
 
-	/* Nevada */
-	info.lat_deg = 36.2338;
-	info.long_deg = 114.9894;
+	if ( ! file_option ) {
+	    /* In California west of Taboose Pass */
+	    set_position ( dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
 
-	set_series ( S_STATE );
-	set_series ( S_ATLAS );
-	set_series ( S_500K );
-	set_series ( S_24K );
-	set_series ( S_100K );
+	    /* Mt. Hopkins, Arizona */
+	    set_position ( 110.88, 31.69 );
 
-	set_series ( S_24K );
-	set_series ( S_500K );
+	    /* Nevada */
+	    set_position ( 114.9894, 36.2338 );
+
+	    set_series ( S_STATE );
+	    set_series ( S_ATLAS );
+	    set_series ( S_500K );
+	    set_series ( S_24K );
+	    set_series ( S_100K );
+
+	    set_series ( S_24K );
+	    set_series ( S_500K );
+	}
 
 	vp_info.vx = MINIMUM_VIEW;
 	vp_info.vy = MINIMUM_VIEW;
