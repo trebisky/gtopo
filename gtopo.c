@@ -403,7 +403,6 @@ main ( int argc, char **argv )
 	char *tpq_path;
 	int xm, ym;
 	char *p;
-	int file_option = 0;
 	char *file_name;
 
 	/* Let gtk strip off any of its arguments first
@@ -415,6 +414,7 @@ main ( int argc, char **argv )
 
 	info.verbose = 0;
 	info.initial = 1;
+	info.file_opt = 0;
 
 	while ( argc-- ) {
 	    p = *argv++;
@@ -425,11 +425,11 @@ main ( int argc, char **argv )
 		    usage ();
 		argc--;
 		file_name = *argv++;
-		file_option = 1;
+		info.file_opt = 1;
 	    }
 	}
 
-	if ( file_option ) {
+	if ( info.file_opt ) {
 	    if ( ! file_init ( file_name ) ) {
 		printf ( "No TOPO file: %s\n", file_name );
 		return 1;
@@ -489,7 +489,7 @@ main ( int argc, char **argv )
 #ifdef notdef
 #endif
 
-	if ( ! file_option ) {
+	if ( ! info.file_opt ) {
 	    /* In California west of Taboose Pass */
 	    set_position ( dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
 

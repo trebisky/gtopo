@@ -122,10 +122,33 @@ int
 file_init ( char *path )
 {
 	struct tpq_info *tp;
+	struct series *sp;
 
 	tp = tpq_lookup ( path );
+	if ( ! tp )
+	    return 0;
 
-	return 0;
+	set_position ( (tp->w_long + tp->e_long)/2.0, (tp->s_lat + tp->n_lat)/2.0 );
+
+	sp = &series_info[S_UNK];
+	    sp->series = S_UNK;
+	    sp->cache = (struct maplet *) NULL;
+	    sp->cache_count = 0;
+	    sp->pixels = NULL;
+	    sp->content = 0;
+
+	    sp->lat_count = tp->lat_count;
+	    sp->long_count = tp->long_count;;
+	    sp->map_lat_deg = tp->n_lat - tp->s_lat;
+	    sp->map_long_deg = tp->e_long - tp->w_long;
+	    sp->lat_count_d = 1.0 / sp->map_lat_deg;
+	    sp->long_count_d = 1.0 / sp->map_long_deg;
+	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
+	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	    sp->quad_lat_count = 1;
+	    sp->quad_long_count = 1;
+
+	return 1;
 }
 
 /* This is the usual initialization when we want to setup to
@@ -267,6 +290,9 @@ archive_init ( char *archives[] )
 void
 toggle_series ( void )
 {
+	if ( info.file_opt )
+	    return;
+
 	if ( info.series->series == S_24K )
 	    set_series ( S_100K );
 	else if ( info.series->series == S_100K )
@@ -278,6 +304,9 @@ toggle_series ( void )
 void
 set_series ( enum s_type s )
 {
+	if ( info.file_opt )
+	    return;
+
 	info.series = &series_info[s];
 }
 

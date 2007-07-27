@@ -1,12 +1,26 @@
 /* gtopo.h
  */
 
-enum s_type { S_NADA, S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+enum s_type { S_UNK, S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
 #define N_SERIES	6
 
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
+
+/* Structure to hold our current position */
+struct topo_info {
+	/* This is where we are in plain old degrees */
+	double lat_deg;
+	double long_deg;
+
+	/* what series we be lookin' at */
+	struct series *series;
+
+	int verbose;
+	int initial;
+	int file_opt;
+};
 
 /* XXX - we need to introduce a tpq structure and link to it
  * from other appropriate structures (probably just the maplet
@@ -61,20 +75,6 @@ struct series {
 	 */
 	double fx;
 	double fy;
-};
-
-/* Structure to hold our current position */
-struct topo_info {
-	/* This is where we are in plain old degrees */
-	double lat_deg;
-	double long_deg;
-
-	/* what series we be lookin' at */
-	struct series *series;
-
-	int verbose;
-
-	int initial;
 };
 
 /* This is set up by load_maplet() and lookup_quad()
