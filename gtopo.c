@@ -254,7 +254,8 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	int vxdim, vydim;
 
 	/* XXX - at this point we would like to resize ourself
-	 * to INITIAL_VIEW.
+	 * to INITIAL_VIEW (the idea being that if we start off
+	 * at 800x800, we cannot be made smaller, which is bad.
 	 */
 	if ( info.initial ) {
 	    info.initial = 0;
@@ -399,9 +400,6 @@ main ( int argc, char **argv )
 {
 	GtkWidget *main_window;
 	GtkWidget *vb;
-	int w, h;
-	char *tpq_path;
-	int xm, ym;
 	char *p;
 	char *file_name;
 
@@ -486,9 +484,6 @@ main ( int argc, char **argv )
 
 	syscm = gdk_colormap_get_system ();
 
-#ifdef notdef
-#endif
-
 	if ( ! info.file_opt ) {
 	    /* In California west of Taboose Pass */
 	    set_position ( dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
@@ -517,9 +512,6 @@ main ( int argc, char **argv )
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), vp_info.vx, vp_info.vy );
 
 	gtk_widget_show ( vp_info.da );
-
-	if ( info.verbose )
-	    printf ( "single maplet size: %d by %d\n", w, h );
 
 	gtk_main ();
 

@@ -241,8 +241,7 @@ load_maplet ( void )
  * ought to have 436x256 maplets or so.  Most quadrangles do have
  * maplets that give square pixels in ground distances, but this
  * one doesn't, and perhaps others don't as well.
- * XXX - just wired in the hack for this quadrangle.
- * What is needed is some kind of test against 512*cos(lat).
+ *
  * For two areas where the pixel scale is correct, we see:
  *
  * Taboose pass area (has 410x256 maplets), 512*cos(37.017) = 408.8

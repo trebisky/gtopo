@@ -1,7 +1,7 @@
 /* gtopo.h
  */
 
-enum s_type { S_UNK, S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+enum s_type { S_FILE, S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
 #define N_SERIES	6
 
@@ -48,6 +48,11 @@ struct series {
 	 * contains the current position.
 	 */
 	struct maplet *center;
+
+	/* This is a pointer to the TPQ info for
+	 * the S_FILE case
+	 */
+	struct tpq_info *tpq;
 
 	/* How many maplets per TPQ file */
 	int lat_count;

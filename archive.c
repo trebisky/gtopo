@@ -73,7 +73,7 @@ struct section {
 	int	q_code;
 };
 
-struct section *section_head;
+struct section *section_head = NULL;
 
 /* Prototypes ... */
 int add_archive ( char * );
@@ -130,15 +130,16 @@ file_init ( char *path )
 
 	set_position ( (tp->w_long + tp->e_long)/2.0, (tp->s_lat + tp->n_lat)/2.0 );
 
-	sp = &series_info[S_UNK];
-	    sp->series = S_UNK;
+	sp = &series_info[S_FILE];
+	    sp->series = S_FILE;
 	    sp->cache = (struct maplet *) NULL;
 	    sp->cache_count = 0;
 	    sp->pixels = NULL;
 	    sp->content = 0;
+	    sp->tpq = tp;
 
 	    sp->lat_count = tp->lat_count;
-	    sp->long_count = tp->long_count;;
+	    sp->long_count = tp->long_count;
 	    sp->map_lat_deg = tp->n_lat - tp->s_lat;
 	    sp->map_long_deg = tp->e_long - tp->w_long;
 	    sp->lat_count_d = 1.0 / sp->map_lat_deg;
@@ -147,6 +148,8 @@ file_init ( char *path )
 	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+
+	info.series = sp;
 
 	return 1;
 }
@@ -160,8 +163,6 @@ archive_init ( char *archives[] )
 	char **p;
 	int nar = 0;
 	struct series *sp;
-
-	section_head = (struct section *) NULL;
 
 	/* 7.5 minute quadrangle files
 	 * each in a single .tpq file
@@ -394,6 +395,46 @@ find_quad ( int lat_section, int long_section, int lat_quad, int long_quad )
 	return NULL;
 }
 
+/* We have a single file of some sort, we just need to figure
+ * out if we are on the sheet, and if so, get the offsets.
+ */
+int
+lookup_quad_file ( struct maplet *mp, int maplet_lat, int maplet_long )
+{
+	int sheet_lat, sheet_long;
+	int m_lat, m_long;
+	struct series *sp;
+
+	sp = info.series;
+
+	/* Figure out the corner indices of our map */
+	sheet_lat = sp->tpq->s_lat * sp->lat_count_d * sp->lat_count;
+	sheet_long = sp->tpq->e_long * sp->long_count_d * sp->long_count;
+
+	/* Now figure which maplet within the sheet we need.
+	 * XXX - notice the north american flip on longitude.
+	 */
+	m_long = - (maplet_long - sheet_long);
+	m_lat = maplet_lat - sheet_lat;
+
+	printf ( "lookup quad sheet long, lat: %d %d\n", sheet_long, sheet_lat );
+	printf ( "lookup quad point : %d %d\n", maplet_long, maplet_lat );
+	printf ( "lookup quad FILE: %d %d\n", m_long, m_lat );
+
+	if ( m_long < 0 || m_long >= sp->long_count )
+	    return 0;
+	if ( m_lat < 0 || m_lat >= sp->lat_count )
+	    return 0;
+
+	mp->tpq_path = sp->tpq->path;
+
+	/* flip the count to origin from the NW corner */
+	mp->x_maplet = sp->long_count - m_long - 1;
+	mp->y_maplet = sp->lat_count - m_lat - 1;
+
+	return 1;	
+}
+
 /* This gets called when we are looking for a neighboring
  * maplet, have not found it in the cache, and it is not
  * on the same sheet as the center maplet.
@@ -407,6 +448,10 @@ lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 	int m_long, m_lat;
 
 	sp = info.series;
+
+	/* XXX - hack for single file mode */
+	if ( sp->series == S_FILE )
+	    return lookup_quad_file ( mp, maplet_lat, maplet_long );
 
 	lat_section = maplet_lat / (sp->lat_count_d * sp->lat_count);
 	long_section = maplet_long / (sp->long_count_d * sp->long_count);
@@ -441,7 +486,7 @@ lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
 /* For some lat/long position, find the 7.5 minute quad file
  * containing it, and the indices of the maplet within that
  * file containing the position.
- * returns mp->tpq_path and mp->x/y_maplet
+ * on success: sets mp->tpq_path and mp->x/y_maplet
  *
  * Note that the map "codes" follow the way that lat and long
  * increase.  There are 64 quads in a 1x1 "section".
@@ -462,55 +507,6 @@ lookup_quad ( struct maplet *mp )
 
 	return lookup_quad_nbr ( mp, maplet_lat, maplet_long );
 }
-
-#ifdef notdef
-int
-lookup_quad ( struct maplet *mp )
-{
-	struct series *sp;
-	int lat_section, long_section;
-	int lat_quad, long_quad;
-	double maplet_long;
-	double maplet_lat;
-	double lat_deg_quad;
-	double long_deg_quad;
-
-	sp = info.series;
-
-	/* section indices tell us which 1x1 degree chunk
-	 * of the world we are dealing with
-	 */
-	lat_section = info.lat_deg;
-	long_section = info.long_deg;
-
-	if ( info.verbose )
-	    printf ( "lookup for %.4f, %.4f\n", info.lat_deg, info.long_deg );
-
-	lat_quad = (info.lat_deg  - (double)lat_section) / sp->map_lat_deg;
-	long_quad = (info.long_deg - (double)long_section) / sp->map_long_deg;
-
-	/* See if the map sheet is available.
-	 */
-	mp->tpq_path = find_quad ( lat_section, long_section, lat_quad, long_quad );
-	if ( ! mp->tpq_path )
-	    return 0;
-
-	/* Now figure which maplet within the sheet we need.
-	 */
-	lat_deg_quad = info.lat_deg - (double)lat_section - ((double)lat_quad) * sp->map_lat_deg;
-	long_deg_quad = info.long_deg - (double)long_section - ((double)long_quad) * sp->map_long_deg;
-
-	/* These count from E to W and from S to N */
-	maplet_long = long_deg_quad / sp->maplet_long_deg;
-	maplet_lat = lat_deg_quad / sp->maplet_lat_deg;
-
-	/* flip the count to origin from the NW corner */
-	mp->x_maplet = sp->long_count - (int) maplet_long - 1;
-	mp->y_maplet = sp->lat_count - (int) maplet_lat - 1;
-
-	return 1;
-}
-#endif
 
 int
 add_archive ( char *archive )
