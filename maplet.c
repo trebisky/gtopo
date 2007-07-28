@@ -13,8 +13,6 @@
 
 extern struct topo_info info;
 
-static void load_maplet_scale ( struct maplet *, int );
-
 /* XXX - 
  * I have had the maplet cache get up to 2500 entries without
  * any trouble, but someday may want to monitor the size and
@@ -32,7 +30,7 @@ maplet_new ( void )
 
 	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
 	if ( ! mp )
-	    error ("load maplet_nbr, out of mem\n", "" );
+	    error ("maplet_new, out of mem\n", "" );
 
 	mp->time = info.series->cache_count++;
 	return mp;
@@ -52,6 +50,7 @@ maplet_lookup ( int maplet_index_lat, int maplet_index_long )
 	return ( struct maplet *) NULL;
 }
 
+#ifdef notdef
 /* New sheet (and not in cache)
  */
 static struct maplet *
@@ -68,7 +67,7 @@ load_maplet_quad ( int maplet_lat, int maplet_long )
 	 * This will set tpq_path as well as
 	 * x_maplet and y_maplet in the maplet structure.
 	 */
-	if ( ! lookup_quad_nbr ( mp, maplet_lat, maplet_long ) ) {
+	if ( ! lookup_quad ( mp, maplet_lat, maplet_long ) ) {
 	    free ( (char *) mp );
 	    return NULL;
 	}
@@ -83,7 +82,9 @@ load_maplet_quad ( int maplet_lat, int maplet_long )
 
 	return mp;
 }
+#endif
 
+#ifdef notdef
 /* Given a center maplet, load a neighbor
  * x and y are offsets in maplet units, with signs
  * correct for indexing a maplet within a quad.
@@ -161,82 +162,9 @@ load_maplet_nbr ( int x, int y )
 
 	return mp;
 }
-
-/* Overhauled 7-27-2007 to be the main deal */
-struct maplet *
-load_maplet ( int long_maplet, int lat_maplet )
-{
-    	struct series *sp;
-    	struct maplet *mp;
-	int x_maplet, y_maplet;
-
-	sp = info.series;
-
-	if ( info.verbose > 1 )
-	    printf ( "Load maplet for position %.4f %.4f\n", info.lat_deg, info.long_deg );
-
-#ifdef notdef
-	double maplet_lat, maplet_long;
-	int maplet_index_lat;
-	int maplet_index_long;
-
-	/* Convert from degrees to "maplet units"
-	 * (keep these as floating point).
-	 */
-	maplet_lat = info.lat_deg / sp->maplet_lat_deg;
-	maplet_long = info.long_deg / sp->maplet_long_deg;
-
-	/* Truncate these to integers unique to a maplet
-	 */
-	maplet_index_lat = maplet_lat;
-	maplet_index_long = maplet_long;
 #endif
 
-	/* now search the cache for a maplet matching this.
-	 * We may have:
-	 *  1 - just moved position in the same maplet.
-	 *  2 - moved to an already visited maplet.
-	 *  3 - moved to an adjoining maplet.
-	 */
-	mp = maplet_lookup ( lat_maplet, long_maplet );
-	if ( mp ) {
-	    if ( info.verbose > 1 )
-		printf ( "maplet cache hit: %d %d\n", long_maplet, lat_maplet );
-	    return mp;
-	}
-
-	/* Looks like we will be setting up a new entry.
-	 */
-	mp = maplet_new ();
-
-	/* Try to find it in the archive
-	 * This will set tpq_path as well as
-	 * x_maplet and y_maplet in the maplet structure.
-	 */
-	if ( ! lookup_quad_nbr ( mp, lat_maplet, long_maplet ) ) {
-	    free ( (char *) mp );
-	    return NULL;
-	}
-
-	x_maplet = mp->x_maplet;
-	y_maplet = mp->y_maplet;
-
-	if ( info.verbose > 1 )
-	    printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count,
-		    x_maplet, y_maplet, long_maplet, lat_maplet );
-
-	mp->maplet_index_lat = lat_maplet;
-	mp->maplet_index_long = long_maplet;
-
-	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
-
-	mp->next = sp->cache;
-	sp->cache = mp;
-
-	return mp;
-}
-
-/* This need to scale popped up with the Mt. Hopkins quadrangle
+/* The need to scale popped up with the Mt. Hopkins quadrangle
  * which has 330x256 maplets, and to have equal x/y pixel scales
  * ought to have 436x256 maplets or so.  Most quadrangles do have
  * maplets that give square pixels in ground distances, but this
@@ -250,7 +178,7 @@ load_maplet ( int long_maplet, int lat_maplet )
  *
  * Bilinear interpolation looks flawless by the way ...
  */
-void
+static void
 load_maplet_scale ( struct maplet *mp, int index )
 {
 	GdkPixbuf *tmp;
@@ -290,6 +218,64 @@ load_maplet_scale ( struct maplet *mp, int index )
 		printf ( "NOT -- SCALING\n" );
 	    mp->pixbuf = tmp;
 	}
+}
+
+
+/* Overhauled 7-27-2007 to be the main deal */
+struct maplet *
+load_maplet ( int long_maplet, int lat_maplet )
+{
+    	struct series *sp;
+    	struct maplet *mp;
+	int x_maplet, y_maplet;
+
+	sp = info.series;
+
+	if ( info.verbose > 1 )
+	    printf ( "Load maplet for position %.4f %.4f\n", info.lat_deg, info.long_deg );
+
+	/* now search the cache for a maplet matching this.
+	 * We may have:
+	 *  1 - just moved position in the same maplet.
+	 *  2 - moved to an already visited maplet.
+	 *  3 - moved to an adjoining maplet.
+	 */
+	mp = maplet_lookup ( lat_maplet, long_maplet );
+	if ( mp ) {
+	    if ( info.verbose > 1 )
+		printf ( "maplet cache hit: %d %d\n", long_maplet, lat_maplet );
+	    return mp;
+	}
+
+	/* Looks like we will be setting up a new entry.
+	 */
+	mp = maplet_new ();
+
+	/* Try to find it in the archive
+	 * This will set tpq_path as well as
+	 * x_maplet and y_maplet in the maplet structure.
+	 */
+	if ( ! lookup_quad ( mp, lat_maplet, long_maplet ) ) {
+	    free ( (char *) mp );
+	    return NULL;
+	}
+
+	x_maplet = mp->x_maplet;
+	y_maplet = mp->y_maplet;
+
+	if ( info.verbose > 1 )
+	    printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count,
+		    x_maplet, y_maplet, long_maplet, lat_maplet );
+
+	mp->maplet_index_lat = lat_maplet;
+	mp->maplet_index_long = long_maplet;
+
+	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
+
+	mp->next = sp->cache;
+	sp->cache = mp;
+
+	return mp;
 }
 
 /* THE END */

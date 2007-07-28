@@ -57,15 +57,14 @@ struct series {
 	/* boolean, true if pixmap content is OK */
 	int content;
 
-	/* This is a pointer to the maplet which
-	 * contains the current position.
-	 */
-	struct maplet *center;
-
 	/* This is a pointer to the TPQ info for
 	 * the S_FILE case
 	 */
 	struct tpq_info *tpq;
+
+	/* pixel size of maplet XXX */
+	int xdim;
+	int ydim;
 
 	/* How many maplets per TPQ file */
 	int lat_count;

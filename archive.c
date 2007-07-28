@@ -433,12 +433,11 @@ lookup_quad_file ( struct maplet *mp, int maplet_lat, int maplet_long )
 	return 1;	
 }
 
-/* This gets called when we are looking for a neighboring
- * maplet, have not found it in the cache, and it is not
- * on the same sheet as the center maplet.
+/* This is the basic call to look for a maplet, when we
+ * know it is not in the cache.
  */
 int
-lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
+lookup_quad ( struct maplet *mp, int maplet_lat, int maplet_long )
 {
 	struct series *sp;
 	int lat_section, long_section;
@@ -493,7 +492,7 @@ lookup_quad_nbr ( struct maplet *mp, int maplet_lat, int maplet_long )
  * i.e longitude become 1-8, latitude a-h
  */
 int
-lookup_quad ( struct maplet *mp )
+lookup_quad_OLD ( struct maplet *mp )
 {
 	struct series *sp;
 	int maplet_long;
@@ -504,7 +503,7 @@ lookup_quad ( struct maplet *mp )
 	maplet_lat = info.lat_deg * sp->lat_count_d * sp->lat_count;
 	maplet_long = info.long_deg * sp->long_count_d * sp->long_count;
 
-	return lookup_quad_nbr ( mp, maplet_lat, maplet_long );
+	return lookup_quad ( mp, maplet_lat, maplet_long );
 }
 #endif
 

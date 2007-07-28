@@ -198,9 +198,6 @@ pixmap_redraw ( void )
 	 */
 	mp = load_maplet ( info.long_maplet, info.lat_maplet );
 
-	/* XXX */
-	info.series->center = mp;
-
 	if ( mp ) {
 	    /* location of the center within the maplet */
 	    offx = info.fx * mp->xdim;
@@ -236,13 +233,16 @@ pixmap_redraw ( void )
 
 	    for ( y = ny1; y <= ny2; y++ ) {
 		for ( x = nx1; x <= nx2; x++ ) {
-		    printf ( "redraw, load maplet  %d %d\n", x, y );
+		    if ( info.verbose > 3 )
+			printf ( "redraw, load maplet  %d %d\n", x, y );
 		    mp = load_maplet ( info.long_maplet + x, info.lat_maplet + y );
 		    if ( ! mp ) {
-			printf ( "Nope\n");
+			if ( info.verbose > 3 )
+			    printf ( "Nope\n");
 			continue;
 		    }
-		    printf ( "OK, draw at %d %d\n", origx + mp->xdim*x, origy + mp->ydim*y );
+		    if ( info.verbose > 3 )
+			printf ( "OK, draw at %d %d\n", origx + mp->xdim*x, origy + mp->ydim*y );
 		    draw_maplet ( mp,
 			    origx - mp->xdim * x,
 			    origy - mp->ydim * y );
@@ -301,7 +301,6 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 {
 	int button;
 	int vxcent, vycent;
-	int mxdim, mydim;
 	double dlat, dlong;
 	double x_pixel_scale, y_pixel_scale;
 	float x, y;
@@ -328,18 +327,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	if ( info.verbose )
 	    printf ( "Orig position (lat/long) %.4f %.4f\n", info.lat_deg, info.long_deg );
 
-	if ( info.series->center ) {
-	    mxdim = info.series->center->xdim;
-	    mydim = info.series->center->ydim;
-	} else {
-	    /* allow mouse motion if over unmapped area */
-	    /* XXX - OK only for 24K maps */
-	    mxdim = 410;	/* close */
-	    mydim = 256;
-	}
-
-	x_pixel_scale = info.series->maplet_long_deg / (double)mxdim;
-	y_pixel_scale = info.series->maplet_lat_deg / (double)mydim;
+	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
+	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
 
 	dlat  = (event->y - (double)vycent) * y_pixel_scale;
 	dlong = (event->x - (double)vxcent) * x_pixel_scale;
@@ -364,13 +353,6 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 gint
 keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 {
-	int button;
-	int vxcent, vycent;
-	int mxdim, mydim;
-	double dlat, dlong;
-	double x_pixel_scale, y_pixel_scale;
-	float x, y;
-
 	if ( event->length > 0 )
 		printf ("Keyboard event string: %s\n", event->string );
 
