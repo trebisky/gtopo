@@ -232,7 +232,7 @@ load_maplet ( int long_maplet, int lat_maplet )
 	sp = info.series;
 
 	if ( info.verbose > 1 )
-	    printf ( "Load maplet for position %.4f %.4f\n", info.lat_deg, info.long_deg );
+	    printf ( "Load maplet for position %d %d\n", long_maplet, lat_maplet );
 
 	/* now search the cache for a maplet matching this.
 	 * We may have:

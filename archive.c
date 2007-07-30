@@ -128,8 +128,6 @@ file_init ( char *path )
 	if ( ! tp )
 	    return 0;
 
-	set_position ( (tp->w_long + tp->e_long)/2.0, (tp->s_lat + tp->n_lat)/2.0 );
-
 	sp = &series_info[S_FILE];
 	    sp->series = S_FILE;
 	    sp->cache = (struct maplet *) NULL;
@@ -137,6 +135,10 @@ file_init ( char *path )
 	    sp->pixels = NULL;
 	    sp->content = 0;
 	    sp->tpq = tp;
+
+	    /* XXX - pretty bogus */
+	    sp->xdim = 400;
+	    sp->ydim = 400;
 
 	    sp->lat_count = tp->lat_count;
 	    sp->long_count = tp->long_count;
@@ -150,6 +152,8 @@ file_init ( char *path )
 	    sp->quad_long_count = 1;
 
 	info.series = sp;
+
+	set_position ( (tp->w_long + tp->e_long)/2.0, (tp->s_lat + tp->n_lat)/2.0 );
 
 	return 1;
 }
@@ -175,6 +179,10 @@ archive_init ( char *archives[] )
 	    sp->pixels = NULL;
 	    sp->content = 0;
 
+	    /* Correct south of Tucson */
+	    sp->xdim = 435;
+	    sp->ydim = 256;
+
 	    sp->lat_count = 10;
 	    sp->long_count = 5;
 	    sp->lat_count_d = 8;
@@ -195,6 +203,10 @@ archive_init ( char *archives[] )
 	    sp->cache_count = 0;
 	    sp->pixels = NULL;
 	    sp->content = 0;
+
+	    /* Correct near Tucson */
+	    sp->xdim = 333;
+	    sp->ydim = 393;
 
 	    sp->lat_count = 8;
 	    sp->long_count = 16;
@@ -218,6 +230,10 @@ archive_init ( char *archives[] )
 	    sp->pixels = NULL;
 	    sp->content = 0;
 
+	    /* Correct in Southern Nevada */
+	    sp->xdim = 380;
+	    sp->ydim = 480;
+
 	    /* The following is only correct for Nevada
 	     * for nevada these are g-files
 	     */
@@ -240,6 +256,10 @@ archive_init ( char *archives[] )
 	    sp->pixels = NULL;
 	    sp->content = 0;
 
+	    /* XXX */
+	    sp->xdim = 400;
+	    sp->ydim = 400;
+
 	    sp->lat_count = 10;
 	    sp->long_count = 5;
 	    sp->lat_count_d = 1;
@@ -258,6 +278,10 @@ archive_init ( char *archives[] )
 	    sp->cache_count = 0;
 	    sp->pixels = NULL;
 	    sp->content = 0;
+
+	    /* XXX */
+	    sp->xdim = 400;
+	    sp->ydim = 400;
 
 	    sp->lat_count = 1;
 	    sp->long_count = 1;
@@ -454,7 +478,7 @@ lookup_quad ( struct maplet *mp, int maplet_lat, int maplet_long )
 	long_section = maplet_long / (sp->long_count_d * sp->long_count);
 
 	if ( info.verbose )
-	    printf ( "lookup_quad_nbr: %d %d\n", lat_section, long_section );
+	    printf ( "lookup_quad, section: %d %d\n", lat_section, long_section );
 
 	lat_quad = maplet_lat / sp->lat_count - lat_section * sp->lat_count_d;
 	long_quad = maplet_long / sp->long_count - long_section * sp->long_count_d;
@@ -501,7 +525,7 @@ lookup_quad_OLD ( struct maplet *mp )
 	sp = info.series;
 
 	maplet_lat = info.lat_deg * sp->lat_count_d * sp->lat_count;
-	maplet_long = info.long_deg * sp->long_count_d * sp->long_count;
+	maplet_long = -info.long_deg * sp->long_count_d * sp->long_count;
 
 	return lookup_quad ( mp, maplet_lat, maplet_long );
 }

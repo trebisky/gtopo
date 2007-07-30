@@ -199,6 +199,10 @@ pixmap_redraw ( void )
 	mp = load_maplet ( info.long_maplet, info.lat_maplet );
 
 	if ( mp ) {
+	    info.series->xdim = mp->xdim;
+	    info.series->ydim = mp->ydim;
+	    printf ( "Center maplet x,ydim = %d, %d\n", mp->xdim, mp->ydim );
+
 	    /* location of the center within the maplet */
 	    offx = info.fx * mp->xdim;
 	    offy = info.fy * mp->ydim;
@@ -325,7 +329,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	vycent = vp_info.vy / 2;
 
 	if ( info.verbose )
-	    printf ( "Orig position (lat/long) %.4f %.4f\n", info.lat_deg, info.long_deg );
+	    printf ( "Orig position (lat/long) %.4f %.4f\n",
+		info.lat_deg, info.long_deg );
 
 	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
 	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
@@ -337,7 +342,7 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	    printf ( "Delta position (lat/long) %.4f %.4f\n", dlat, dlong );
 
 	/* Make location of the mouse click be the current position */
-	set_position ( info.long_deg - dlong, info.lat_deg - dlat );
+	set_position ( info.long_deg + dlong, info.lat_deg - dlat );
 
 	invalidate_pixel_content ();
 
@@ -377,7 +382,7 @@ synch_position ( void )
     	double m_lat, m_long;
 
     	m_lat = info.lat_deg / info.series->maplet_lat_deg;
-    	m_long = info.long_deg / info.series->maplet_long_deg;
+    	m_long = - info.long_deg / info.series->maplet_long_deg;
 
 	/* indices of the maplet we are in
 	 */
@@ -441,6 +446,7 @@ main ( int argc, char **argv )
 		argc--;
 		file_name = *argv++;
 		info.file_opt = 1;
+		printf ( "Using file option on %s\n", file_name );
 	    }
 	}
 
@@ -519,14 +525,15 @@ main ( int argc, char **argv )
 
 	    set_series ( S_24K );
 
+	    /* In California west of Taboose Pass */
+	    set_position ( -dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
+
 	    /* Mt. Hopkins, Arizona */
-	    set_position ( 110.88, 31.69 );
+	    set_position ( -110.88, 31.69 );
 
 	    /* Nevada */
-	    set_position ( 114.9894, 36.2338 );
+	    set_position ( -114.9894, 36.2338 );
 
-	    /* In California west of Taboose Pass */
-	    set_position ( dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
 	}
 
 	vp_info.vx = MINIMUM_VIEW;

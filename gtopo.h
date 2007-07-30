@@ -149,13 +149,11 @@ struct tpq_info *tpq_lookup ( char * );
 
 /* from maplet.c */
 struct maplet *load_maplet ( int, int );
-struct maplet *load_maplet_nbr ( int, int );
 
 /* from archive.c */
 char *strhide ( char * );
 int archive_init ( char ** );
-int lookup_quad ( struct maplet * );
-int lookup_quad_nbr ( struct maplet *, int, int );
+int lookup_quad ( struct maplet *, int, int );
 void set_series ( enum s_type );
 
 /* THE END */
