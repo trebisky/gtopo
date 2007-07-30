@@ -128,9 +128,12 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 
 	if ( verbose ) {
 	    printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.quad_name );
-	    printf ( "TPQ file maplet counts lat/long: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
+	    printf ( "TPQ file maplet counts long/lat: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
 	    printf ( "TPQ file long range: %.3f %3f\n", tpq_header.west_long, tpq_header.east_long );
 	    printf ( "TPQ file lat range: %.3f %3f\n", tpq_header.south_lat, tpq_header.north_lat );
+	    printf ( "TPQ maplet size: %.5f %.5f\n",
+		(tpq_header.east_long-tpq_header.west_long) / tpq_header.maplet.nlong,
+		(tpq_header.north_lat-tpq_header.south_lat) / tpq_header.maplet.nlat );
 	}
 
 	tp->w_long = tpq_header.west_long;

@@ -102,8 +102,7 @@ struct maplet {
 	int time;
 
 	/* This is which maplet in the quad we are */
-	int x_maplet;
-	int y_maplet;
+	int index;
 
 	/* size of the maplet image in pixels */
 	int xdim;

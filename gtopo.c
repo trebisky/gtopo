@@ -45,8 +45,6 @@
  *	and it will view it. (Use the -f switch).
  *  - use tree rather than linear linked list for section
  *	stuff and for maplet cache.
- *   - fix bug where if you click on a white area, the center
- *     maplet goes away, so all maplets go white.
  *   - add age field to maplet cache and expire/recycle
  *     if size grows beyond some limit.
  *   - handle maplet size discontinuity.
@@ -194,63 +192,57 @@ pixmap_redraw ( void )
 	info.series->content = 1;
 
 	/* load the maplet containing the current position so
-	 * we have some information we need
+	 * we can get the maplet pixel size up front.
 	 */
 	mp = load_maplet ( info.long_maplet, info.lat_maplet );
 
 	if ( mp ) {
 	    info.series->xdim = mp->xdim;
 	    info.series->ydim = mp->ydim;
-	    printf ( "Center maplet x,ydim = %d, %d\n", mp->xdim, mp->ydim );
-
-	    /* location of the center within the maplet */
-	    offx = info.fx * mp->xdim;
-	    offy = info.fy * mp->ydim;
-
-	    origx = vxcent - offx;
-	    origy = vycent - offy;
 	    if ( info.verbose )
-		printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
+		printf ( "Center maplet x,ydim = %d, %d\n", mp->xdim, mp->ydim );
+	}
 
-	    if ( info.center_only ) {
-		nx1 = nx2 = 0;
-		ny1 = ny2 = 0;
-	    } else {
-		nx1 = - (vxdim - (origx + mp->xdim) + mp->xdim - 1 ) / mp->xdim;
-		nx2 = + (origx + mp->xdim - 1 ) / mp->xdim;
-		ny1 = - (vydim - (origy + mp->ydim) + mp->ydim - 1 ) / mp->ydim;
-		ny2 = + (origy + mp->ydim - 1 ) / mp->ydim;
-	    }
+	/* location of the center within the maplet */
+	offx = info.fx * info.series->xdim;
+	offy = info.fy * info.series->ydim;
 
-	    if ( info.verbose ) {
-		printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
-		    vxdim, vydim, mp->xdim, mp->ydim, offx, offy );
-		printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
-	    }
+	origx = vxcent - offx;
+	origy = vycent - offy;
+	if ( info.verbose )
+	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 
-	    /*
-	    draw_maplet ( mp, origx, origy );
-	    for ( y = -ny1; y <= ny2; y++ ) {
-		for ( x = -nx1; x <= nx2; x++ ) {
-		    mp = load_maplet_nbr ( x, y );
-	    */
+	if ( info.center_only ) {
+	    nx1 = nx2 = 0;
+	    ny1 = ny2 = 0;
+	} else {
+	    nx1 = - (vxdim - (origx + info.series->xdim) + info.series->xdim - 1 ) / info.series->xdim;
+	    nx2 = + (origx + info.series->xdim - 1 ) / info.series->xdim;
+	    ny1 = - (vydim - (origy + info.series->ydim) + info.series->ydim - 1 ) / info.series->ydim;
+	    ny2 = + (origy + info.series->ydim - 1 ) / info.series->ydim;
+	}
 
-	    for ( y = ny1; y <= ny2; y++ ) {
-		for ( x = nx1; x <= nx2; x++ ) {
+	if ( info.verbose ) {
+	    printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
+		vxdim, vydim, info.series->xdim, info.series->ydim, offx, offy );
+	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
+	}
+
+	for ( y = ny1; y <= ny2; y++ ) {
+	    for ( x = nx1; x <= nx2; x++ ) {
+		if ( info.verbose > 3 )
+		    printf ( "redraw, load maplet  %d %d\n", x, y );
+		mp = load_maplet ( info.long_maplet + x, info.lat_maplet + y );
+		if ( ! mp ) {
 		    if ( info.verbose > 3 )
-			printf ( "redraw, load maplet  %d %d\n", x, y );
-		    mp = load_maplet ( info.long_maplet + x, info.lat_maplet + y );
-		    if ( ! mp ) {
-			if ( info.verbose > 3 )
-			    printf ( "Nope\n");
-			continue;
-		    }
-		    if ( info.verbose > 3 )
-			printf ( "OK, draw at %d %d\n", origx + mp->xdim*x, origy + mp->ydim*y );
-		    draw_maplet ( mp,
-			    origx - mp->xdim * x,
-			    origy - mp->ydim * y );
+			printf ( "Nope\n");
+		    continue;
 		}
+		if ( info.verbose > 3 )
+		    printf ( "OK, draw at %d %d\n", origx + mp->xdim*x, origy + mp->ydim*y );
+		draw_maplet ( mp,
+			origx - mp->xdim * x,
+			origy - mp->ydim * y );
 	    }
 	}
 
@@ -437,7 +429,7 @@ main ( int argc, char **argv )
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-v" ) == 0 )
-	    	info.verbose = 1;
+	    	info.verbose = 999;
 	    if ( strcmp ( p, "-c" ) == 0 )
 	    	info.center_only = 1;
 	    if ( strcmp ( p, "-f" ) == 0 ) {

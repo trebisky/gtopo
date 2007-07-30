@@ -13,14 +13,16 @@
 
 extern struct topo_info info;
 
-/* XXX - 
- * I have had the maplet cache get up to 2500 entries without
+/* I have had the maplet cache get up to 2500 entries without
  * any trouble, but someday may want to monitor the size and
  * recycle entries with an old timestamp.
- * Also, it may be possible to use a tree rather than a
- * linked list to speed the lookup.
- * Also, keep separate series in their own "hash" to
- * help speed this up.
+ * Also, it may be possible to use a more sophisticated data
+ * structure than a linear linked list to speed up the search.
+ * (use the low bits as a hash index, this puts local blocks
+ * into separate hash bins, something like:
+ * (maplet_lat & 0xf) << 4 | (maplet_long & 0xf)
+ * Also, when an entry is found, move it to the front of
+ * the list.
  */
 
 struct maplet *
@@ -49,120 +51,6 @@ maplet_lookup ( int maplet_index_lat, int maplet_index_long )
 	}
 	return ( struct maplet *) NULL;
 }
-
-#ifdef notdef
-/* New sheet (and not in cache)
- */
-static struct maplet *
-load_maplet_quad ( int maplet_lat, int maplet_long )
-{
-    	struct maplet *mp;
-	struct series *sp;
-
-	sp = info.series;
-
-	mp = maplet_new ();
-
-	/* Try to find it in the archive
-	 * This will set tpq_path as well as
-	 * x_maplet and y_maplet in the maplet structure.
-	 */
-	if ( ! lookup_quad ( mp, maplet_lat, maplet_long ) ) {
-	    free ( (char *) mp );
-	    return NULL;
-	}
-
-	mp->maplet_index_lat = maplet_lat;
-	mp->maplet_index_long = maplet_long;
-
-	load_maplet_scale ( mp, mp->y_maplet * sp->long_count + mp->x_maplet );
-
-	mp->next = sp->cache;
-	sp->cache = mp;
-
-	return mp;
-}
-#endif
-
-#ifdef notdef
-/* Given a center maplet, load a neighbor
- * x and y are offsets in maplet units, with signs
- * correct for indexing a maplet within a quad.
- */
-struct maplet *
-load_maplet_nbr ( int x, int y )
-{
-	struct series *sp;
-    	struct maplet *cmp;
-    	struct maplet *cp;
-    	struct maplet *mp;
-	int maplet_index_lat;
-	int maplet_index_long;
-	int x_maplet;
-	int y_maplet;
-
-	sp = info.series;
-	cmp = sp->center;
-
-    	/* First try cache
-	 * flip sign to increase with lat and long
-	 * this gives a unique pair of numbers for the maplet.
-	 */
-	maplet_index_lat = cmp->maplet_index_lat - y;
-	maplet_index_long = cmp->maplet_index_long - x;
-
-	cp = maplet_lookup ( maplet_index_lat, maplet_index_long );
-	if ( cp ) {
-	    if ( info.verbose > 1 )
-		printf ( "maplet nbr cache hit: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
-	    return cp;
-	}
-
-	/* See if this maplet is on same sheet as center.
-	 */
-	x_maplet = cmp->x_maplet + x;
-	if ( x_maplet < 0 || x_maplet >= sp->long_count ) {
-	    if ( info.verbose > 1 )
-		printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
-	    return load_maplet_quad ( maplet_index_lat, maplet_index_long );
-	}
-
-	y_maplet = cmp->y_maplet + y;
-	if ( y_maplet < 0 || y_maplet >= sp->lat_count ) {
-	    if ( info.verbose > 1 )
-		printf ( "maplet nbr off sheet: (%d %d) %d %d\n", x, y, maplet_index_lat, maplet_index_long );
-	    return load_maplet_quad ( maplet_index_lat, maplet_index_long );
-	}
-
-	mp = maplet_new ();
-
-	/* XXX - do we need to copy more stuff from cmp ??
-	 *   remember, this may be found in cache later
-	 *   and become cmp.
-	 */
-	mp->x_maplet = x_maplet;
-	mp->y_maplet = y_maplet;
-
-	if ( info.verbose > 1 )
-	    printf ( "x,y maplet nbr(%d) = %d %d -- %d %d\n", sp->cache_count, x_maplet, y_maplet,
-		maplet_index_lat, maplet_index_long );
-
-	/* Each maplet from the same sheet has links to the same
-	 * path string, which is just fine.
-	 */
-	mp->tpq_path = cmp->tpq_path;
-
-	mp->maplet_index_lat = maplet_index_lat;
-	mp->maplet_index_long = maplet_index_long;
-
-	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
-
-	mp->next = sp->cache;
-	sp->cache = mp;
-
-	return mp;
-}
-#endif
 
 /* The need to scale popped up with the Mt. Hopkins quadrangle
  * which has 330x256 maplets, and to have equal x/y pixel scales
@@ -220,26 +108,17 @@ load_maplet_scale ( struct maplet *mp, int index )
 	}
 }
 
-
-/* Overhauled 7-27-2007 to be the main deal */
 struct maplet *
 load_maplet ( int long_maplet, int lat_maplet )
 {
     	struct series *sp;
     	struct maplet *mp;
-	int x_maplet, y_maplet;
 
 	sp = info.series;
 
 	if ( info.verbose > 1 )
 	    printf ( "Load maplet for position %d %d\n", long_maplet, lat_maplet );
 
-	/* now search the cache for a maplet matching this.
-	 * We may have:
-	 *  1 - just moved position in the same maplet.
-	 *  2 - moved to an already visited maplet.
-	 *  3 - moved to an adjoining maplet.
-	 */
 	mp = maplet_lookup ( lat_maplet, long_maplet );
 	if ( mp ) {
 	    if ( info.verbose > 1 )
@@ -253,24 +132,21 @@ load_maplet ( int long_maplet, int lat_maplet )
 
 	/* Try to find it in the archive
 	 * This will set tpq_path as well as
-	 * x_maplet and y_maplet in the maplet structure.
+	 * "index" in the maplet structure.
 	 */
-	if ( ! lookup_quad ( mp, lat_maplet, long_maplet ) ) {
+	if ( ! lookup_series ( mp, long_maplet, lat_maplet ) ) {
 	    free ( (char *) mp );
 	    return NULL;
 	}
 
-	x_maplet = mp->x_maplet;
-	y_maplet = mp->y_maplet;
+	mp->maplet_index_long = long_maplet;
+	mp->maplet_index_lat = lat_maplet;
 
 	if ( info.verbose > 1 )
-	    printf ( "x,y maplet(%d) = %d %d -- %d %d\n", sp->cache_count,
-		    x_maplet, y_maplet, long_maplet, lat_maplet );
+	    printf ( "Read maplet(%d) = %d %d -- %d\n", sp->cache_count,
+		    long_maplet, lat_maplet, index );
 
-	mp->maplet_index_lat = lat_maplet;
-	mp->maplet_index_long = long_maplet;
-
-	load_maplet_scale ( mp, y_maplet * sp->long_count + x_maplet );
+	load_maplet_scale ( mp, mp->index );
 
 	mp->next = sp->cache;
 	sp->cache = mp;
