@@ -35,6 +35,19 @@ struct topo_info {
 	int center_only;
 };
 
+/* each map series may use a different algorithm
+ * or method to find maplets.  Each series has a
+ * list of methods to try until one works.
+ */
+enum m_type { M_UNK, M_SECTION, M_FILE };
+
+struct method {
+	struct method *next;
+	enum m_type type;
+	struct section *sections;
+	struct tpq_info *tpq;
+};
+
 /* XXX - we need to introduce a tpq structure and link to it
  * from other appropriate structures (probably just the maplet
  * structure).  This is necessitated at level 3 where the TPQ
@@ -57,10 +70,7 @@ struct series {
 	/* boolean, true if pixmap content is OK */
 	int content;
 
-	/* This is a pointer to the TPQ info for
-	 * the S_FILE case
-	 */
-	struct tpq_info *tpq;
+	struct method *methods;
 
 	/* pixel size of maplet XXX */
 	int xdim;
@@ -152,7 +162,7 @@ struct maplet *load_maplet ( int, int );
 /* from archive.c */
 char *strhide ( char * );
 int archive_init ( char ** );
-int lookup_quad ( struct maplet *, int, int );
+int lookup_series ( struct maplet *, int, int );
 void set_series ( enum s_type );
 
 /* THE END */

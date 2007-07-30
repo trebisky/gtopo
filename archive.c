@@ -115,6 +115,48 @@ invalidate_pixel_content ( void )
 	    series_info[i].content = 0;
 }
 
+void
+add_file_method ( struct series *sp, struct tpq_info *tp )
+{
+	struct method *xp;
+
+	xp = (struct method *) malloc ( sizeof(struct method) );
+	if ( ! xp )
+	    error ("file method - out of memory\n", "" );
+
+	xp->type = M_FILE;
+	xp->tpq = tp;
+	xp->next = sp->methods;
+
+	sp->methods = xp;
+}
+
+void
+add_section_method ( struct series *sp, struct section *ep )
+{
+	struct method *xp;
+
+	xp = (struct method *) malloc ( sizeof(struct method) );
+	if ( ! xp )
+	    error ("section method - out of memory\n", "" );
+
+	xp->type = M_SECTION;
+	xp->sections = ep;
+	xp->next = sp->methods;
+
+	sp->methods = xp;
+}
+
+static void
+series_init ( struct series *sp )
+{
+	sp->cache = (struct maplet *) NULL;
+	sp->cache_count = 0;
+	sp->pixels = NULL;
+	sp->content = 0;
+	sp->methods = NULL;
+}
+
 /* This is called when we are initializing to view just
  * a single TPQ file.
  */
@@ -123,18 +165,15 @@ file_init ( char *path )
 {
 	struct tpq_info *tp;
 	struct series *sp;
+	struct method *xp;
 
 	tp = tpq_lookup ( path );
 	if ( ! tp )
 	    return 0;
 
 	sp = &series_info[S_FILE];
+	    series_init ( sp );
 	    sp->series = S_FILE;
-	    sp->cache = (struct maplet *) NULL;
-	    sp->cache_count = 0;
-	    sp->pixels = NULL;
-	    sp->content = 0;
-	    sp->tpq = tp;
 
 	    /* XXX - pretty bogus */
 	    sp->xdim = 400;
@@ -153,6 +192,8 @@ file_init ( char *path )
 	    sp->long_count_d = 1.0 / sp->map_long_deg;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+
+	add_file_method ( &series_info[S_FILE], tp );
 
 	info.series = sp;
 
@@ -177,10 +218,7 @@ archive_init ( char *archives[] )
 	 */
 	sp = &series_info[S_24K];
 	    sp->series = S_24K;
-	    sp->cache = (struct maplet *) NULL;
-	    sp->cache_count = 0;
-	    sp->pixels = NULL;
-	    sp->content = 0;
+	    series_init ( sp );
 
 	    /* Correct south of Tucson */
 	    sp->xdim = 435;
@@ -202,10 +240,7 @@ archive_init ( char *archives[] )
 	 */
 	sp = &series_info[S_100K];
 	    sp->series = S_100K;
-	    sp->cache = (struct maplet *) NULL;
-	    sp->cache_count = 0;
-	    sp->pixels = NULL;
-	    sp->content = 0;
+	    series_init ( sp );
 
 	    /* Correct near Tucson */
 	    sp->xdim = 333;
@@ -228,10 +263,7 @@ archive_init ( char *archives[] )
 	 */
 	sp = &series_info[S_500K];
 	    sp->series = S_500K;
-	    sp->cache = (struct maplet *) NULL;
-	    sp->cache_count = 0;
-	    sp->pixels = NULL;
-	    sp->content = 0;
+	    series_init ( sp );
 
 	    /* Correct in Southern Nevada */
 	    sp->xdim = 380;
@@ -254,10 +286,7 @@ archive_init ( char *archives[] )
 	/* XXX */
 	sp = &series_info[S_ATLAS];
 	    sp->series = S_ATLAS;
-	    sp->cache = (struct maplet *) NULL;
-	    sp->cache_count = 0;
-	    sp->pixels = NULL;
-	    sp->content = 0;
+	    series_init ( sp );
 
 	    /* XXX */
 	    sp->xdim = 400;
@@ -277,10 +306,7 @@ archive_init ( char *archives[] )
 	/* XXX - The entire state */
 	sp = &series_info[S_STATE];
 	    sp->series = S_STATE;
-	    sp->cache = (struct maplet *) NULL;
-	    sp->cache_count = 0;
-	    sp->pixels = NULL;
-	    sp->content = 0;
+	    series_init ( sp );
 
 	    /* XXX */
 	    sp->xdim = 400;
@@ -311,6 +337,10 @@ archive_init ( char *archives[] )
 	    else if ( info.verbose )
 	    	printf ( "Not a topo archive: %s\n", *p );
 	}
+
+	add_section_method ( &series_info[S_24K], section_head );
+	add_section_method ( &series_info[S_100K], section_head );
+	add_section_method ( &series_info[S_500K], section_head );
 
 	return nar;
 }
@@ -423,8 +453,9 @@ find_quad ( int lat_section, int long_section, int lat_quad, int long_quad )
 /* We have a single file of some sort, we just need to figure
  * out if we are on the sheet, and if so, get the offsets.
  */
-int
-lookup_quad_file ( struct maplet *mp, int maplet_lat, int maplet_long )
+static int
+method_file ( struct maplet *mp, struct method *xp,
+		int maplet_long, int maplet_lat )
 {
 	int sheet_lat, sheet_long;
 	struct series *sp;
@@ -434,8 +465,8 @@ lookup_quad_file ( struct maplet *mp, int maplet_lat, int maplet_long )
 	sp = info.series;
 
 	/* Figure out the corner indices of our map */
-	sheet_lat = sp->tpq->s_lat / sp->maplet_lat_deg;
-	sheet_long = - sp->tpq->e_long / sp->maplet_long_deg;
+	sheet_lat = xp->tpq->s_lat / sp->maplet_lat_deg;
+	sheet_long = - xp->tpq->e_long / sp->maplet_long_deg;
 	printf ( "LQF sheet long, lat: %d %d\n", sheet_long, sheet_lat );
 
 	/* Now figure which maplet within the sheet we need.
@@ -452,7 +483,7 @@ lookup_quad_file ( struct maplet *mp, int maplet_lat, int maplet_long )
 	if ( m_lat < 0 || m_lat >= sp->lat_count )
 	    return 0;
 
-	mp->tpq_path = sp->tpq->path;
+	mp->tpq_path = xp->tpq->path;
 
 	/* flip the count to origin from the NW corner */
 	x_index = sp->long_count - m_long - 1;
@@ -463,11 +494,9 @@ lookup_quad_file ( struct maplet *mp, int maplet_lat, int maplet_long )
 	return 1;	
 }
 
-/* This is the basic call to look for a maplet, when we
- * know it is not in the cache.
- */
-int
-lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
+static int
+method_section ( struct maplet *mp, struct method *xp,
+		    int maplet_long, int maplet_lat )
 {
 	struct series *sp;
 	int lat_section, long_section;
@@ -476,10 +505,6 @@ lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
 	int x_index, y_index;
 
 	sp = info.series;
-
-	/* XXX - hack for single file mode */
-	if ( sp->series == S_FILE )
-	    return lookup_quad_file ( mp, maplet_lat, maplet_long );
 
 	lat_section = maplet_lat / (sp->lat_count_d * sp->lat_count);
 	long_section = maplet_long / (sp->long_count_d * sp->long_count);
@@ -511,6 +536,31 @@ lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
 	mp->index = y_index * sp->long_count + x_index;
 
 	return 1;
+}
+
+/* This is the basic call to look for a maplet, when we
+ * know it is not in the cache.
+ */
+int
+lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
+{
+	struct series *sp;
+	struct method *xp;
+	int done;
+
+	sp = info.series;
+
+	done = 0;
+	for ( xp = sp->methods; xp; xp = xp->next ) {
+	    if ( xp->type == M_SECTION )
+	    	done = method_section ( mp, xp, maplet_long, maplet_lat );
+	    if ( xp->type == M_FILE )
+	    	done = method_file ( mp, xp, maplet_long, maplet_lat );
+	    if ( done )
+	    	return 1;
+	}
+
+	return 0;
 }
 
 int
