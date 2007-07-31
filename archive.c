@@ -115,20 +115,26 @@ invalidate_pixel_content ( void )
 	    series_info[i].content = 0;
 }
 
-void
-add_file_method ( struct series *sp, struct tpq_info *tp )
+static int
+add_file_method ( struct series *sp, char *path )
 {
 	struct method *xp;
+	struct tpq_info *tp;
 
 	xp = (struct method *) malloc ( sizeof(struct method) );
 	if ( ! xp )
 	    error ("file method - out of memory\n", "" );
+
+	tp = tpq_lookup ( path );
+	if ( ! tp )
+	    return 0;
 
 	xp->type = M_FILE;
 	xp->tpq = tp;
 	xp->next = sp->methods;
 
 	sp->methods = xp;
+	return 1;
 }
 
 void
@@ -163,37 +169,38 @@ series_init ( struct series *sp )
 int
 file_init ( char *path )
 {
-	struct tpq_info *tp;
 	struct series *sp;
-	struct method *xp;
-
-	tp = tpq_lookup ( path );
-	if ( ! tp )
-	    return 0;
+	struct tpq_info *tp;
 
 	sp = &series_info[S_FILE];
-	    series_init ( sp );
-	    sp->series = S_FILE;
+	series_init ( sp );
+	sp->series = S_FILE;
 
-	    /* XXX - pretty bogus */
-	    sp->xdim = 400;
-	    sp->ydim = 400;
+	/* XXX - pretty bogus */
+	sp->xdim = 400;
+	sp->ydim = 400;
 
-	    sp->lat_count = tp->lat_count;
-	    sp->long_count = tp->long_count;
-	    sp->map_lat_deg = tp->n_lat - tp->s_lat;
-	    sp->map_long_deg = tp->e_long - tp->w_long;
+	if ( ! add_file_method ( &series_info[S_FILE], path ) )
+	    return 0;
 
-	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
-	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	/* XXX - ugly hack */
+	tp = sp->methods->tpq;
 
-	    /* XXX - bogus if not in a section list */
-	    sp->lat_count_d = 1.0 / sp->map_lat_deg;
-	    sp->long_count_d = 1.0 / sp->map_long_deg;
-	    sp->quad_lat_count = 1;
-	    sp->quad_long_count = 1;
+	sp->lat_count = tp->lat_count;
+	sp->long_count = tp->long_count;
+	sp->map_lat_deg = tp->n_lat - tp->s_lat;
+	sp->map_long_deg = tp->e_long - tp->w_long;
 
-	add_file_method ( &series_info[S_FILE], tp );
+	sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
+	sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+
+#ifdef notdef
+	/* XXX - bogus if not in a section list */
+	sp->lat_count_d = 1.0 / sp->map_lat_deg;
+	sp->long_count_d = 1.0 / sp->map_long_deg;
+	sp->quad_lat_count = 1;
+	sp->quad_long_count = 1;
+#endif
 
 	info.series = sp;
 
@@ -209,7 +216,7 @@ int
 archive_init ( char *archives[] )
 {
 	char **p;
-	int nar = 0;
+	int nar;
 	struct series *sp;
 
 	/* 7.5 minute quadrangle files
@@ -331,6 +338,7 @@ archive_init ( char *archives[] )
 	    sp->maplet_lat_deg = 10.0;
 	    sp->maplet_long_deg = 11.0;
 
+	nar = 0;
 	for ( p=archives; *p; p++ ) {
 	    if ( add_archive ( *p ) )
 		nar++;
@@ -348,15 +356,35 @@ archive_init ( char *archives[] )
 void
 toggle_series ( void )
 {
+	int series;
+
 	if ( info.series->series == S_FILE )
 	    return;
 
-	if ( info.series->series == S_24K )
-	    set_series ( S_100K );
-	else if ( info.series->series == S_100K )
-	    set_series ( S_500K );
-	else
-	    set_series ( S_24K );
+	series = info.series->series;
+	for ( ;; ) {
+	    if ( series == S_24K )
+	    	series = S_STATE;
+	    else
+		++series;
+	    if ( series_info[series].methods ) {
+	    	set_series ( series );
+		return;
+	    }
+	}
+}
+
+void
+show_methods ( struct series *sp )
+{
+	struct method *xp;
+
+	for ( xp = sp->methods; xp; xp = xp->next ) {
+	    printf ( "Method %d", xp->type );
+	    if ( xp->type == M_FILE )
+		printf ( " %s", xp->tpq->path );
+	    printf ( "\n" );
+	}
 }
 
 void
@@ -364,6 +392,8 @@ set_series ( enum s_type s )
 {
 	info.series = &series_info[s];
 	synch_position ();
+	printf ( "Switch to series %d\n", s );
+	show_methods ( info.series );
 }
 
 /* Try both upper and lower case path names for the tpq file
@@ -467,7 +497,8 @@ method_file ( struct maplet *mp, struct method *xp,
 	/* Figure out the corner indices of our map */
 	sheet_lat = xp->tpq->s_lat / sp->maplet_lat_deg;
 	sheet_long = - xp->tpq->e_long / sp->maplet_long_deg;
-	printf ( "LQF sheet long, lat: %d %d\n", sheet_long, sheet_lat );
+	if ( info.verbose > 2 )
+	    printf ( "LQF sheet long, lat: %d %d\n", sheet_long, sheet_lat );
 
 	/* Now figure which maplet within the sheet we need.
 	 * XXX - notice the north american flip on longitude.
@@ -475,8 +506,10 @@ method_file ( struct maplet *mp, struct method *xp,
 	m_long = maplet_long - sheet_long;
 	m_lat = maplet_lat - sheet_lat;
 
-	printf ( "LQF point : %d %d\n", maplet_long, maplet_lat );
-	printf ( "LQF index: %d %d\n", m_long, m_lat );
+	if ( info.verbose > 2 ) {
+	    printf ( "LQF point : %d %d\n", maplet_long, maplet_lat );
+	    printf ( "LQF index: %d %d\n", m_long, m_lat );
+	}
 
 	if ( m_long < 0 || m_long >= sp->long_count )
 	    return 0;
@@ -564,6 +597,18 @@ lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
 }
 
 int
+is_directory ( char *path )
+{
+	struct stat stat_buf;
+
+	if ( stat ( path, &stat_buf ) < 0 )
+	    return 0;
+	if ( ! S_ISDIR(stat_buf.st_mode) )
+	    return 0;
+	return 1;
+}
+
+int
 add_archive ( char *archive )
 {
 	struct stat stat_buf;
@@ -604,16 +649,13 @@ add_archive ( char *archive )
 int
 add_disk ( char *archive, char *disk )
 {
-	struct stat stat_buf;
 	DIR *dd;
 	struct dirent *dp;
 	char disk_path[100];
 
 	sprintf ( disk_path, "%s/%s", archive, disk );
 
-	if ( stat ( disk_path, &stat_buf ) < 0 )
-	    return 0;
-	if ( ! S_ISDIR(stat_buf.st_mode) )
+	if ( ! is_directory ( disk_path ) )
 	    return 0;
 
 	if ( ! (dd = opendir ( disk_path )) )
@@ -627,6 +669,8 @@ add_disk ( char *archive, char *disk )
 	for ( ;; ) {
 	    if ( ! (dp = readdir ( dd )) )
 	    	break;
+	    if ( strlen(dp->d_name) == 8 )
+	    	add_dir ( disk_path, dp->d_name );
 	    if ( strcmp(dp->d_name,"SI_D01") == 0 ) {
 	    	add_full_usa ( disk_path, dp->d_name );
 		continue;
@@ -655,16 +699,13 @@ static int letter_count[N_LETTERS];
 int
 scan_section ( char *path )
 {
-	struct stat stat_buf;
 	DIR *dd;
 	struct dirent *dp;
 	int i;
 	int ch;
 	int rv = 'q';
 
-	if ( stat ( path, &stat_buf ) < 0 )
-	    return 0;
-	if ( ! S_ISDIR(stat_buf.st_mode) )
+	if ( ! is_directory ( path ) )
 	    return 0;
 
 	if ( ! (dd = opendir ( path )) )
@@ -759,6 +800,101 @@ lookup_section ( int latlong )
 	    	return ep;
 	}
 	return NULL;
+}
+
+struct dir_table {
+	struct dir_table *next;
+	char *name;
+};
+
+struct dir_table *dir_head = NULL;
+
+/* Search the dir name table, if we find an entry,
+ * return true, if we don't, add this one and return
+ * false
+ */
+int
+dir_lookup ( char *name )
+{
+	struct dir_table *dp;
+
+	for ( dp=dir_head; dp; dp = dp->next ) {
+	    if ( strcmp ( dp->name, name ) == 0 )
+		return 1;
+	}
+
+	dp = (struct dir_table *) malloc ( sizeof(struct dir_table) );
+	if ( ! dp )
+	    error ("dir_lookup - out of memory\n", "" );
+
+	dp->name = strhide ( name );
+	dp->next = dir_head;
+	dir_head = dp;
+	return 0;
+}
+
+void
+add_dir_level ( int level, char *dirpath, char *name )
+{
+	char tpq_path[100];
+
+	sprintf ( tpq_path, "%s/%s", dirpath, name );
+	if ( info.verbose )
+	    printf ( "add dir level:  %s\n", tpq_path );
+
+	if ( is_directory ( tpq_path ) )
+	    return;
+
+	printf ( "Add file method: %d  %s\n", level, tpq_path );
+	if ( level == 1 )
+	    (void) add_file_method ( &series_info[S_STATE], tpq_path );
+	if ( level == 2 )
+	    (void) add_file_method ( &series_info[S_ATLAS], tpq_path );
+	if ( level == 3 )
+	    (void) add_file_method ( &series_info[S_500K], tpq_path );
+}
+
+/* We are here when we have found an 8 character name within
+ * a disk.  We are expecting something like az1_map1,
+ * within which are TPQ files for levels 1 2 or 3
+ */
+int
+add_dir ( char *archive, char *dir )
+{
+	DIR *dd;
+	struct dirent *dp;
+	char dir_path[100];
+	int level;
+
+	level = dir[7] - '0';
+	if ( level < 1 || level > 3 )
+	    return 0;
+
+	sprintf ( dir_path, "%s/%s", archive, dir );
+
+	if ( ! is_directory ( dir_path ) )
+	    return 0;
+
+	/* See if we already got this directory
+	 * from some other disk.
+	 */
+	if ( dir_lookup ( dir ) )
+	    return 0;
+
+	if ( info.verbose )
+	    printf ( "add dir: %d %s\n", level, dir_path );
+
+	if ( ! (dd = opendir ( dir_path )) )
+	    return 0;
+
+	for ( ;; ) {
+	    if ( ! (dp = readdir ( dd )) )
+	    	break;
+	    add_dir_level ( level, dir_path, dp->d_name );
+	}
+
+	closedir ( dd );
+	return 1;
 }
 
 int

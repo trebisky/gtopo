@@ -520,11 +520,11 @@ main ( int argc, char **argv )
 	    /* In California west of Taboose Pass */
 	    set_position ( -dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
 
-	    /* Mt. Hopkins, Arizona */
-	    set_position ( -110.88, 31.69 );
-
 	    /* Nevada */
 	    set_position ( -114.9894, 36.2338 );
+
+	    /* Mt. Hopkins, Arizona */
+	    set_position ( -110.88, 31.69 );
 
 	}
 

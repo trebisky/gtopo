@@ -54,10 +54,11 @@ struct tpq_header {
  */
 
 /* The biggest thing I have seen yet was in the california
- * level 3 map (22x20), which is 440 !!
+ * level 3 map (22x20), which has 440 jpeg maplets and 767
+ * table entries.
  */
-#define TPQ_MAX_MAPLETS	500
-#define INDEX_BUFSIZE	2048
+#define TPQ_MAX_MAPLETS	800
+#define INDEX_BUFSIZE	3200
 
 /* For a q-series TPQ file representing a 7.5 minute quadrangle,
  * there are 50 maplets within the file.  These begin in the upper
@@ -87,10 +88,13 @@ build_index ( struct tpq_info *tp, int fd, long *info )
 	int num_jpeg;
 	struct tpq_index_e proto_index[TPQ_MAX_MAPLETS];
 	struct tpq_index_e *index;
+	char ebuf[16];
 
 	num_index = (info[0] - 1024)/4 - 4;
-	if ( num_index > TPQ_MAX_MAPLETS )
-	    error ("Whoa! too many maplets\n", "" );
+	if ( num_index > TPQ_MAX_MAPLETS ) {
+	    sprintf ( ebuf, "%d", num_index );
+	    error ("Whoa! too many maplets %s\n", ebuf );
+	}
 
 	num_jpeg = 0;
 	for ( i=0; i<num_index; i++ ) {
@@ -166,7 +170,7 @@ tpq_new ( char *path )
 	if ( fd < 0 )
 	    return NULL;
 
-	if ( ! read_tpq_header ( tp, fd, 1 ) )
+	if ( ! read_tpq_header ( tp, fd, info.verbose ) )
 	    return NULL;
 
 	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
