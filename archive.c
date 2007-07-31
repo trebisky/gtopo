@@ -91,6 +91,30 @@ strhide ( char *data )
 	return rv;
 }
 
+int
+is_directory ( char *path )
+{
+	struct stat stat_buf;
+
+	if ( stat ( path, &stat_buf ) < 0 )
+	    return 0;
+	if ( S_ISDIR(stat_buf.st_mode) )
+	    return 1;
+	return 0;
+}
+
+int
+is_file ( char *path )
+{
+	struct stat stat_buf;
+
+	if ( stat ( path, &stat_buf ) < 0 )
+	    return 0;
+	if ( S_ISREG(stat_buf.st_mode) )
+	    return 1;
+	return 0;
+}
+
 /* What we want here are a couple of interators.
  * This is kinda goofy, but I like having the series
  * structure local to this file only ...
@@ -161,6 +185,16 @@ series_init ( struct series *sp )
 	sp->pixels = NULL;
 	sp->content = 0;
 	sp->methods = NULL;
+}
+
+/* Print info about one TPQ file and exit */
+void
+file_info ( char *path )
+{
+	if ( ! is_file(path) ) {
+	    printf ( "No such file: %s\n", path );
+	    return;
+	}
 }
 
 /* This is called when we are initializing to view just
@@ -399,10 +433,9 @@ set_series ( enum s_type s )
 /* Try both upper and lower case path names for the tpq file
  */
 static char *
-quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad, int long_quad )
+section_map_path ( struct section *ep, int lat_section, int long_section, int lat_quad, int long_quad )
 {
 	char path_buf[100];
-	struct stat stat_buf;
 	int lat_q, long_q;
 	int series_letter;
 
@@ -432,9 +465,8 @@ quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad,
 	if ( info.verbose )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
-	if ( stat ( path_buf, &stat_buf ) >=  0 )
-	    if ( S_ISREG(stat_buf.st_mode) )
-		return strhide ( path_buf );
+	if ( is_file(path_buf) )
+	    return strhide ( path_buf );
 
 	/* Try upper case */
 	lat_q  = toupper(lat_q);
@@ -444,9 +476,8 @@ quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad,
 	if ( info.verbose )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
-	if ( stat ( path_buf, &stat_buf ) >=  0 )
-	    if ( S_ISREG(stat_buf.st_mode) )
-		return strhide ( path_buf );
+	if ( is_file(path_buf) )
+	    return strhide ( path_buf );
 
 	return NULL;
 }
@@ -460,7 +491,7 @@ quad_path ( struct section *ep, int lat_section, int long_section, int lat_quad,
  * within the usual degree section setup.  Other states, who knows.
  */
 static char *
-find_quad ( int lat_section, int long_section, int lat_quad, int long_quad )
+section_find_map ( int lat_section, int long_section, int lat_quad, int long_quad )
 {
 	struct section *ep;
 	char *rv;
@@ -473,7 +504,7 @@ find_quad ( int lat_section, int long_section, int lat_quad, int long_quad )
 	 * directories cover the same area
 	 */
 	for ( ; ep; ep = ep->next_ll ) {
-	    rv = quad_path ( ep, lat_section, long_section, lat_quad, long_quad );
+	    rv = section_map_path ( ep, lat_section, long_section, lat_quad, long_quad );
 	    if ( rv )
 	    	return rv;
 	}
@@ -522,7 +553,7 @@ method_file ( struct maplet *mp, struct method *xp,
 	x_index = sp->long_count - m_long - 1;
 	y_index = sp->lat_count - m_lat - 1;
 
-	mp->index = y_index * sp->long_count + x_index;
+	mp->tpq_index = y_index * sp->long_count + x_index;
 
 	return 1;	
 }
@@ -550,7 +581,7 @@ method_section ( struct maplet *mp, struct method *xp,
 
 	/* See if the map sheet is available.
 	 */
-	mp->tpq_path = find_quad ( lat_section, long_section, lat_quad, long_quad );
+	mp->tpq_path = section_find_map ( lat_section, long_section, lat_quad, long_quad );
 	if ( ! mp->tpq_path )
 	    return 0;
 
@@ -566,7 +597,7 @@ method_section ( struct maplet *mp, struct method *xp,
 	x_index = sp->long_count - m_long - 1;
 	y_index = sp->lat_count - m_lat - 1;
 
-	mp->index = y_index * sp->long_count + x_index;
+	mp->tpq_index = y_index * sp->long_count + x_index;
 
 	return 1;
 }
@@ -594,18 +625,6 @@ lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
 	}
 
 	return 0;
-}
-
-int
-is_directory ( char *path )
-{
-	struct stat stat_buf;
-
-	if ( stat ( path, &stat_buf ) < 0 )
-	    return 0;
-	if ( ! S_ISDIR(stat_buf.st_mode) )
-	    return 0;
-	return 1;
 }
 
 int

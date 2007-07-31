@@ -402,9 +402,11 @@ set_position ( double long_deg, double lat_deg )
 void
 usage ( void )
 {
-	printf ( "Usage: gtopo [-f <file>]\n" );
+	printf ( "Usage: gtopo [-v -f/i <file>]\n" );
 	exit ( 1 );
 }
+
+static int file_opt = 0;
 
 int
 main ( int argc, char **argv )
@@ -423,7 +425,6 @@ main ( int argc, char **argv )
 
 	info.verbose = 0;
 	info.initial = 1;
-	info.file_opt = 0;
 	info.center_only = 0;
 
 	while ( argc-- ) {
@@ -437,12 +438,20 @@ main ( int argc, char **argv )
 		    usage ();
 		argc--;
 		file_name = *argv++;
-		info.file_opt = 1;
+		file_opt = 1;
 		printf ( "Using file option on %s\n", file_name );
+	    }
+	    if ( strcmp ( p, "-i" ) == 0 ) {
+		if ( argc < 1 )
+		    usage ();
+		argc--;
+		file_name = *argv++;
+		printf ( "File info on %s\n", file_name );
+		file_info ( file_name );
 	    }
 	}
 
-	if ( info.file_opt ) {
+	if ( file_opt ) {
 	    if ( ! file_init ( file_name ) ) {
 		printf ( "No TOPO file: %s\n", file_name );
 		return 1;
@@ -499,7 +508,7 @@ main ( int argc, char **argv )
 
 	syscm = gdk_colormap_get_system ();
 
-	if ( ! info.file_opt ) {
+	if ( ! file_opt ) {
 
 	    /* not strictly needed, but set_series will access
 	     * these values.

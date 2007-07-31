@@ -67,7 +67,7 @@ maplet_lookup ( int maplet_index_lat, int maplet_index_long )
  * Bilinear interpolation looks flawless by the way ...
  */
 static void
-load_maplet_scale ( struct maplet *mp, int index )
+load_maplet_scale ( struct maplet *mp )
 {
 	GdkPixbuf *tmp;
 	double lat_deg;
@@ -79,7 +79,7 @@ load_maplet_scale ( struct maplet *mp, int index )
 
 	lat_deg = mp->maplet_index_lat * sp->maplet_lat_deg;
 
-	tmp = load_tpq_maplet ( mp->tpq_path, index );
+	tmp = load_tpq_maplet ( mp );
 
 	/* get the maplet size */
 	mp->xdim = gdk_pixbuf_get_width ( tmp );
@@ -132,7 +132,7 @@ load_maplet ( int long_maplet, int lat_maplet )
 
 	/* Try to find it in the archive
 	 * This will set tpq_path as well as
-	 * "index" in the maplet structure.
+	 * tpq_index in the maplet structure.
 	 */
 	if ( ! lookup_series ( mp, long_maplet, lat_maplet ) ) {
 	    free ( (char *) mp );
@@ -146,10 +146,39 @@ load_maplet ( int long_maplet, int lat_maplet )
 	    printf ( "Read maplet(%d) = %d %d -- %d\n", sp->cache_count,
 		    long_maplet, lat_maplet, index );
 
-	load_maplet_scale ( mp, mp->index );
+	load_maplet_scale ( mp );
 
 	mp->next = sp->cache;
 	sp->cache = mp;
+
+	return mp;
+}
+
+/* This is used when we want to "sniff at" at TPQ file prior to actually loading and
+ * displaying maplets from it.  The best thing to do is to load a maplet near
+ * the center of the map, at least when we are in file view mode.
+ */
+struct maplet *
+load_maplet_any ( char *path )
+{
+    	struct maplet *mp;
+
+	mp = maplet_new ();
+
+#ifdef notdef
+	mp->maplet_index_long = long_maplet;
+	mp->maplet_index_lat = lat_maplet;
+#endif
+
+	mp->tpq_path = strhide ( path );
+	mp->tpq_index = 0;
+
+	load_maplet_scale ( mp );
+
+#ifdef notdef
+	mp->next = sp->cache;
+	sp->cache = mp;
+#endif
 
 	return mp;
 }

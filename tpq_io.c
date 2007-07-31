@@ -151,9 +151,9 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 	return 1;
 }
 
-struct tpq_info *tpq_head = NULL;
+static struct tpq_info *tpq_head = NULL;
 
-struct tpq_info *
+static struct tpq_info *
 tpq_new ( char *path )
 {
         struct tpq_info *tp;
@@ -224,7 +224,7 @@ temp_file_open ( void )
  * returns NULL if trouble.
  */
 GdkPixbuf *
-load_tpq_maplet ( char *name, int index )
+load_tpq_maplet ( struct maplet *mp )
 {
 	char buf[BUFSIZE];
 	int fd, ofd;
@@ -234,26 +234,28 @@ load_tpq_maplet ( char *name, int index )
 	GdkPixbuf *rv;
 	struct tpq_info *tp;
 
-	tp = tpq_lookup ( name );
+	tp = tpq_lookup ( mp->tpq_path );
 	if ( ! tp )
 	    return NULL;
 
-	if ( index < 0 || index >=tp->index_size )
+	mp->tpq = tp;
+
+	if ( mp->tpq_index < 0 || mp->tpq_index >=tp->index_size )
 	    return NULL;
 
 	/* open a temp file for R/W */
 	ofd = temp_file_open ();
 
-	fd = open ( name, O_RDONLY );
+	fd = open ( mp->tpq_path, O_RDONLY );
 	if ( fd < 0 )
-	    error ( "Cannot open: %s\n", name );
+	    error ( "Cannot open: %s\n", mp->tpq_path );
 
-	lseek ( fd, tp->index[index].offset, SEEK_SET );
-	size = tp->index[index].size;
+	lseek ( fd, tp->index[mp->tpq_index].offset, SEEK_SET );
+	size = tp->index[mp->tpq_index].size;
 
 	while ( size > 0 ) {
 	    if ( read( fd, buf, BUFSIZE ) != BUFSIZE )
-		error ( "TPQ file read error\n", name );
+		error ( "TPQ file read error\n", mp->tpq_path );
 	    nw = size < BUFSIZE ? size : BUFSIZE;
 	    if ( write ( ofd, buf, nw ) != nw )
 		error ( "tmp file write error\n", tmpname );

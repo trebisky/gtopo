@@ -31,7 +31,6 @@ struct topo_info {
 
 	/* stuff from command line options */
 	int verbose;
-	int file_opt;
 	int center_only;
 };
 
@@ -111,9 +110,6 @@ struct maplet {
 	/* Use for possible cache entry aging */
 	int time;
 
-	/* This is which maplet in the quad we are */
-	int index;
-
 	/* size of the maplet image in pixels */
 	int xdim;
 	int ydim;
@@ -123,6 +119,11 @@ struct maplet {
 
 	/* pathname that gave us this maplet */
 	char *tpq_path;
+
+	/* This is the maplet index in the file (0-N) */
+	int tpq_index;
+
+	struct tpq_info *tpq;
 };
 
 /* Stuff extracted from a TPQ file header
@@ -153,7 +154,7 @@ void synch_position ( void );
 void set_position ( double, double );
 
 /* from tpq_io.c */
-GdkPixbuf *load_tpq_maplet ( char *, int );
+GdkPixbuf *load_tpq_maplet ( struct maplet * );
 struct tpq_info *tpq_lookup ( char * );
 
 /* from maplet.c */
