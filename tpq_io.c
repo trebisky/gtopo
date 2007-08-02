@@ -56,9 +56,11 @@ struct tpq_header {
 /* The biggest thing I have seen yet was in the california
  * level 3 map (22x20), which has 440 jpeg maplets and 767
  * table entries.
- */
 #define TPQ_MAX_MAPLETS	800
 #define INDEX_BUFSIZE	3200
+ */
+#define TPQ_MAX_MAPLETS	7000
+#define INDEX_BUFSIZE  32000
 
 /* For a q-series TPQ file representing a 7.5 minute quadrangle,
  * there are 50 maplets within the file.  These begin in the upper
@@ -70,8 +72,12 @@ struct tpq_header {
  * there are 100 maplets in the file in a 10x10 pattern,
  * the same order as above.
  * (For the California level 3, it is one huge TPQ file
- *  with 440 maplets). 440x4 is 1760 bytes.
+ *  with 440 maplets as 22x20). 440x4 is 1760 bytes.
+ * (The level 2 in the Nevada set for the entire US takes
+ *  the cake with 6133 maps !!  ( US1_MAP2.tpq )
+ *  This boils down to 1534 maps (59x26)
  */
+
 
 #ifdef BIG_ENDIAN_HACK
 #define JPEG_SOI_TAG	0xffd8
@@ -140,6 +146,9 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 		(tpq_header.north_lat-tpq_header.south_lat) / tpq_header.maplet.nlat );
 	}
 
+	tp->state = strhide ( tpq_header.state );
+	tp->quad = strhide ( tpq_header.quad_name );
+
 	tp->w_long = tpq_header.west_long;
 	tp->e_long = tpq_header.east_long;
 	tp->n_lat = tpq_header.north_lat;
@@ -147,6 +156,34 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 
 	tp->lat_count = tpq_header.maplet.nlat;
 	tp->long_count = tpq_header.maplet.nlong;
+
+	tp->maplet_lat_deg = (tp->n_lat - tp->s_lat) / tp->lat_count;
+	tp->maplet_long_deg = (tp->e_long - tp->w_long) / tp->long_count;
+
+	/* Figure out the corner indices of our map */
+        tp->sheet_lat = tp->s_lat / tp->maplet_lat_deg;
+	tp->sheet_long = - tp->e_long / tp->maplet_long_deg;
+
+	/* What we see so far, and I believe to be an invariant, is the following
+	 * sizes of maplets in the give series:
+	 *   24K  series = 0.0250 long by 0.0125 lat
+	 *  100K  series = 0.0625 long by 0.0625 lat
+	 *  500K  series = 0.5000 long by 0.5000 lat
+	 *  Atlas series = 1.0000 long by 1.0000 lat
+	 *  State series = quite variable
+	 *  (AZ = 7x7, CA = 11x10)
+	 *  (the new NV set has the entire USA as 4.9167 by 3.25)
+	 */
+	if ( tp->maplet_long_deg < 0.0350 )
+	    tp->series = S_24K;
+	else if ( tp->maplet_long_deg < 0.1 )
+	    tp->series = S_100K;
+	else if ( tp->maplet_long_deg < 0.75 )
+	    tp->series = S_500K;
+	else if ( tp->maplet_long_deg < 2.0 )
+	    tp->series = S_ATLAS;
+	else
+	    tp->series = S_STATE;
 
 	return 1;
 }
@@ -221,9 +258,9 @@ temp_file_open ( void )
 #define BUFSIZE	1024
 
 /* Pull a maplet out of a TPQ file.
- * returns NULL if trouble.
+ * expects mp->tpq_index and mp->tpq_path
  */
-GdkPixbuf *
+int
 load_tpq_maplet ( struct maplet *mp )
 {
 	char buf[BUFSIZE];
@@ -231,24 +268,36 @@ load_tpq_maplet ( struct maplet *mp )
 	int size;
 	int nw;
 	int nlong;
-	GdkPixbuf *rv;
 	struct tpq_info *tp;
+	int x_index, y_index;
 
 	tp = tpq_lookup ( mp->tpq_path );
 	if ( ! tp )
-	    return NULL;
+	    return 0;
 
 	mp->tpq = tp;
 
+	/* Some hackery for when we are just sniffing at file
+	 * contents, so that we read a maplet near the geometric
+	 * center of the file.
+	 */
+	if ( mp->tpq_index < 0 ) {
+	    x_index = tp->long_count / 2;
+	    y_index = tp->lat_count / 2;
+	    mp->maplet_index_long = tp->sheet_long + tp->long_count - x_index - 1;
+	    mp->maplet_index_lat = tp->sheet_lat + tp->lat_count - y_index - 1;
+	    mp->tpq_index = y_index * tp->long_count + x_index;
+	}
+
 	if ( mp->tpq_index < 0 || mp->tpq_index >=tp->index_size )
-	    return NULL;
+	    return 0;
 
 	/* open a temp file for R/W */
 	ofd = temp_file_open ();
 
 	fd = open ( mp->tpq_path, O_RDONLY );
 	if ( fd < 0 )
-	    error ( "Cannot open: %s\n", mp->tpq_path );
+	    return 0;
 
 	lseek ( fd, tp->index[mp->tpq_index].offset, SEEK_SET );
 	size = tp->index[mp->tpq_index].size;
@@ -265,13 +314,12 @@ load_tpq_maplet ( struct maplet *mp )
 	close ( fd );
 	close ( ofd );
 
-	rv = gdk_pixbuf_new_from_file ( tmpname, NULL );
-	if ( ! rv && info.verbose )
-	    printf ("Cannot open %s\n", tmpname );
+	mp->pixbuf = gdk_pixbuf_new_from_file ( tmpname, NULL );
+	if ( ! mp->pixbuf && info.verbose )
+	    printf ("Cannot get pixbuf from %s\n", tmpname );
 
 	remove ( tmpname );
-
-	return rv;
+	return 1;
 }
 
 /* THE END */

@@ -8,6 +8,12 @@ enum s_type { S_FILE, S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
 
+/* each map series may use a different algorithm
+ * or method to find maplets.  Each series has a
+ * list of methods to try until one works.
+ */
+enum m_type { M_UNK, M_SECTION, M_FILE };
+
 /* Structure to hold our current position */
 struct topo_info {
 	/* This is where we are in plain old degrees */
@@ -24,21 +30,16 @@ struct topo_info {
 	double 	fx;
 	double	fy;
 
-	/* what series we be lookin' at */
-	struct series *series;
+	/* info for all the series */
+	struct series *series_info;
 
-	int initial;
+	/* the current series */
+	struct series *series;
 
 	/* stuff from command line options */
 	int verbose;
 	int center_only;
 };
-
-/* each map series may use a different algorithm
- * or method to find maplets.  Each series has a
- * list of methods to try until one works.
- */
-enum m_type { M_UNK, M_SECTION, M_FILE };
 
 struct method {
 	struct method *next;
@@ -132,13 +133,24 @@ struct tpq_info {
 	struct tpq_info *next;
 	char *path;
 
+	char *state;
+	char *quad;
+
 	double w_long;
 	double e_long;
 	double s_lat;
 	double n_lat;
 
-	int lat_count;
 	int long_count;
+	int lat_count;
+
+	double maplet_long_deg;
+	double maplet_lat_deg;
+
+	enum s_type series;
+
+	int sheet_long;
+	int sheet_lat;
 
 	int index_size;
 	struct tpq_index_e *index;
@@ -154,11 +166,12 @@ void synch_position ( void );
 void set_position ( double, double );
 
 /* from tpq_io.c */
-GdkPixbuf *load_tpq_maplet ( struct maplet * );
+int load_tpq_maplet ( struct maplet * );
 struct tpq_info *tpq_lookup ( char * );
 
 /* from maplet.c */
 struct maplet *load_maplet ( int, int );
+struct maplet *load_maplet_any ( char * );
 
 /* from archive.c */
 char *strhide ( char * );

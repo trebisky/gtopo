@@ -66,29 +66,27 @@ maplet_lookup ( int maplet_index_lat, int maplet_index_long )
  *
  * Bilinear interpolation looks flawless by the way ...
  */
-static void
+static int
 load_maplet_scale ( struct maplet *mp )
 {
 	GdkPixbuf *tmp;
 	double lat_deg;
 	double pixel_width;
 	int pixel_norm;
-	struct series *sp;
 
-	sp = info.series;
-
-	lat_deg = mp->maplet_index_lat * sp->maplet_lat_deg;
-
-	tmp = load_tpq_maplet ( mp );
+	if ( ! load_tpq_maplet ( mp ) )
+	    return 0;
 
 	/* get the maplet size */
-	mp->xdim = gdk_pixbuf_get_width ( tmp );
-	mp->ydim = gdk_pixbuf_get_height ( tmp );
+	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
+	mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
+
+	lat_deg = mp->maplet_index_lat * mp->tpq->maplet_lat_deg;
 
 	/* The usual situation here with a 7.5 minute quad is that the
 	 * maplets are 256 tall by 512 wide, before fussing with cos(lat)
 	 */
-	pixel_width = mp->ydim * sp->maplet_long_deg / sp->maplet_lat_deg;
+	pixel_width = mp->ydim * mp->tpq->maplet_long_deg / mp->tpq->maplet_lat_deg;
 	pixel_width *= cos ( lat_deg * DEGTORAD );
 	pixel_norm = pixel_width;
 	if ( info.verbose > 1 )
@@ -97,15 +95,14 @@ load_maplet_scale ( struct maplet *mp )
 	if ( mp->xdim < pixel_norm - 8 || mp->xdim > pixel_norm + 8 ) {
 	    if ( info.verbose > 1 )
 		printf ( "SCALING\n" );
+	    tmp = mp->pixbuf;
 	    mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, pixel_norm, mp->ydim, GDK_INTERP_BILINEAR );
 	    gdk_pixbuf_unref ( tmp );
 	    mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
 	    mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
-	} else {
-	    if ( info.verbose > 1 )
-		printf ( "NOT -- SCALING\n" );
-	    mp->pixbuf = tmp;
 	}
+
+	return 1;
 }
 
 struct maplet *
@@ -146,7 +143,10 @@ load_maplet ( int long_maplet, int lat_maplet )
 	    printf ( "Read maplet(%d) = %d %d -- %d\n", sp->cache_count,
 		    long_maplet, lat_maplet, index );
 
-	load_maplet_scale ( mp );
+	if ( ! load_maplet_scale ( mp ) ) {
+	    free ( (char *) mp );
+	    return NULL;
+	}
 
 	mp->next = sp->cache;
 	sp->cache = mp;
@@ -165,13 +165,8 @@ load_maplet_any ( char *path )
 
 	mp = maplet_new ();
 
-#ifdef notdef
-	mp->maplet_index_long = long_maplet;
-	mp->maplet_index_lat = lat_maplet;
-#endif
-
 	mp->tpq_path = strhide ( path );
-	mp->tpq_index = 0;
+	mp->tpq_index = -1;
 
 	load_maplet_scale ( mp );
 

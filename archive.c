@@ -19,8 +19,6 @@
 
 extern struct topo_info info;
 
-static struct series series_info[N_SERIES];
-
 /* There are 5 map series,
  * level 1 is the state as a whole on the screen
  * level 2 "national atlas"
@@ -91,6 +89,17 @@ strhide ( char *data )
 	return rv;
 }
 
+char *
+str_lower ( char *data )
+{
+	char *rv, *p;
+
+	p = rv = strhide ( data );
+	for ( p = rv; *p; p++ )
+	    *p = tolower ( *p );
+	return rv;
+}
+
 int
 is_directory ( char *path )
 {
@@ -113,30 +122,6 @@ is_file ( char *path )
 	if ( S_ISREG(stat_buf.st_mode) )
 	    return 1;
 	return 0;
-}
-
-/* What we want here are a couple of interators.
- * This is kinda goofy, but I like having the series
- * structure local to this file only ...
- */
-void
-invalidate_pixels ( void )
-{
-	int i;
-
-	for ( i=0; i<N_SERIES; i++ ) {
-	    free_pixels ( &series_info[i] );
-	    series_info[i].content = 0;
-	}
-}
-
-void
-invalidate_pixel_content ( void )
-{
-	int i;
-
-	for ( i=0; i<N_SERIES; i++ )
-	    series_info[i].content = 0;
 }
 
 static int
@@ -187,14 +172,56 @@ series_init ( struct series *sp )
 	sp->methods = NULL;
 }
 
+char *wonk_series ( enum s_type series )
+{
+	if ( series == S_24K )
+	    return "24K";
+	if ( series == S_100K )
+	    return "100K";
+	if ( series == S_500K )
+	    return "500K";
+	if ( series == S_ATLAS )
+	    return "ATLAS";
+	if ( series == S_STATE )
+	    return "STATE";
+}
+
 /* Print info about one TPQ file and exit */
 void
 file_info ( char *path )
 {
+	struct maplet *mp;
+	struct tpq_info *tp;
+	struct series *sp;
+
+	sp = &info.series_info[S_FILE];
+	series_init ( sp );
+	sp->series = S_FILE;
+	info.series = sp;
+
 	if ( ! is_file(path) ) {
 	    printf ( "No such file: %s\n", path );
 	    return;
 	}
+
+	mp = load_maplet_any ( path );
+	if ( ! mp ) {
+	    printf ( "Cannot grog file: %s\n", path );
+	    return;
+	}
+
+	tp = mp->tpq;
+
+	printf ( "File: %s\n", path );
+	printf ( " state: %s", tp->state );
+	if ( strlen(tp->quad) > 1 )
+	    printf ( " ( %s )", tp->quad );
+	printf ( "\n" );
+	printf ( " nlong x nlat = %d %d\n", tp->long_count, tp->lat_count );
+	printf ( " longitude range = %.4f to  %.4f\n", tp->w_long, tp->e_long );
+	printf ( " latitude range = %.4f to  %.4f\n", tp->s_lat, tp->n_lat );
+	printf ( " maplet size (long, lat) = %.4f to  %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
+	printf ( " series: %s\n", wonk_series ( tp->series ) );
 }
 
 /* This is called when we are initializing to view just
@@ -206,7 +233,7 @@ file_init ( char *path )
 	struct series *sp;
 	struct tpq_info *tp;
 
-	sp = &series_info[S_FILE];
+	sp = &info.series_info[S_FILE];
 	series_init ( sp );
 	sp->series = S_FILE;
 
@@ -214,7 +241,7 @@ file_init ( char *path )
 	sp->xdim = 400;
 	sp->ydim = 400;
 
-	if ( ! add_file_method ( &series_info[S_FILE], path ) )
+	if ( ! add_file_method ( &info.series_info[S_FILE], path ) )
 	    return 0;
 
 	/* XXX - ugly hack */
@@ -257,7 +284,7 @@ archive_init ( char *archives[] )
 	 * each in a single .tpq file
 	 * 64 of these in a square degree
 	 */
-	sp = &series_info[S_24K];
+	sp = &info.series_info[S_24K];
 	    sp->series = S_24K;
 	    series_init ( sp );
 
@@ -279,7 +306,7 @@ archive_init ( char *archives[] )
 	/* 2 of these in a square degree
 	 * one of top of the other a1 and e1
 	 */
-	sp = &series_info[S_100K];
+	sp = &info.series_info[S_100K];
 	    sp->series = S_100K;
 	    series_init ( sp );
 
@@ -302,7 +329,7 @@ archive_init ( char *archives[] )
 	 * thing that seems constant is that the maplets
 	 * are 0.5 by 0.5 degrees on a side.
 	 */
-	sp = &series_info[S_500K];
+	sp = &info.series_info[S_500K];
 	    sp->series = S_500K;
 	    series_init ( sp );
 
@@ -325,7 +352,7 @@ archive_init ( char *archives[] )
 	    sp->quad_long_count = 8;
 
 	/* XXX */
-	sp = &series_info[S_ATLAS];
+	sp = &info.series_info[S_ATLAS];
 	    sp->series = S_ATLAS;
 	    series_init ( sp );
 
@@ -345,7 +372,7 @@ archive_init ( char *archives[] )
 	    sp->quad_long_count = 1;
 
 	/* XXX - The entire state */
-	sp = &series_info[S_STATE];
+	sp = &info.series_info[S_STATE];
 	    sp->series = S_STATE;
 	    series_init ( sp );
 
@@ -380,9 +407,9 @@ archive_init ( char *archives[] )
 	    	printf ( "Not a topo archive: %s\n", *p );
 	}
 
-	add_section_method ( &series_info[S_24K], section_head );
-	add_section_method ( &series_info[S_100K], section_head );
-	add_section_method ( &series_info[S_500K], section_head );
+	add_section_method ( &info.series_info[S_24K], section_head );
+	add_section_method ( &info.series_info[S_100K], section_head );
+	add_section_method ( &info.series_info[S_500K], section_head );
 
 	return nar;
 }
@@ -401,7 +428,7 @@ toggle_series ( void )
 	    	series = S_STATE;
 	    else
 		++series;
-	    if ( series_info[series].methods ) {
+	    if ( info.series_info[series].methods ) {
 	    	set_series ( series );
 		return;
 	    }
@@ -424,7 +451,7 @@ show_methods ( struct series *sp )
 void
 set_series ( enum s_type s )
 {
-	info.series = &series_info[s];
+	info.series = &info.series_info[s];
 	synch_position ();
 	printf ( "Switch to series %d\n", s );
 	show_methods ( info.series );
@@ -518,42 +545,32 @@ static int
 method_file ( struct maplet *mp, struct method *xp,
 		int maplet_long, int maplet_lat )
 {
-	int sheet_lat, sheet_long;
-	struct series *sp;
 	int m_lat, m_long;
 	int x_index, y_index;
 
-	sp = info.series;
-
-	/* Figure out the corner indices of our map */
-	sheet_lat = xp->tpq->s_lat / sp->maplet_lat_deg;
-	sheet_long = - xp->tpq->e_long / sp->maplet_long_deg;
-	if ( info.verbose > 2 )
-	    printf ( "LQF sheet long, lat: %d %d\n", sheet_long, sheet_lat );
-
 	/* Now figure which maplet within the sheet we need.
-	 * XXX - notice the north american flip on longitude.
 	 */
-	m_long = maplet_long - sheet_long;
-	m_lat = maplet_lat - sheet_lat;
+	m_long = maplet_long - xp->tpq->sheet_long;
+	m_lat = maplet_lat - xp->tpq->sheet_lat;
 
 	if ( info.verbose > 2 ) {
+	    printf ( "LQF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
 	    printf ( "LQF point : %d %d\n", maplet_long, maplet_lat );
 	    printf ( "LQF index: %d %d\n", m_long, m_lat );
 	}
 
-	if ( m_long < 0 || m_long >= sp->long_count )
+	if ( m_long < 0 || m_long >= xp->tpq->long_count )
 	    return 0;
-	if ( m_lat < 0 || m_lat >= sp->lat_count )
+	if ( m_lat < 0 || m_lat >= xp->tpq->lat_count )
 	    return 0;
 
 	mp->tpq_path = xp->tpq->path;
 
 	/* flip the count to origin from the NW corner */
-	x_index = sp->long_count - m_long - 1;
-	y_index = sp->lat_count - m_lat - 1;
+	x_index = xp->tpq->long_count - m_long - 1;
+	y_index = xp->tpq->lat_count - m_lat - 1;
 
-	mp->tpq_index = y_index * sp->long_count + x_index;
+	mp->tpq_index = y_index * xp->tpq->long_count + x_index;
 
 	return 1;	
 }
@@ -830,23 +847,29 @@ struct dir_table *dir_head = NULL;
 
 /* Search the dir name table, if we find an entry,
  * return true, if we don't, add this one and return
- * false
+ * false.  Force lower case since names can be mixed in
+ * case on the various disk images.
  */
 int
 dir_lookup ( char *name )
 {
 	struct dir_table *dp;
+	char *lower;
+
+	lower = str_lower ( name );
 
 	for ( dp=dir_head; dp; dp = dp->next ) {
-	    if ( strcmp ( dp->name, name ) == 0 )
+	    if ( strcmp ( dp->name, lower ) == 0 ) {
+		free ( lower );
 		return 1;
+	    }
 	}
 
 	dp = (struct dir_table *) malloc ( sizeof(struct dir_table) );
 	if ( ! dp )
 	    error ("dir_lookup - out of memory\n", "" );
 
-	dp->name = strhide ( name );
+	dp->name = lower;
 	dp->next = dir_head;
 	dir_head = dp;
 	return 0;
@@ -866,11 +889,11 @@ add_dir_level ( int level, char *dirpath, char *name )
 
 	printf ( "Add file method: %d  %s\n", level, tpq_path );
 	if ( level == 1 )
-	    (void) add_file_method ( &series_info[S_STATE], tpq_path );
+	    (void) add_file_method ( &info.series_info[S_STATE], tpq_path );
 	if ( level == 2 )
-	    (void) add_file_method ( &series_info[S_ATLAS], tpq_path );
+	    (void) add_file_method ( &info.series_info[S_ATLAS], tpq_path );
 	if ( level == 3 )
-	    (void) add_file_method ( &series_info[S_500K], tpq_path );
+	    (void) add_file_method ( &info.series_info[S_500K], tpq_path );
 }
 
 /* We are here when we have found an 8 character name within

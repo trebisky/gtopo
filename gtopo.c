@@ -81,6 +81,8 @@
 
 struct topo_info info;
 
+struct series series_info_buf[N_SERIES];
+
 /* This is a list of "root directories" where images of the
  * CDROMS may be found.  It is used as a kind of search path,
  * if directories do not exist they are ignored.
@@ -259,14 +261,8 @@ gint
 configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 {
 	int vxdim, vydim;
-
-	/* XXX - at this point we would like to resize ourself
-	 * to INITIAL_VIEW (the idea being that if we start off
-	 * at 800x800, we cannot be made smaller, which is bad.
-	 */
-	if ( info.initial ) {
-	    info.initial = 0;
-	}
+	int i;
+	struct series *sp;
 
 	/* get the viewport size */
 	vp_info.vx = vxdim = wp->allocation.width;
@@ -275,21 +271,19 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	if ( info.verbose )
 	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
 
-	invalidate_pixels ();
+	for ( i=0; i<N_SERIES; i++ ) {
+	    sp = &info.series_info[i];
+	    /* Avoid memory leak */
+	    if ( sp->pixels )
+		gdk_pixmap_unref ( sp->pixels );
+	    sp->pixels = NULL;
+	    sp->content = 0;
+	}
 
 	info.series->pixels = gdk_pixmap_new ( wp->window, vxdim, vydim, -1 );
 	pixmap_redraw ();
 
 	return TRUE;
-}
-
-void
-free_pixels ( struct series *sp )
-{
-	/* Avoid memory leak */
-	if ( sp->pixels )
-	    gdk_pixmap_unref ( sp->pixels );
-	sp->pixels = NULL;
 }
 
 gint
@@ -300,6 +294,7 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	double dlat, dlong;
 	double x_pixel_scale, y_pixel_scale;
 	float x, y;
+	int i;
 
 	if ( info.verbose )
 	    printf ( "Button event %d %.3f %.3f in (%d %d)\n",
@@ -336,7 +331,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	/* Make location of the mouse click be the current position */
 	set_position ( info.long_deg + dlong, info.lat_deg - dlat );
 
-	invalidate_pixel_content ();
+	for ( i=0; i<N_SERIES; i++ )
+	    info.series_info[i].content = 0;
 
 	/* redraw on the new center */
 	pixmap_redraw ();
@@ -424,8 +420,8 @@ main ( int argc, char **argv )
 	argv++;
 
 	info.verbose = 0;
-	info.initial = 1;
 	info.center_only = 0;
+	info.series_info = series_info_buf;
 
 	while ( argc-- ) {
 	    p = *argv++;
@@ -448,6 +444,7 @@ main ( int argc, char **argv )
 		file_name = *argv++;
 		printf ( "File info on %s\n", file_name );
 		file_info ( file_name );
+		return 0;
 	    }
 	}
 
@@ -537,10 +534,15 @@ main ( int argc, char **argv )
 
 	}
 
+#ifdef notdef
+	/* XXX - Someday what we would like to do is resize ourself
+	 * to INITIAL_VIEW (the idea being that if we start off
+	 * at 800x800, we cannot be made smaller, which is bad.
+	 */
 	vp_info.vx = MINIMUM_VIEW;
 	vp_info.vy = MINIMUM_VIEW;
+#endif
 
-	/* XXX would like to do this later */
 	vp_info.vx = INITIAL_VIEW;
 	vp_info.vy = INITIAL_VIEW;
 
