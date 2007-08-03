@@ -88,10 +88,6 @@ struct series {
 	int quad_lat_count;
 	int quad_long_count;
 
-	/* size of the entire TPQ file */
-	double map_lat_deg;
-	double map_long_deg;
-
 	/* size of each maplet */
 	double maplet_lat_deg;
 	double maplet_long_deg;

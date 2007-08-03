@@ -247,21 +247,13 @@ file_init ( char *path )
 	/* XXX - ugly hack */
 	tp = sp->methods->tpq;
 
+	/* XXX */
 	sp->lat_count = tp->lat_count;
 	sp->long_count = tp->long_count;
-	sp->map_lat_deg = tp->n_lat - tp->s_lat;
-	sp->map_long_deg = tp->e_long - tp->w_long;
 
-	sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
-	sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
-
-#ifdef notdef
-	/* XXX - bogus if not in a section list */
-	sp->lat_count_d = 1.0 / sp->map_lat_deg;
-	sp->long_count_d = 1.0 / sp->map_long_deg;
-	sp->quad_lat_count = 1;
-	sp->quad_long_count = 1;
-#endif
+	/* XXX */
+	sp->maplet_lat_deg = tp->maplet_lat_deg;
+	sp->maplet_long_deg = tp->maplet_long_deg;
 
 	info.series = sp;
 
@@ -296,10 +288,8 @@ archive_init ( char *archives[] )
 	    sp->long_count = 5;
 	    sp->lat_count_d = 8;
 	    sp->long_count_d = 8;
-	    sp->map_lat_deg = 1.0 / 8.0;
-	    sp->map_long_deg = 1.0 / 8.0;
-	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
-	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	    sp->maplet_lat_deg = 0.0125;
+	    sp->maplet_long_deg = 0.0250;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 
@@ -318,10 +308,8 @@ archive_init ( char *archives[] )
 	    sp->long_count = 16;
 	    sp->lat_count_d = 2;
 	    sp->long_count_d = 1;
-	    sp->map_lat_deg = 1.0 / 2.0;
-	    sp->map_long_deg = 1.0;
-	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
-	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	    sp->maplet_lat_deg = 0.0625;
+	    sp->maplet_long_deg = 0.0625;
 	    sp->quad_lat_count = 4;
 	    sp->quad_long_count = 8;
 
@@ -344,8 +332,6 @@ archive_init ( char *archives[] )
 	    sp->long_count = 2;
 	    sp->lat_count_d = 1;
 	    sp->long_count_d = 1;
-	    sp->map_lat_deg = 1.0;
-	    sp->map_long_deg = 1.0;
 	    sp->maplet_lat_deg = 0.5;
 	    sp->maplet_long_deg = 0.5;
 	    sp->quad_lat_count = 8;
@@ -360,14 +346,12 @@ archive_init ( char *archives[] )
 	    sp->xdim = 400;
 	    sp->ydim = 400;
 
-	    sp->lat_count = 10;
-	    sp->long_count = 5;
+	    sp->lat_count = 1;
+	    sp->long_count = 1;
 	    sp->lat_count_d = 1;
 	    sp->long_count_d = 1;
-	    sp->map_lat_deg = 1.0 / 8.0;
-	    sp->map_long_deg = 1.0 / 8.0;
-	    sp->maplet_lat_deg = sp->map_lat_deg / sp->lat_count;
-	    sp->maplet_long_deg = sp->map_long_deg / sp->long_count;
+	    sp->maplet_lat_deg = 1.0;
+	    sp->maplet_long_deg = 1.0;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 
@@ -388,14 +372,10 @@ archive_init ( char *archives[] )
 	    sp->quad_long_count = 1;
 
 	    /* XXX - true for arizona */
-	    sp->map_lat_deg = 7.0;
-	    sp->map_long_deg = 7.0;
 	    sp->maplet_lat_deg = 7.0;
 	    sp->maplet_long_deg = 7.0;
 
 	    /* XXX - true for california */
-	    sp->map_lat_deg = 10.0;
-	    sp->map_long_deg = 11.0;
 	    sp->maplet_lat_deg = 10.0;
 	    sp->maplet_long_deg = 11.0;
 
@@ -554,9 +534,9 @@ method_file ( struct maplet *mp, struct method *xp,
 	m_lat = maplet_lat - xp->tpq->sheet_lat;
 
 	if ( info.verbose > 2 ) {
-	    printf ( "LQF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
-	    printf ( "LQF point : %d %d\n", maplet_long, maplet_lat );
-	    printf ( "LQF index: %d %d\n", m_long, m_lat );
+	    printf ( "MF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
+	    printf ( "MF point : %d %d\n", maplet_long, maplet_lat );
+	    printf ( "MF index: %d %d\n", m_long, m_lat );
 	}
 
 	if ( m_long < 0 || m_long >= xp->tpq->long_count )

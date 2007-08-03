@@ -59,6 +59,14 @@ struct tpq_header {
 #define TPQ_MAX_MAPLETS	800
 #define INDEX_BUFSIZE	3200
  */
+
+/* XXX - this is an awful header read to just be able
+ to handle this one odd case properly, so should read in
+ say 1K pieces and build up the index as needed, not one
+ giant read.  The index array will need to be big enough
+ though, but 1600 entries  would do ...
+ For now, this works by brute force.
+ */
 #define TPQ_MAX_MAPLETS	7000
 #define INDEX_BUFSIZE  32000
 
