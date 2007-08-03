@@ -1,3 +1,23 @@
+/*
+ *  GTopo
+ *
+ *  Copyright (C) 2007, Thomas J. Trebisky
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Street #330, Boston, MA 02111-1307, USA.
+ */
+
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>
 
@@ -10,7 +30,9 @@
 #define MINIMUM_VIEW	100
 #define INITIAL_VIEW	800
 
-/* Tom Trebisky  MMT Observatory, Tucson, Arizona
+/* gtopo.c - the main file for gtopo
+ *
+ * Tom Trebisky  MMT Observatory, Tucson, Arizona
  *
  * version 0.1 - really just a JPG file display gizmo, but
  *	a starting point for what is to follow.  Did not get
@@ -39,6 +61,7 @@
  *	add series structure and reorganize 7/13/2007
  * version 0.8.2 - work on series 3 support. 7/24/2007
  *	add support for Nevada (version 4.2 of TOPO!)
+ * version 0.9 - first release  8/3/2007, add GPL stuff
  *
  *  TODO
  *   - add a mode where this can be pointed at any TPQ file
@@ -517,20 +540,22 @@ main ( int argc, char **argv )
 	    set_series ( S_STATE );
 	    set_series ( S_ATLAS );
 	    set_series ( S_500K );
-	    set_series ( S_24K );
 	    set_series ( S_100K );
+	    set_series ( S_24K );
 	    */
 
-	    set_series ( S_24K );
+	    set_series ( S_ATLAS );
 
-	    /* In California west of Taboose Pass */
-	    set_position ( -dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
-
+#ifdef notdef
 	    /* Nevada */
 	    set_position ( -114.9894, 36.2338 );
 
 	    /* Mt. Hopkins, Arizona */
 	    set_position ( -110.88, 31.69 );
+#endif
+
+	    /* In California west of Taboose Pass */
+	    set_position ( -dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
 
 	}
 

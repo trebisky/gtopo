@@ -1,7 +1,27 @@
+/*
+ *  GTopo
+ *
+ *  Copyright (C) 2007, Thomas J. Trebisky
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Street #330, Boston, MA 02111-1307, USA.
+ */
+
 /* Tom Trebisky  MMT Observatory, Tucson, Arizona
- * archive.c -- navigate the directory structure
+ *  archive.c -- navigate the directory structure
  *  to find individual TPQ files.
- * part of gtopo  7/6/2007
+ *  7/6/2007
  */
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>
@@ -433,8 +453,10 @@ set_series ( enum s_type s )
 {
 	info.series = &info.series_info[s];
 	synch_position ();
-	printf ( "Switch to series %d\n", s );
-	show_methods ( info.series );
+	if ( info.verbose > 0 ) {
+	    printf ( "Switch to series %d\n", s );
+	    show_methods ( info.series );
+	}
 }
 
 /* Try both upper and lower case path names for the tpq file
@@ -867,7 +889,9 @@ add_dir_level ( int level, char *dirpath, char *name )
 	if ( is_directory ( tpq_path ) )
 	    return;
 
-	printf ( "Add file method: %d  %s\n", level, tpq_path );
+	if ( info.verbose )
+	    printf ( "Add file method: %d  %s\n", level, tpq_path );
+
 	if ( level == 1 )
 	    (void) add_file_method ( &info.series_info[S_STATE], tpq_path );
 	if ( level == 2 )
@@ -926,7 +950,8 @@ add_full_usa ( char *disk, char *section )
 
 	sprintf ( si_path, "%s/%s", disk, section );
 
-	printf ( "Found level 123 for full USA (cool!) at %s\n", si_path );
+	if ( info.verbose )
+	    printf ( "Found level 123 for full USA (cool!) at %s\n", si_path );
 }
 
 /* THE END */

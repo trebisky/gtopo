@@ -1,0 +1,13 @@
+#!/bin/sh
+
+SHIPVER=0.9.0
+SHIPDIR=gtopo-${SHIPVER}
+SHIPTAR=${SHIPDIR}.tar.gz
+
+rm -rf ${SHIPDIR}
+mkdir ${SHIPDIR}
+cp *.h *.c ${SHIPDIR}
+cp README ${SHIPDIR}
+cp COPYING ${SHIPDIR}
+cp INSTALL ${SHIPDIR}
+tar czvf ${SHIPTAR} ${SHIPDIR}
