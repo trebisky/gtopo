@@ -61,7 +61,8 @@
  *	add series structure and reorganize 7/13/2007
  * version 0.8.2 - work on series 3 support. 7/24/2007
  *	add support for Nevada (version 4.2 of TOPO!)
- * version 0.9 - first release  8/3/2007, add GPL stuff
+ *	works on series 2-5, series 1 maplet sizes vary.
+ * version 0.9.0 - first release  8/3/2007, add GPL stuff
  *
  *  TODO
  *   - add a mode where this can be pointed at any TPQ file
