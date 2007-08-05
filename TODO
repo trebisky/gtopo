@@ -5,12 +5,18 @@ Tom Trebisky  August, 2007
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
 
+=== Things to definitely do, top priority
+
 * Fix the bug with series 1 maps
 
-* Use a notebook with tabs on the right side to switch
-between map series and indicate the current series in lieu
-of (or in addition to) the right mouse click scale switching
-currently used.
+* Series 2 maps also have a bug (sort of cosmetic)
+The maplets only match at the center of the viewed area,
+apparently there is a pixel change issue at this scale
+as latitude changes (the same issue is there with other
+map series, but is never a real issue with the size of
+screen usually used).
+
+=== Things to definitely do, but not top priority
 
 * Be able to print to a 8.5 by 11 inch equivalent postscript
 file.  In particular the 7.5 minute maps should print at the
@@ -22,7 +28,14 @@ be included in web pages or email or whatever.
 * Get keyboard stuff working and use +- to flip forward and
 back in the scale series, as well as other things.
 
------------ And a final thought that may not be worth much.
+=== Things to maybe do, or maybe not.
+
+* Use a notebook with tabs on the right side to switch
+between map series and indicate the current series in lieu
+of (or in addition to) the right mouse click scale switching
+currently used.
+
+=== Things to probably not do.
 
 Somewhere, I read the suggestion that a GtkImage widget could be
 used in lieu of a drawing area for the kind of thing I am doing

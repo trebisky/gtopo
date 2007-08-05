@@ -436,6 +436,10 @@ main ( int argc, char **argv )
 	char *p;
 	char *file_name;
 
+	if ( ! temp_init() ) {
+	    printf ("Sorry, I can't find a place to put temporary files\n");
+	    return 1;
+	}
 	/* Let gtk strip off any of its arguments first
 	 */
 	gtk_init ( &argc, &argv );

@@ -265,20 +265,78 @@ tpq_lookup ( char *path )
 	return tp;
 }
 
+static char tmpdir[64];
 static char tmpname[128];
 
-/* XXX - should use /tmp for ramdisk speed */
 static int
 temp_file_open ( void )
 {
+	strcpy ( tmpname, tmpdir );
+	strcat ( tmpname, "/" );
+	strcat ( tmpname, "gtopo.tmp" );
+
+	return open ( tmpname, O_CREAT | O_TRUNC | O_WRONLY, 0600 );
+}
+
+static int
+try_temp ( char *dir )
+{
+    	long magic = 0xdeadbeef;
+	long rmagic;
 	int tfd;
 
-	strcpy ( tmpname, "gtopo.tmp" );
-	tfd = open ( tmpname, O_CREAT | O_TRUNC | O_WRONLY, 0600 );
-	if ( tfd < 0 )
-	    error ( "Cannot open tempfile: %s\n", tmpname );
+    	strcpy ( tmpdir, dir );
 
-	return tfd;
+	strcpy ( tmpname, tmpdir );
+	strcat ( tmpname, "/" );
+	strcat ( tmpname, "gtopo_probe.tmp" );
+
+	tfd = open ( tmpname, O_CREAT | O_TRUNC | O_RDWR, 0600 );
+	if ( tfd < 0 )
+	    return -1;
+
+	if ( write ( tfd, &magic, sizeof(long) ) != sizeof(long) ) {
+	    close ( tfd );
+	    remove ( tmpname );
+	    return -2;
+	}
+	if ( lseek ( tfd, 0, SEEK_SET ) < 0 ) {
+	    close ( tfd );
+	    remove ( tmpname );
+	    return -3;
+	}
+	rmagic = 0;
+	if ( read ( tfd, &rmagic, sizeof(long) ) != sizeof(long) ) {
+	    close ( tfd );
+	    remove ( tmpname );
+	    return -4;
+	}
+	if ( rmagic != magic ) {
+	    close ( tfd );
+	    remove ( tmpname );
+	    return -5;
+	}
+
+	close ( tfd );
+	remove ( tmpname );
+	return 1;
+}
+
+/* Try to figure out the best place to stick the temporary
+ * file we need to use (in the current deplorable state of
+ * things).  We try several places before giving up.
+ */
+int
+temp_init ( void )
+{
+	int tfd;
+
+	if ( try_temp ( "/tmp" ) > 0 )
+	    return 1;
+	/* XXX - should also try /home/<user> */
+	if ( try_temp ( "." ) > 0 )
+	    return 1;
+	return 0;
 }
 
 #define BUFSIZE	1024
@@ -320,6 +378,8 @@ load_tpq_maplet ( struct maplet *mp )
 
 	/* open a temp file for R/W */
 	ofd = temp_file_open ();
+	if ( ofd < 0 )
+	    error ( "Cannot open tempfile: %s\n", tmpname );
 
 	fd = open ( mp->tpq_path, O_RDONLY );
 	if ( fd < 0 )
