@@ -192,6 +192,12 @@ draw_maplet ( struct maplet *mp, int x, int y )
 		GDK_RGB_DITHER_NONE, 0, 0 );
 }
 
+void
+state_handler ( struct maplet *mp )
+{
+    	printf ( "State handler\n" );
+}
+
 /* This is the guts of what goes on during a reconfigure */
 void
 pixmap_redraw ( void )
@@ -214,14 +220,32 @@ pixmap_redraw ( void )
 
 	/* clear the whole pixmap to white */
 	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
-
 	info.series->content = 1;
+
+	/* The state series are a special case.  In fact the usual
+	 * thing here (if there is a usual thing) is that the whole
+	 * state is handled with a single tpq file with one big maplet,
+	 * but the maplet size varies from state to state (but the pixel
+	 * scale does seem constant).
+	 * California (and Nevada) are a 11 long by 10 degree lat map of 751 by 789 pixels
+	 * Arizona is a 7 by 7 degree map of 484 by 549 pixels
+	 */
+	if ( info.series->series == S_STATE ) {
+	    state_maplets ( state_handler );
+	    return;
+	}
 
 	/* load the maplet containing the current position so
 	 * we can get the maplet pixel size up front.
 	 */
 	mp = load_maplet ( info.long_maplet, info.lat_maplet );
 
+	/* The above can fail if we have used the mouse to wander off
+	 * the edge of the map coverage.  We use the series information
+	 * in that case to allow something like reasonable mouse motion
+	 * to move us back.  Note that we replace the "guessed" info
+	 * about maplet size -- with a hopefully better guess.
+	 */
 	if ( mp ) {
 	    info.series->xdim = mp->xdim;
 	    info.series->ydim = mp->ydim;
@@ -235,6 +259,7 @@ pixmap_redraw ( void )
 
 	origx = vxcent - offx;
 	origy = vycent - offy;
+
 	if ( info.verbose )
 	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 

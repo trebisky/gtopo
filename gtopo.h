@@ -21,7 +21,7 @@
 /* gtopo.h
  */
 
-enum s_type { S_FILE, S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
 #define N_SERIES	6
 
@@ -32,7 +32,7 @@ enum s_type { S_FILE, S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
  * or method to find maplets.  Each series has a
  * list of methods to try until one works.
  */
-enum m_type { M_UNK, M_SECTION, M_FILE };
+enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE };
 
 /* Structure to hold our current position */
 struct topo_info {

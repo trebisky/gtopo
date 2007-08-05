@@ -45,7 +45,7 @@ extern struct topo_info info;
  * the list.
  */
 
-struct maplet *
+static struct maplet *
 maplet_new ( void )
 {
 	struct maplet *mp;
@@ -54,7 +54,6 @@ maplet_new ( void )
 	if ( ! mp )
 	    error ("maplet_new, out of mem\n", "" );
 
-	mp->time = info.series->cache_count++;
 	return mp;
 }
 
@@ -170,11 +169,25 @@ load_maplet ( int long_maplet, int lat_maplet )
 
 	mp->next = sp->cache;
 	sp->cache = mp;
+	mp->time = sp->cache_count++;
 
 	return mp;
 }
 
-/* This is used when we want to "sniff at" at TPQ file prior to actually loading and
+typedef void (*mfptr) ( struct maplet * );
+
+/* States are weird, what we do is use this as an iterator to
+ * grind through all the maplets and call our callback for each
+ */
+void
+state_maplets ( mfptr handler )
+{
+    	struct maplet *mp = NULL;
+
+    	(*handler) (mp);
+}
+
+/* This is used when we want to "sniff at" a TPQ file prior to actually loading and
  * displaying maplets from it.  The best thing to do is to load a maplet near
  * the center of the map, at least when we are in file view mode.
  */
@@ -182,6 +195,7 @@ struct maplet *
 load_maplet_any ( char *path )
 {
     	struct maplet *mp;
+	struct series *sp;
 
 	mp = maplet_new ();
 
@@ -190,10 +204,11 @@ load_maplet_any ( char *path )
 
 	load_maplet_scale ( mp );
 
-#ifdef notdef
+	/* Put this on the cache for that series */
+	sp = &info.series_info[mp->tpq->series];
 	mp->next = sp->cache;
 	sp->cache = mp;
-#endif
+	mp->time = sp->cache_count++;
 
 	return mp;
 }

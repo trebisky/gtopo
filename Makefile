@@ -26,9 +26,11 @@
 #CFLAGS = `gtk-config --cflags`
 #GTKLIBS = `gtk-config --libs`
 
-# This will get you gtk-2.10.12
+# The following will get you gtk-2.10.12
 # -g switch gets debugging information.
-CFLAGS = -g `pkg-config --cflags gtk+-2.0`
+
+COPTS = -g -DDEVEL
+CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
 
 OBJS = gtopo.o maplet.o archive.o tpq_io.o
@@ -57,5 +59,10 @@ gtopo:	$(OBJS)
 # my home machine (trona) gives 2.8.15
 gtkversion:
 	pkg-config --modversion gtk+-2.0
+
+states:
+	./gtopo -i /u1/topo/ca_d01/ca1_map1/ca1_map1.tpq
+	./gtopo -i /u1/topo/AZ_D05/AZ1_MAP1/AZ1_MAP1.TPQ
+
 
 # THE END

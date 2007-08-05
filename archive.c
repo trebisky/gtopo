@@ -146,6 +146,7 @@ is_file ( char *path )
 	return 0;
 }
 
+
 static int
 add_file_method ( struct series *sp, char *path )
 {
@@ -156,11 +157,15 @@ add_file_method ( struct series *sp, char *path )
 	if ( ! xp )
 	    error ("file method - out of memory\n", "" );
 
+	/* This reads the TPQ header, but NOT any maplet(s) */
 	tp = tpq_lookup ( path );
 	if ( ! tp )
 	    return 0;
 
-	xp->type = M_FILE;
+	if ( tp->series == S_STATE && tp->lat_count == 1 && tp->long_count == 1 )
+	    xp->type = M_STATE;
+	else
+	    xp->type = M_FILE;
 	xp->tpq = tp;
 	xp->next = sp->methods;
 
@@ -185,13 +190,14 @@ add_section_method ( struct series *sp, struct section *ep )
 }
 
 static void
-series_init ( struct series *sp )
+series_init ( struct series *sp, enum s_type series )
 {
 	sp->cache = (struct maplet *) NULL;
 	sp->cache_count = 0;
 	sp->pixels = NULL;
 	sp->content = 0;
 	sp->methods = NULL;
+	sp->series = series;
 }
 
 char *wonk_series ( enum s_type series )
@@ -216,11 +222,7 @@ file_info ( char *path )
 	struct tpq_info *tp;
 	struct series *sp;
 	double lat_deg, lat_scale, long_scale;
-
-	sp = &info.series_info[S_FILE];
-	series_init ( sp );
-	sp->series = S_FILE;
-	info.series = sp;
+	int nn;
 
 	if ( ! is_file(path) ) {
 	    printf ( "No such file: %s\n", path );
@@ -235,6 +237,10 @@ file_info ( char *path )
 
 	tp = mp->tpq;
 
+	sp = &info.series_info[tp->series];
+	series_init ( sp, tp->series );
+	info.series = sp;
+
 	lat_deg = mp->maplet_index_lat * mp->tpq->maplet_lat_deg;
 	lat_scale = mp->tpq->maplet_lat_deg / mp->ydim;
 	long_scale = mp->tpq->maplet_long_deg * cos ( lat_deg * DEGTORAD ) / mp->xdim;
@@ -244,11 +250,16 @@ file_info ( char *path )
 	if ( strlen(tp->quad) > 1 )
 	    printf ( " ( %s )", tp->quad );
 	printf ( "\n" );
-	printf ( " nlong x nlat = %d %d\n", tp->long_count, tp->lat_count );
+	printf ( " nlong x nlat = %d %d ", tp->long_count, tp->lat_count );
+	nn = tp->long_count * tp->lat_count;
+	if ( nn < 2 )
+	    printf ( "(%d maplet)\n", nn );
+	else
+	    printf ( "(%d maplets)\n", nn );
 	printf ( " longitude range = %.4f to %.4f\n", tp->w_long, tp->e_long );
 	printf ( " latitude range = %.4f to %.4f\n", tp->s_lat, tp->n_lat );
 	printf ( " maplet size (long, lat) = %.4f to %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
-	printf ( " maplet pixels (x, y) = %d to %d\n", mp->xdim, mp->ydim );
+	printf ( " maplet pixels (x, y) = %d by %d\n", mp->xdim, mp->ydim );
 	printf ( " lat scale: %.8f\n", lat_scale );
 	printf ( " long scale: %.8f\n", long_scale );
 	printf ( " series: %s\n", wonk_series ( tp->series ) );
@@ -260,22 +271,29 @@ file_info ( char *path )
 int
 file_init ( char *path )
 {
+	struct maplet *mp;
 	struct series *sp;
 	struct tpq_info *tp;
 
-	sp = &info.series_info[S_FILE];
-	series_init ( sp );
-	sp->series = S_FILE;
+	if ( ! is_file(path) ) {
+	    printf ( "No such file: %s\n", path );
+	    return;
+	}
 
-	/* XXX - pretty bogus */
-	sp->xdim = 400;
-	sp->ydim = 400;
+	mp = load_maplet_any ( path );
+	if ( ! mp ) {
+	    printf ( "Cannot grog file: %s\n", path );
+	    return;
+	}
 
-	if ( ! add_file_method ( &info.series_info[S_FILE], path ) )
+	tp = mp->tpq;
+
+	sp = &info.series_info[tp->series];
+	series_init ( sp, tp->series );
+	info.series = sp;
+
+	if ( ! add_file_method ( sp, path ) )
 	    return 0;
-
-	/* XXX - ugly hack */
-	tp = sp->methods->tpq;
 
 	/* XXX */
 	sp->lat_count = tp->lat_count;
@@ -284,8 +302,6 @@ file_init ( char *path )
 	/* XXX */
 	sp->maplet_lat_deg = tp->maplet_lat_deg;
 	sp->maplet_long_deg = tp->maplet_long_deg;
-
-	info.series = sp;
 
 	set_position ( (tp->w_long + tp->e_long)/2.0, (tp->s_lat + tp->n_lat)/2.0 );
 
@@ -307,8 +323,7 @@ archive_init ( char *archives[] )
 	 * 64 of these in a square degree
 	 */
 	sp = &info.series_info[S_24K];
-	    sp->series = S_24K;
-	    series_init ( sp );
+	    series_init ( sp, S_24K );
 
 	    /* Correct south of Tucson */
 	    sp->xdim = 435;
@@ -327,8 +342,7 @@ archive_init ( char *archives[] )
 	 * one of top of the other a1 and e1
 	 */
 	sp = &info.series_info[S_100K];
-	    sp->series = S_100K;
-	    series_init ( sp );
+	    series_init ( sp, S_100K );
 
 	    /* Correct near Tucson */
 	    sp->xdim = 333;
@@ -348,8 +362,7 @@ archive_init ( char *archives[] )
 	 * are 0.5 by 0.5 degrees on a side.
 	 */
 	sp = &info.series_info[S_500K];
-	    sp->series = S_500K;
-	    series_init ( sp );
+	    series_init ( sp, S_500K );
 
 	    /* Correct in Southern Nevada */
 	    sp->xdim = 380;
@@ -369,8 +382,7 @@ archive_init ( char *archives[] )
 
 	/* XXX */
 	sp = &info.series_info[S_ATLAS];
-	    sp->series = S_ATLAS;
-	    series_init ( sp );
+	    series_init ( sp, S_ATLAS );
 
 	    /* XXX */
 	    sp->xdim = 400;
@@ -387,13 +399,9 @@ archive_init ( char *archives[] )
 
 	/* XXX - The entire state */
 	sp = &info.series_info[S_STATE];
-	    sp->series = S_STATE;
-	    series_init ( sp );
+	    series_init ( sp, S_STATE );
 
 	    /* XXX */
-	    sp->xdim = 400;
-	    sp->ydim = 400;
-
 	    sp->lat_count = 1;
 	    sp->long_count = 1;
 	    sp->lat_count_d = 1;
@@ -401,13 +409,21 @@ archive_init ( char *archives[] )
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 
+	    /* XXX - true for california */
+	    sp->maplet_lat_deg = 10.0;
+	    sp->maplet_long_deg = 11.0;
+
+	    /* California */
+	    sp->xdim = 751;
+	    sp->ydim = 789;
+
 	    /* XXX - true for arizona */
 	    sp->maplet_lat_deg = 7.0;
 	    sp->maplet_long_deg = 7.0;
 
-	    /* XXX - true for california */
-	    sp->maplet_lat_deg = 10.0;
-	    sp->maplet_long_deg = 11.0;
+	    /* Arizona */
+	    sp->xdim = 484;
+	    sp->ydim = 549;
 
 	nar = 0;
 	for ( p=archives; *p; p++ ) {
@@ -417,6 +433,7 @@ archive_init ( char *archives[] )
 	    	printf ( "Not a topo archive: %s\n", *p );
 	}
 
+	/* XXX */
 	add_section_method ( &info.series_info[S_24K], section_head );
 	add_section_method ( &info.series_info[S_100K], section_head );
 	add_section_method ( &info.series_info[S_500K], section_head );
@@ -428,26 +445,38 @@ void
 toggle_series ( void )
 {
 	int series;
-
-	if ( info.series->series == S_FILE )
-	    return;
+	int nseries;
 
 	series = info.series->series;
-	for ( ;; ) {
-#ifdef DEVEL
-	    if ( series == S_24K )
-	    	series = S_STATE;
-#else
-	    if ( series == S_24K )
-	    	series = S_ATLAS;
-#endif
+
+	nseries = series;
+	do {
+	    if ( nseries == S_24K )
+	    	nseries = S_STATE;
 	    else
-		++series;
-	    if ( info.series_info[series].methods ) {
-	    	set_series ( series );
+		++nseries;
+
+	    if ( info.series_info[nseries].methods ) {
+		set_series ( nseries );
 		return;
 	    }
-	}
+	} while ( nseries != series );
+	/* fall out the end when no other series has
+	 * methods (always happens in -f mode )
+	 */
+}
+
+static char *
+wonk_method ( int type )
+{
+    	if ( type == M_FILE )
+	    return "File";
+    	if ( type == M_STATE )
+	    return "State";
+	else if ( type == M_SECTION )
+	    return "Section";
+	else
+	    return "Unknown";
 }
 
 void
@@ -456,8 +485,8 @@ show_methods ( struct series *sp )
 	struct method *xp;
 
 	for ( xp = sp->methods; xp; xp = xp->next ) {
-	    printf ( "Method %d", xp->type );
-	    if ( xp->type == M_FILE )
+	    printf ( "%s method: ", wonk_method(xp->type) );
+	    if ( xp->type != M_SECTION )
 		printf ( " %s", xp->tpq->path );
 	    printf ( "\n" );
 	}
@@ -653,6 +682,7 @@ lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
 	sp = info.series;
 
 	done = 0;
+	/* We skip STATE_METHOD in this loop */
 	for ( xp = sp->methods; xp; xp = xp->next ) {
 	    if ( xp->type == M_SECTION )
 	    	done = method_section ( mp, xp, maplet_long, maplet_lat );
@@ -909,7 +939,7 @@ add_dir_level ( int level, char *dirpath, char *name )
 	    return;
 
 	if ( info.verbose )
-	    printf ( "Add file method: %d  %s\n", level, tpq_path );
+	    printf ( "Add file/state method: %d  %s\n", level, tpq_path );
 
 	if ( level == 1 )
 	    (void) add_file_method ( &info.series_info[S_STATE], tpq_path );

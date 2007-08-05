@@ -4,3 +4,5 @@
 8/4/2007 --
 
 	* add pixel scale stuff to -i command output.
+	* get rid of S_FILE series
+	* make the broken series 1 STATE level work.
