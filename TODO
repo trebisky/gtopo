@@ -1,0 +1,33 @@
+TODO file for Gtopo
+
+Tom Trebisky  August, 2007
+
+These are ideas, subject to revision as the time to implement
+them arises, but will give you an idea where gtopo is heading.
+
+* Fix the bug with series 1 maps
+
+* Use a notebook with tabs on the right side to switch
+between map series and indicate the current series in lieu
+of (or in addition to) the right mouse click scale switching
+currently used.
+
+* Be able to print to a 8.5 by 11 inch equivalent postscript
+file.  In particular the 7.5 minute maps should print at the
+true 1:24,000 scale
+
+* Be able to extract a region and emit it as a .jpg file to
+be included in web pages or email or whatever.
+
+* Get keyboard stuff working and use +- to flip forward and
+back in the scale series, as well as other things.
+
+----------- And a final thought that may not be worth much.
+
+Somewhere, I read the suggestion that a GtkImage widget could be
+used in lieu of a drawing area for the kind of thing I am doing
+(namely copying a single pixmap to the drawing area).  I don't know
+what advantages there would be to this, maybe it would be faster
+and lighter weight.  I don't know if there would be any issues
+receiving events.  Pixmaps would be sent to such a widget via
+gtk_widget_queue_draw.

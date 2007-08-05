@@ -1,0 +1,15 @@
+Gtopo
+
+Gtopo is a program for viewing topographic maps.
+It is loosely designed as a replacement for the TOPO!
+program that is sold by the National Geographic Survey.
+
+It is able to read the .TPQ files that hold the scanned
+USGS maps that they sell in sets, state by state.
+
+It should run on any linux system that has the GTK
+libraries.
+
+Gtopo was written by Tom Trebisky in July of 2007.
+Questions and Comments should be directed to
+tom@mmto.org.

@@ -1,0 +1,121 @@
+How to install and run gtopo
+
+* Building the program:
+
+	tar xzvf gtopo-0.9.0.tar.gz
+	cd gtopo-0.9.0
+	make
+
+This should yield the executable "gtopo" which you can
+then put anywhere you think it should go.
+(/usr/local/bin or ~/bin or /usr/bin are possible)
+
+* Setting up a TOPO repository
+
+I have several states and keep them all on my hard drive.
+I keep them all in a directory /u1/topo, but you might like
+to use /home/topo ~/topo or who knows.  You will need to
+add this directory name to the list of places gtopo looks
+for files.  Edit the file gtopo.c and add your repository
+to the list in a line that looks something like this:
+
+    char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", NULL };
+
+This is a search path, which allows a repository to be kept in
+pieces (which I never do), or on different locations on different
+machines (which I indeed do) without a need to rebuild gtopo.
+Someday this will be settable via an config file or environment variable.
+
+Another thing you will want to hack in this file is the position at
+which gtopo starts up.  Look for the lines:
+
+    set_series ( S_24K );
+
+    /* Nevada */
+    set_position ( -114.9894, 36.2338 );
+
+    /* In California west of Taboose Pass */
+    set_position ( -dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
+
+The series can be set to any of the five (S_24K gives the detailed 7.5 minute
+scale).  The position is in longitude and latitude.  The dms2deg function
+lets you set degrees, minutes, seconds if you like.
+
+* What the repository looks like.
+
+I recently purchased the Nevada map set and went through the CD's one by one
+in the following fashion.  The second CD (on my system anyway) mounts up as
+/media/NV_D02 and contains the single directory nv_d02, so I do this:
+
+    cd /u1/topo
+    cp -var /media/NV_D02 .
+    mv NV_D02/nv_d02 nv_d02
+    rmdir NV_D02
+
+You should end up with a repository that looks like this:
+
+ls -l /u1/topo
+dr-xr-xr-x 10 tom user       4096 Sep 26  2002 AZ_D01
+dr-xr-xr-x 17 tom user       4096 Sep 26  2002 AZ_D02
+dr-xr-xr-x 15 tom user       4096 Sep 26  2002 AZ_D03
+dr-xr-xr-x 15 tom user       4096 Sep 26  2002 AZ_D04
+dr-xr-xr-x 13 tom user       4096 Sep 26  2002 AZ_D05
+dr-xr-xr-x 13 tom user       4096 Sep 26  2002 AZ_D06
+dr-xr-xr-x 16 tom user       4096 Sep 26  2002 AZ_D07
+dr-xr-xr-x 15 tom user       4096 Jul 24  2001 AZ_D08
+dr-xr-xr-x 10 tom user       4096 Oct 24  2001 CA_D01
+dr-xr-xr-x 14 tom user       4096 Oct 24  2001 CA_D06
+dr-xr-xr-x 17 tom user       4096 Oct 24  2001 CA_D08
+dr-xr-xr-x 20 tom user       4096 Oct 24  2001 CA_D10
+dr-xr-xr-x 16 tom user       4096 Oct 24  2001 ca_d02
+dr-xr-xr-x 14 tom user       4096 Oct 24  2001 ca_d03
+dr-xr-xr-x 17 tom user       4096 Oct 24  2001 ca_d04
+dr-xr-xr-x 16 tom user       4096 Oct 24  2001 ca_d05
+dr-xr-xr-x 14 tom user       4096 Oct 24  2001 ca_d07
+dr-xr-xr-x 17 tom user       4096 Oct 24  2001 ca_d09
+dr-xr-xr-x  4 tom user       4096 Jan 10  2006 nv_d01
+dr-xr-xr-x 13 tom user       4096 Dec 10  2005 nv_d02
+dr-xr-xr-x 11 tom user       4096 Dec 10  2005 nv_d03
+dr-xr-xr-x 11 tom user       4096 Dec 10  2005 nv_d04
+dr-xr-xr-x  9 tom user       4096 Dec 10  2005 nv_d05
+dr-xr-xr-x 11 tom user       4096 Dec 10  2005 nv_d06
+dr-xr-xr-x 12 tom user       4096 Dec 10  2005 nv_d07
+
+I have used this setup for a long while when running the TOPO program that
+comes with the sets under the Wine emulator, and wanted to just keep things
+exactly as they came off the CD, and I accept the inconsistent upper and
+lower case business that has varied over time as well.
+
+* How to run Gtopo
+
+Once you have the repository set up and the path hacked into the
+gtopo executable, you just type:
+
+	gtopo
+
+It will fire up showing you the longitude and latitude location that you 
+specified as a startup position in the executable, using the starting
+series you specified there.
+
+Now you can do two things:
+
+	Left mouse click recenters at the mouse position.
+	Right mouse click cycles through scales/series.
+
+This is usable, but perhaps a little awkward.
+
+A couple of other things should be mentioned:
+
+	gtopo -f file.tpq
+
+Will display a single tpq file (or try to).
+
+	gtopo -i file.tpq
+
+Will display a summary of information extracted from a TPQ file
+
+These latter two options are probably only of use to a developer of gtopo,
+but who knows?
+
+	Tom  8-3-2007
+
