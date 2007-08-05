@@ -35,6 +35,8 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#include <math.h>
+
 #include "gtopo.h"
 
 extern struct topo_info info;
@@ -213,6 +215,7 @@ file_info ( char *path )
 	struct maplet *mp;
 	struct tpq_info *tp;
 	struct series *sp;
+	double lat_deg, lat_scale, long_scale;
 
 	sp = &info.series_info[S_FILE];
 	series_init ( sp );
@@ -232,15 +235,22 @@ file_info ( char *path )
 
 	tp = mp->tpq;
 
+	lat_deg = mp->maplet_index_lat * mp->tpq->maplet_lat_deg;
+	lat_scale = mp->tpq->maplet_lat_deg / mp->ydim;
+	long_scale = mp->tpq->maplet_long_deg * cos ( lat_deg * DEGTORAD ) / mp->xdim;
+
 	printf ( "File: %s\n", path );
 	printf ( " state: %s", tp->state );
 	if ( strlen(tp->quad) > 1 )
 	    printf ( " ( %s )", tp->quad );
 	printf ( "\n" );
 	printf ( " nlong x nlat = %d %d\n", tp->long_count, tp->lat_count );
-	printf ( " longitude range = %.4f to  %.4f\n", tp->w_long, tp->e_long );
-	printf ( " latitude range = %.4f to  %.4f\n", tp->s_lat, tp->n_lat );
-	printf ( " maplet size (long, lat) = %.4f to  %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
+	printf ( " longitude range = %.4f to %.4f\n", tp->w_long, tp->e_long );
+	printf ( " latitude range = %.4f to %.4f\n", tp->s_lat, tp->n_lat );
+	printf ( " maplet size (long, lat) = %.4f to %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
+	printf ( " maplet pixels (x, y) = %d to %d\n", mp->xdim, mp->ydim );
+	printf ( " lat scale: %.8f\n", lat_scale );
+	printf ( " long scale: %.8f\n", long_scale );
 	printf ( " series: %s\n", wonk_series ( tp->series ) );
 }
 

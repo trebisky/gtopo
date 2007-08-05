@@ -191,7 +191,7 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 	tp->sheet_long = - tp->e_long / tp->maplet_long_deg;
 
 	/* What we see so far, and I believe to be an invariant, is the following
-	 * sizes of maplets in the give series:
+	 * sizes of maplets in the given series:
 	 *   24K  series = 0.0250 long by 0.0125 lat
 	 *  100K  series = 0.0625 long by 0.0625 lat
 	 *  500K  series = 0.5000 long by 0.5000 lat
