@@ -121,8 +121,15 @@ struct maplet {
 	struct maplet *next;
 
 	/* Unique indices used to do cache lookups */
-	int maplet_index_lat;
-	int maplet_index_long;
+	int world_index_lat;
+	int world_index_long;
+
+	/* indices within the TPQ file */
+	int sheet_index_lat;
+	int sheet_index_long;
+
+	/* Latitude at maplet center */
+	double lat_deg;
 
 	/* Use for possible cache entry aging */
 	int time;

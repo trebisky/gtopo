@@ -195,7 +195,41 @@ draw_maplet ( struct maplet *mp, int x, int y )
 void
 state_handler ( struct maplet *mp )
 {
-    	printf ( "State handler\n" );
+	struct tpq_info *tp;
+	double fx, fy;
+	int vxdim, vydim;
+	int vxcent, vycent;
+	int offx, offy;
+	int origx, origy;
+
+    	printf ( "State handler %s\n", mp->tpq->path );
+
+	tp = mp->tpq;
+
+	/* get the viewport size */
+	vxdim = vp_info.vx;
+	vydim = vp_info.vy;
+
+	/* viewport center */
+	vxcent = vxdim / 2;
+	vycent = vydim / 2;
+
+	if ( info.long_deg < tp->w_long || info.long_deg > tp->e_long )
+	    return;
+	if ( info.lat_deg < tp->s_lat || info.lat_deg > tp->n_lat )
+	    return;
+
+	fx = (info.long_deg - tp->w_long ) / (tp->e_long - tp->w_long );
+	fy = - (info.lat_deg - tp->s_lat ) / (tp->n_lat - tp->s_lat );
+
+	/* location of the center within the maplet */
+	offx = fx * mp->xdim;
+	offy = fy * mp->ydim;
+
+	origx = vxcent - offx;
+	origy = vycent - offy;
+
+	draw_maplet ( mp, origx, origy );
 }
 
 /* This is the guts of what goes on during a reconfigure */

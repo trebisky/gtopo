@@ -221,7 +221,7 @@ file_info ( char *path )
 	struct maplet *mp;
 	struct tpq_info *tp;
 	struct series *sp;
-	double lat_deg, lat_scale, long_scale;
+	double lat_scale, long_scale;
 	int nn;
 
 	if ( ! is_file(path) ) {
@@ -241,9 +241,8 @@ file_info ( char *path )
 	series_init ( sp, tp->series );
 	info.series = sp;
 
-	lat_deg = mp->maplet_index_lat * mp->tpq->maplet_lat_deg;
 	lat_scale = mp->tpq->maplet_lat_deg / mp->ydim;
-	long_scale = mp->tpq->maplet_long_deg * cos ( lat_deg * DEGTORAD ) / mp->xdim;
+	long_scale = mp->tpq->maplet_long_deg * cos ( mp->lat_deg * DEGTORAD ) / mp->xdim;
 
 	printf ( "File: %s\n", path );
 	printf ( " state: %s", tp->state );
@@ -595,30 +594,29 @@ static int
 method_file ( struct maplet *mp, struct method *xp,
 		int maplet_long, int maplet_lat )
 {
-	int m_lat, m_long;
 	int x_index, y_index;
 
 	/* Now figure which maplet within the sheet we need.
 	 */
-	m_long = maplet_long - xp->tpq->sheet_long;
-	m_lat = maplet_lat - xp->tpq->sheet_lat;
+	mp->sheet_index_long = maplet_long - xp->tpq->sheet_long;
+	mp->sheet_index_lat = maplet_lat - xp->tpq->sheet_lat;
 
 	if ( info.verbose > 2 ) {
 	    printf ( "MF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
 	    printf ( "MF point : %d %d\n", maplet_long, maplet_lat );
-	    printf ( "MF index: %d %d\n", m_long, m_lat );
+	    printf ( "MF index: %d %d\n", mp->sheet_index_long, mp->sheet_index_lat );
 	}
 
-	if ( m_long < 0 || m_long >= xp->tpq->long_count )
+	if ( mp->sheet_index_long < 0 || mp->sheet_index_long >= xp->tpq->long_count )
 	    return 0;
-	if ( m_lat < 0 || m_lat >= xp->tpq->lat_count )
+	if ( mp->sheet_index_lat < 0 || mp->sheet_index_lat >= xp->tpq->lat_count )
 	    return 0;
 
 	mp->tpq_path = xp->tpq->path;
 
 	/* flip the count to origin from the NW corner */
-	x_index = xp->tpq->long_count - m_long - 1;
-	y_index = xp->tpq->lat_count - m_lat - 1;
+	x_index = xp->tpq->long_count - mp->sheet_index_long - 1;
+	y_index = xp->tpq->lat_count - mp->sheet_index_lat - 1;
 
 	mp->tpq_index = y_index * xp->tpq->long_count + x_index;
 
@@ -632,7 +630,6 @@ method_section ( struct maplet *mp, struct method *xp,
 	struct series *sp;
 	int lat_section, long_section;
 	int lat_quad, long_quad;
-	int m_long, m_lat;
 	int x_index, y_index;
 
 	sp = info.series;
@@ -654,15 +651,15 @@ method_section ( struct maplet *mp, struct method *xp,
 
 	/* Now figure which maplet within the sheet we need.
 	 */
-	m_long = maplet_long - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
-	m_lat = maplet_lat - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
+	mp->sheet_index_long = maplet_long - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
+	mp->sheet_index_lat = maplet_lat - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
 
 	if ( info.verbose )
 	    printf ( "lat/long quad, lat/long maplet: %d %d  %d %d\n", lat_quad, long_quad, maplet_lat, maplet_long );
 
 	/* flip the count to origin from the NW corner */
-	x_index = sp->long_count - m_long - 1;
-	y_index = sp->lat_count - m_lat - 1;
+	x_index = sp->long_count - mp->sheet_index_long - 1;
+	y_index = sp->lat_count - mp->sheet_index_lat - 1;
 
 	mp->tpq_index = y_index * sp->long_count + x_index;
 
@@ -671,6 +668,11 @@ method_section ( struct maplet *mp, struct method *xp,
 
 /* This is the basic call to look for a maplet, when we
  * know it is not in the cache.
+ * It returns with the following set:
+ *	tpq_path
+ *	tpq_index
+ *	sheet_index_long
+ *	sheet_index_lat
  */
 int
 lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )

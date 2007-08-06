@@ -361,15 +361,17 @@ load_tpq_maplet ( struct maplet *mp )
 
 	mp->tpq = tp;
 
-	/* Some hackery for when we are just sniffing at file
+	/* XXX - Some hackery for when we are just sniffing at file
 	 * contents, so that we read a maplet near the geometric
 	 * center of the file.
 	 */
 	if ( mp->tpq_index < 0 ) {
 	    x_index = tp->long_count / 2;
 	    y_index = tp->lat_count / 2;
-	    mp->maplet_index_long = tp->sheet_long + tp->long_count - x_index - 1;
-	    mp->maplet_index_lat = tp->sheet_lat + tp->lat_count - y_index - 1;
+	    mp->sheet_index_long = tp->long_count - x_index - 1;
+	    mp->sheet_index_lat = tp->lat_count - y_index - 1;
+	    mp->world_index_long = tp->sheet_long + mp->sheet_index_long;
+	    mp->world_index_lat = tp->sheet_lat + mp->sheet_index_lat;
 	    mp->tpq_index = y_index * tp->long_count + x_index;
 	}
 

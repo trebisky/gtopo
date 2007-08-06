@@ -58,13 +58,13 @@ maplet_new ( void )
 }
 
 struct maplet *
-maplet_lookup ( int maplet_index_lat, int maplet_index_long )
+maplet_lookup ( int index_lat, int index_long )
 {
 	struct maplet *cp;
 
 	for ( cp = info.series->cache; cp; cp = cp->next ) {
-	    if ( cp->maplet_index_lat == maplet_index_lat &&
-	    	cp->maplet_index_long == maplet_index_long ) {
+	    if ( cp->world_index_lat == index_lat &&
+	    	cp->world_index_long == index_long ) {
 		    return cp;
 	    }
 	}
@@ -89,9 +89,9 @@ static int
 load_maplet_scale ( struct maplet *mp )
 {
 	GdkPixbuf *tmp;
-	double lat_deg;
 	double pixel_width;
 	int pixel_norm;
+	struct tpq_info *tp;
 
 	if ( ! load_tpq_maplet ( mp ) )
 	    return 0;
@@ -100,13 +100,16 @@ load_maplet_scale ( struct maplet *mp )
 	mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
 	mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
 
-	lat_deg = mp->maplet_index_lat * mp->tpq->maplet_lat_deg;
+	tp = mp->tpq;
+
+	mp->lat_deg = tp->s_lat + mp->sheet_index_lat * tp->maplet_lat_deg +
+			tp->maplet_lat_deg / 2.0;
 
 	/* The usual situation here with a 7.5 minute quad is that the
 	 * maplets are 256 tall by 512 wide, before fussing with cos(lat)
 	 */
 	pixel_width = mp->ydim * mp->tpq->maplet_long_deg / mp->tpq->maplet_lat_deg;
-	pixel_width *= cos ( lat_deg * DEGTORAD );
+	pixel_width *= cos ( mp->lat_deg * DEGTORAD );
 	pixel_norm = pixel_width;
 	if ( info.verbose > 1 )
 	    printf ( "maplet scale: %d %d --> %d %d\n", mp->xdim, mp->ydim, pixel_norm, mp->ydim );
@@ -155,8 +158,8 @@ load_maplet ( int long_maplet, int lat_maplet )
 	    return NULL;
 	}
 
-	mp->maplet_index_long = long_maplet;
-	mp->maplet_index_lat = lat_maplet;
+	mp->world_index_long = long_maplet;
+	mp->world_index_lat = lat_maplet;
 
 	if ( info.verbose > 1 )
 	    printf ( "Read maplet(%d) = %d %d -- %d\n", sp->cache_count,
@@ -177,14 +180,66 @@ load_maplet ( int long_maplet, int lat_maplet )
 typedef void (*mfptr) ( struct maplet * );
 
 /* States are weird, what we do is use this as an iterator to
- * grind through all the maplets and call our callback for each
+ * grind through all the maplets and call our callback for each.
+ * For states there is one TPQ file with one giant maplet per state.
  */
 void
 state_maplets ( mfptr handler )
 {
-    	struct maplet *mp = NULL;
+    	struct maplet *mp;
+	struct series *sp;
+	struct method *xp;
+	struct tpq_info *tp;
+	int long_maplet, lat_maplet;
 
-    	(*handler) (mp);
+	sp = info.series;
+
+	/* loop through all the state methods, and that
+	 * is all we expect at this level ....
+	 */
+	for ( xp = sp->methods; xp; xp = xp->next ) {
+	    if ( xp->type != M_STATE )
+		continue;
+	    tp = xp->tpq;
+
+	    /* Use these as indices */
+	    long_maplet = - tp->w_long;
+	    lat_maplet = tp->s_lat;
+	    if ( info.verbose > 1 )
+		printf ( "state maplets long/lat: %d %d\n", long_maplet, lat_maplet );
+
+	    /* First try the cache */
+	    mp = maplet_lookup ( lat_maplet, long_maplet );
+	    if ( mp ) {
+		if ( info.verbose > 1 )
+		    printf ( "state maplets cache hit\n" );
+		(*handler) (mp);
+	    }
+
+	    mp = maplet_new ();
+
+	    mp->world_index_long = long_maplet;
+	    mp->world_index_lat = lat_maplet;
+	    mp->sheet_index_long = 0;
+	    mp->sheet_index_lat = 0;
+
+	    if ( info.verbose > 1 )
+		printf ( "State maplets read (%d) = %s\n", sp->cache_count, tp->path );
+
+	    mp->tpq_path = tp->path;
+	    mp->tpq_index = 0;
+
+	    if ( ! load_maplet_scale ( mp ) ) {
+		free ( (char *) mp );
+		continue;
+	    }
+
+	    mp->next = sp->cache;
+	    sp->cache = mp;
+	    mp->time = sp->cache_count++;
+
+	    (*handler) (mp);
+	}
 }
 
 /* This is used when we want to "sniff at" a TPQ file prior to actually loading and
