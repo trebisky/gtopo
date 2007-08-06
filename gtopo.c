@@ -122,6 +122,8 @@ GdkColormap *syscm;
 struct viewport {
 	int vx;
 	int vy;
+	int vxcent;
+	int vycent;
 	GtkWidget *da;
 } vp_info;
 
@@ -197,22 +199,15 @@ state_handler ( struct maplet *mp )
 {
 	struct tpq_info *tp;
 	double fx, fy;
-	int vxdim, vydim;
-	int vxcent, vycent;
 	int offx, offy;
 	int origx, origy;
 
     	printf ( "State handler %s\n", mp->tpq->path );
+	printf ( "Position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
 
 	tp = mp->tpq;
-
-	/* get the viewport size */
-	vxdim = vp_info.vx;
-	vydim = vp_info.vy;
-
-	/* viewport center */
-	vxcent = vxdim / 2;
-	vycent = vydim / 2;
+	printf ( "Sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
+	printf ( "Sheet, W, E: %.4f %.4f\n", tp->w_long, tp->e_long );
 
 	if ( info.long_deg < tp->w_long || info.long_deg > tp->e_long )
 	    return;
@@ -220,14 +215,16 @@ state_handler ( struct maplet *mp )
 	    return;
 
 	fx = (info.long_deg - tp->w_long ) / (tp->e_long - tp->w_long );
-	fy = - (info.lat_deg - tp->s_lat ) / (tp->n_lat - tp->s_lat );
+	fy = 1.0 - (info.lat_deg - tp->s_lat ) / (tp->n_lat - tp->s_lat );
+	printf ( " fx, fy = %.6f %.6f\n", fx, fy );
 
 	/* location of the center within the maplet */
 	offx = fx * mp->xdim;
 	offy = fy * mp->ydim;
 
-	origx = vxcent - offx;
-	origy = vycent - offy;
+	origx = vp_info.vxcent - offx;
+	origy = vp_info.vycent - offy;
+	printf ( " ox, oy = %d %d\n", origx, origy );
 
 	draw_maplet ( mp, origx, origy );
 }
@@ -237,7 +234,6 @@ void
 pixmap_redraw ( void )
 {
 	int vxdim, vydim;
-	int vxcent, vycent;
 	int nx1, nx2, ny1, ny2;
 	int offx, offy;
 	int origx, origy;
@@ -247,10 +243,6 @@ pixmap_redraw ( void )
 	/* get the viewport size */
 	vxdim = vp_info.vx;
 	vydim = vp_info.vy;
-
-	/* viewport center */
-	vxcent = vxdim / 2;
-	vycent = vydim / 2;
 
 	/* clear the whole pixmap to white */
 	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
@@ -266,6 +258,8 @@ pixmap_redraw ( void )
 	 */
 	if ( info.series->series == S_STATE ) {
 	    state_maplets ( state_handler );
+	    /* mark center */
+	    gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE, vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
 	    return;
 	}
 
@@ -291,8 +285,8 @@ pixmap_redraw ( void )
 	offx = info.fx * info.series->xdim;
 	offy = info.fy * info.series->ydim;
 
-	origx = vxcent - offx;
-	origy = vycent - offy;
+	origx = vp_info.vxcent - offx;
+	origy = vp_info.vycent - offy;
 
 	if ( info.verbose )
 	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
@@ -332,7 +326,7 @@ pixmap_redraw ( void )
 	}
 
 	/* mark center */
-	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE, vxcent-1, vycent-1, 3, 3 );
+	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE, vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
 }
 
 static int config_count = 0;
@@ -350,6 +344,8 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	/* get the viewport size */
 	vp_info.vx = vxdim = wp->allocation.width;
 	vp_info.vy = vydim = wp->allocation.height;
+	vp_info.vxcent = vp_info.vx / 2;
+	vp_info.vycent = vp_info.vy / 2;
 
 	if ( info.verbose )
 	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
