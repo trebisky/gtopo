@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SHIPVER=0.9.0
+SHIPVER=0.9.1
 SHIPDIR=gtopo-${SHIPVER}
 SHIPTAR=${SHIPDIR}.tar.gz
 
@@ -11,7 +11,7 @@ cp Makefile ${SHIPDIR}
 cp README ${SHIPDIR}
 cp COPYING ${SHIPDIR}
 cp INSTALL ${SHIPDIR}
-cp Chanelog ${SHIPDIR}
+cp ChangeLog ${SHIPDIR}
 cp TODO ${SHIPDIR}
 tar czvf ${SHIPTAR} ${SHIPDIR}
 

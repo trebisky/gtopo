@@ -7,8 +7,6 @@ them arises, but will give you an idea where gtopo is heading.
 
 === Things to definitely do, top priority
 
-* Fix the bug with series 1 maps
-
 * Series 2 maps also have a bug (sort of cosmetic)
 The maplets only match at the center of the viewed area,
 apparently there is a pixel change issue at this scale

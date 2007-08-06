@@ -1,7 +1,10 @@
 8/3/2007
-    Version 0.9.0  (svn ver 64) released
+	Version 0.9.0  (svn ver 64) released
 
-8/4/2007 --
+	* first release to public under GPL v3
+
+8/4/2007 through 8/5/2007
+	Version 0.9.1 (svn version 71) released
 
 	* add pixel scale stuff to -i command output.
 	* get rid of S_FILE series
