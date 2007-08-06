@@ -391,9 +391,9 @@ load_tpq_maplet ( struct maplet *mp )
 	size = tp->index[mp->tpq_index].size;
 
 	while ( size > 0 ) {
-	    if ( read( fd, buf, BUFSIZE ) != BUFSIZE )
-		error ( "TPQ file read error\n", mp->tpq_path );
 	    nw = size < BUFSIZE ? size : BUFSIZE;
+	    if ( read( fd, buf, nw ) != nw )
+		error ( "TPQ file read error\n", mp->tpq_path );
 	    if ( write ( ofd, buf, nw ) != nw )
 		error ( "tmp file write error\n", tmpname );
 	    size -= nw;

@@ -63,12 +63,9 @@
  *	add support for Nevada (version 4.2 of TOPO!)
  *	works on series 2-5, series 1 maplet sizes vary.
  * version 0.9.0 - first release  8/3/2007, add GPL stuff
+ * version 0.9.1 - 8/5/2007 - make series 1 work for AZ, CA
  *
  *  TODO
- *   - add a mode where this can be pointed at any TPQ file
- *	and it will view it. (Use the -f switch).
- *  - use tree rather than linear linked list for section
- *	stuff and for maplet cache.
  *   - add age field to maplet cache and expire/recycle
  *     if size grows beyond some limit.
  *   - handle maplet size discontinuity.
@@ -264,6 +261,7 @@ pixmap_redraw ( void )
 	int origx, origy;
 	int x, y;
 	struct maplet *mp;
+	int xx, yy;
 
 	/* get the viewport size */
 	vxdim = vp_info.vx;
@@ -273,6 +271,7 @@ pixmap_redraw ( void )
 	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
 	info.series->content = 1;
 
+#ifndef NO_STATE
 	/* The state series are a special case.  In fact the usual
 	 * thing here (if there is a usual thing) is that the whole
 	 * state is handled with a single tpq file with one big maplet,
@@ -287,6 +286,7 @@ pixmap_redraw ( void )
 	    gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE, vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
 	    return;
 	}
+#endif
 
 	/* load the maplet containing the current position so
 	 * we can get the maplet pixel size up front.
@@ -349,6 +349,20 @@ pixmap_redraw ( void )
 			origy - mp->ydim * y );
 	    }
 	}
+
+	if ( info.show_maplets ) {
+	    for ( x = nx1+1; x <= nx2; x++ ) {
+		xx = origx - mp->xdim * x,
+		gdk_draw_line ( info.series->pixels, vp_info.da->style->black_gc,
+		    xx, 0, xx, vp_info.vy );
+	    }
+	    for ( y = ny1+1; y <= ny2; y++ ) {
+		yy = origy - mp->ydim * y,
+		gdk_draw_line ( info.series->pixels, vp_info.da->style->black_gc,
+		    0, yy, vp_info.vx, yy );
+	    }
+	}
+
 
 	/* mark center */
 	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE, vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
@@ -478,8 +492,10 @@ synch_position ( void )
 
 	/* indices of the maplet we are in
 	 */
-    	info.lat_maplet = m_lat;
     	info.long_maplet = m_long;
+    	info.lat_maplet = m_lat;
+	if ( info.verbose > 1 )
+	    printf ( "maplet indices of position: %d %d\n", m_long, m_lat );
 
 	/* fractional offset of our position in that maplet
 	 */
@@ -515,6 +531,7 @@ main ( int argc, char **argv )
 	GtkWidget *vb;
 	char *p;
 	char *file_name;
+	GtkWidget *focal;
 
 	if ( ! temp_init() ) {
 	    printf ("Sorry, I can't find a place to put temporary files\n");
@@ -530,6 +547,7 @@ main ( int argc, char **argv )
 	info.verbose = 0;
 	info.center_only = 0;
 	info.series_info = series_info_buf;
+	info.show_maplets = 0;
 
 	while ( argc-- ) {
 	    p = *argv++;
@@ -537,20 +555,20 @@ main ( int argc, char **argv )
 	    	info.verbose = 999;
 	    if ( strcmp ( p, "-c" ) == 0 )
 	    	info.center_only = 1;
+	    if ( strcmp ( p, "-m" ) == 0 )
+	    	info.show_maplets = 1;
 	    if ( strcmp ( p, "-f" ) == 0 ) {
 		if ( argc < 1 )
 		    usage ();
 		argc--;
 		file_name = *argv++;
 		file_opt = 1;
-		printf ( "Using file option on %s\n", file_name );
 	    }
 	    if ( strcmp ( p, "-i" ) == 0 ) {
 		if ( argc < 1 )
 		    usage ();
 		argc--;
 		file_name = *argv++;
-		printf ( "File info on %s\n", file_name );
 		file_info ( file_name );
 		return 0;
 	    }
@@ -561,6 +579,7 @@ main ( int argc, char **argv )
 		printf ( "No TOPO file: %s\n", file_name );
 		return 1;
 	    }
+	    printf ( "Displaying single file: %s\n", file_name );
 	} else {
 	    if ( ! archive_init ( topo_archives ) ) {
 		printf ( "No topo archives found\n" );
@@ -582,6 +601,10 @@ main ( int argc, char **argv )
 	vp_info.da = gtk_drawing_area_new ();
 	gtk_box_pack_start ( GTK_BOX(vb), vp_info.da, TRUE, TRUE, 0 );
 
+	/* Hook up the expose and configure signals, we could also
+	 * connect to the "realize" signal, but I haven't found a need
+	 * for that yet
+	 */
 	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "expose_event",
 			GTK_SIGNAL_FUNC(expose_handler), NULL );
 	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "configure_event",
@@ -595,20 +618,25 @@ main ( int argc, char **argv )
 	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_BUTTON_RELEASE_MASK );
 	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_BUTTON_PRESS_MASK );
 
-#ifdef notdef
+	focal = vp_info.da;
+	/*
+	focal = vp_info.da->window;
+	*/
+#ifdef notyet
 	/* XXX - doesn't work yet */
-	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "focus_event",
+	gtk_signal_connect ( GTK_OBJECT(focal), "focus_event",
 			GTK_SIGNAL_FUNC(focus_handler), NULL );
-	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_FOCUS_CHANGE );
+	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_FOCUS_CHANGE );
 
 	/* XXX - doesn't work yet */
-	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "key_press_event",
+	gtk_signal_connect ( GTK_OBJECT(focal), "key_press_event",
 			GTK_SIGNAL_FUNC(keyboard_handler), NULL );
-	GTK_WIDGET_SET_FLAGS ( GTK_WIDGET(vp_info.da), GTK_CAN_FOCUS );
-	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_KEY_PRESS );
+	GTK_WIDGET_SET_FLAGS ( GTK_WIDGET(focal), GTK_CAN_FOCUS );
+	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_KEY_PRESS );
 	/*
-	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_KEY_RELEASE );
+	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_KEY_RELEASE );
 	*/
+	gtk_grab_focus ( focal );
 #endif
 
 	syscm = gdk_colormap_get_system ();
@@ -645,18 +673,22 @@ main ( int argc, char **argv )
 	}
 
 #ifdef notdef
-	/* XXX - Someday what we would like to do is resize ourself
-	 * to INITIAL_VIEW (the idea being that if we start off
-	 * at 800x800, we cannot be made smaller, which is bad.
+	/* XXX - Someday what we would like to do is make a way so
+	 * that gtopo comes up 800x800 but can be resized smaller
+	 * by the user.
 	 */
-	vp_info.vx = MINIMUM_VIEW;
-	vp_info.vy = MINIMUM_VIEW;
 #endif
+
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), INITIAL_VIEW, INITIAL_VIEW );
+
+	/*
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), MINIMUM_VIEW, MINIMUM_VIEW );
+	gtk_widget_set_usize ( GTK_WIDGET(vp_info.da), INITIAL_VIEW, INITIAL_VIEW );
+	gdk_window_resize ( vp_info.da->window, INITIAL_VIEW, INITIAL_VIEW );
+	*/
 
 	vp_info.vx = INITIAL_VIEW;
 	vp_info.vy = INITIAL_VIEW;
-
-	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), vp_info.vx, vp_info.vy );
 
 	gtk_widget_show ( vp_info.da );
 

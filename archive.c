@@ -235,6 +235,8 @@ file_info ( char *path )
 	    return;
 	}
 
+	printf ( "File info on: %s\n", path );
+
 	tp = mp->tpq;
 
 	sp = &info.series_info[tp->series];
@@ -274,16 +276,12 @@ file_init ( char *path )
 	struct series *sp;
 	struct tpq_info *tp;
 
-	if ( ! is_file(path) ) {
-	    printf ( "No such file: %s\n", path );
-	    return;
-	}
+	if ( ! is_file(path) )
+	    return 0;
 
 	mp = load_maplet_any ( path );
-	if ( ! mp ) {
-	    printf ( "Cannot grog file: %s\n", path );
-	    return;
-	}
+	if ( ! mp )
+	    return 0;
 
 	tp = mp->tpq;
 
@@ -298,9 +296,9 @@ file_init ( char *path )
 	sp->lat_count = tp->lat_count;
 	sp->long_count = tp->long_count;
 
-	/* XXX */
 	sp->maplet_lat_deg = tp->maplet_lat_deg;
 	sp->maplet_long_deg = tp->maplet_long_deg;
+	synch_position ();
 
 	set_position ( (tp->w_long + tp->e_long)/2.0, (tp->s_lat + tp->n_lat)/2.0 );
 
@@ -990,6 +988,30 @@ add_dir ( char *archive, char *dir )
 	return 1;
 }
 
+/* My Nevada set (TOPO version 4.2 circa 2006) has a much cleaner
+ * setup for levels 1, 2, and 3 on the first disk.
+ * First of all level 1 is handled by a single TPQ file that
+ * covers the entire country (as is level 2).  It looks like
+ * level 3 for the entire country is also provided with one
+ * TPQ file per 1-degree section.  Here is the story:
+ * The first CD has a directory SI_D01 and in fact there are
+ * no state specific files on the first CD.
+ * Within SI_D01 things are as follows:
+ *
+ *   USMAPS/US1_MAP1.TPQ is the entire US, level 1
+ *   USMAPS/US1_MAP2.TPQ is the entire US, level 2
+ *   US_NE, US_SE, US_NW, and US_SW hold the level 3 maps
+ *   US_SW/B30115/D33118/G33118A1.tpq is a typical path.
+ *    the Bxxyyy directories hold a 5x5 degree area
+ *    the Dxxyyy directories hold a single 1x1 degree TPQ file.
+ *
+ *  There are also Hawaii and Alaska level 1 and 2 files,
+ *  (and you can use the -f option to look at them)
+ *  I do not see Hawaii and Alaska level 3 files.
+ * For the record:
+ *  Anchorage is at 149:54 West and 61:13 North
+ *  Honolulu  is at 157:50 West and 21:18 North
+ */
 int
 add_full_usa ( char *disk, char *section )
 {
