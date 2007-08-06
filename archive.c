@@ -494,10 +494,6 @@ show_methods ( struct series *sp )
 void
 set_series ( enum s_type s )
 {
-#ifndef DEVEL
-	if ( s == S_STATE )
-	    return;
-#endif
 	info.series = &info.series_info[s];
 	synch_position ();
 	if ( info.verbose > 0 ) {

@@ -29,7 +29,7 @@
 # The following will get you gtk-2.10.12
 # -g switch gets debugging information.
 
-COPTS = -g -DDEVEL
+COPTS = -g
 CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
 

@@ -201,22 +201,48 @@ state_handler ( struct maplet *mp )
 	double fx, fy;
 	int offx, offy;
 	int origx, origy;
-
-    	printf ( "State handler %s\n", mp->tpq->path );
-	printf ( "Position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
+	double dpp_ew, dpp_ns;
+	double vpe, vpw, vps, vpn;
 
 	tp = mp->tpq;
-	printf ( "Sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
-	printf ( "Sheet, W, E: %.4f %.4f\n", tp->w_long, tp->e_long );
 
+	if ( info.verbose ) {
+	    printf ( "State handler %s\n", mp->tpq->path );
+	    printf ( "Position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
+	    printf ( "Sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
+	    printf ( "Sheet, W, E: %.4f %.4f\n", tp->w_long, tp->e_long );
+	}
+
+	/* degrees per pixel */
+	dpp_ew = (tp->e_long - tp->w_long) / mp->xdim;
+	dpp_ns = (tp->n_lat - tp->s_lat) / mp->ydim;
+
+	/* viewport limits in degrees */
+	vpw = info.long_deg - vp_info.vxcent * dpp_ew;
+	vpe = info.long_deg + vp_info.vxcent * dpp_ew;
+	vps = info.lat_deg - vp_info.vycent * dpp_ns;
+	vpn = info.lat_deg + vp_info.vycent * dpp_ns;
+
+	/* Test if this map is not in our viewport */ 
+	if ( tp->e_long < vpw )
+	    return;
+	if ( tp->w_long > vpe )
+	    return;
+	if ( tp->n_lat < vps )
+	    return;
+	if ( tp->s_lat > vpn )
+	    return;
+
+#ifdef notdef
+	/* Test if our center is not in this map */
 	if ( info.long_deg < tp->w_long || info.long_deg > tp->e_long )
 	    return;
 	if ( info.lat_deg < tp->s_lat || info.lat_deg > tp->n_lat )
 	    return;
+#endif
 
 	fx = (info.long_deg - tp->w_long ) / (tp->e_long - tp->w_long );
 	fy = 1.0 - (info.lat_deg - tp->s_lat ) / (tp->n_lat - tp->s_lat );
-	printf ( " fx, fy = %.6f %.6f\n", fx, fy );
 
 	/* location of the center within the maplet */
 	offx = fx * mp->xdim;
@@ -224,7 +250,6 @@ state_handler ( struct maplet *mp )
 
 	origx = vp_info.vxcent - offx;
 	origy = vp_info.vycent - offy;
-	printf ( " ox, oy = %d %d\n", origx, origy );
 
 	draw_maplet ( mp, origx, origy );
 }
@@ -604,7 +629,7 @@ main ( int argc, char **argv )
 	    set_series ( S_24K );
 	    */
 
-	    set_series ( S_ATLAS );
+	    set_series ( S_STATE );
 
 #ifdef notdef
 	    /* Nevada */
