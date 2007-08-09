@@ -64,6 +64,7 @@
  *	works on series 2-5, series 1 maplet sizes vary.
  * version 0.9.0 - first release  8/3/2007, add GPL stuff
  * version 0.9.1 - 8/5/2007 - make series 1 work for AZ, CA
+ * version 0.9.2 - 8/8/2007 - discover GdkPixbufLoader
  *
  *  TODO
  *   - add age field to maplet cache and expire/recycle

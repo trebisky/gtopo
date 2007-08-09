@@ -14,5 +14,7 @@ cp INSTALL ${SHIPDIR}
 cp ChangeLog ${SHIPDIR}
 cp TODO ${SHIPDIR}
 tar czvf ${SHIPTAR} ${SHIPDIR}
+rm -rf ${SHIPDIR}
 
 cp ${SHIPTAR} /www/cholla/gtopo/downloads
+rm ${SHIPTAR}
