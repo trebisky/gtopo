@@ -354,6 +354,8 @@ load_tpq_maplet ( struct maplet *mp )
 	int nlong;
 	struct tpq_info *tp;
 	int x_index, y_index;
+	GdkPixbufLoader *loader;
+	GError *load_error = NULL;
 
 	tp = tpq_lookup ( mp->tpq_path );
 	if ( ! tp )
@@ -378,6 +380,30 @@ load_tpq_maplet ( struct maplet *mp )
 	if ( mp->tpq_index < 0 || mp->tpq_index >=tp->index_size )
 	    return 0;
 
+#define LOADER
+#ifdef LOADER
+	fd = open ( mp->tpq_path, O_RDONLY );
+	if ( fd < 0 )
+	    return 0;
+
+	lseek ( fd, tp->index[mp->tpq_index].offset, SEEK_SET );
+	size = tp->index[mp->tpq_index].size;
+
+	loader = gdk_pixbuf_loader_new_with_type ( "jpeg", &load_error );
+
+	while ( size > 0 ) {
+	    nw = size < BUFSIZE ? size : BUFSIZE;
+	    if ( read( fd, buf, nw ) != nw )
+		error ( "TPQ file read error\n", mp->tpq_path );
+	    gdk_pixbuf_loader_write ( loader, buf, nw, &load_error );
+	    size -= nw;
+	}
+
+	close ( fd );
+
+	mp->pixbuf = gdk_pixbuf_loader_get_pixbuf ( loader );
+	gdk_pixbuf_loader_close ( loader, &load_error );
+#else
 	/* open a temp file for R/W */
 	ofd = temp_file_open ();
 	if ( ofd < 0 )
@@ -403,10 +429,14 @@ load_tpq_maplet ( struct maplet *mp )
 	close ( ofd );
 
 	mp->pixbuf = gdk_pixbuf_new_from_file ( tmpname, NULL );
-	if ( ! mp->pixbuf && info.verbose )
-	    printf ("Cannot get pixbuf from %s\n", tmpname );
-
 	remove ( tmpname );
+#endif
+
+	if ( ! mp->pixbuf && info.verbose ) {
+	    printf ("Cannot get pixbuf from %s\n", tmpname );
+	    return 0;
+	}
+
 	return 1;
 }
 

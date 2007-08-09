@@ -283,7 +283,9 @@ pixmap_redraw ( void )
 	if ( info.series->series == S_STATE ) {
 	    state_maplets ( state_handler );
 	    /* mark center */
-	    gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE, vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
+	    if ( info.center_dot )
+		gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE,
+			vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
 	    return;
 	}
 #endif
@@ -365,7 +367,9 @@ pixmap_redraw ( void )
 
 
 	/* mark center */
-	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE, vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
+	if ( info.center_dot )
+	    gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE,
+		vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
 }
 
 static int config_count = 0;
@@ -404,6 +408,69 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	return TRUE;
 }
 
+/* Take a snapshot of current pixmap.
+ * A pixmap is a server side resource (which makes switching
+ * them around and handling expose events very fast).
+ * but to fiddle with pixel values, we need to copy them
+ * to a client side Image or Pixbuf.
+ */
+void
+snap ( void )
+{
+	GdkPixbuf *pixbuf;
+	GError *error = NULL;
+
+	printf ( "Snapshot\n" );
+	pixbuf = gdk_pixbuf_get_from_drawable(NULL, info.series->pixels, NULL,
+		0, 0, 0, 0, vp_info.vx, vp_info.vy );
+
+#ifdef notdef
+	int n_channels;
+	int width, height;
+	int rowstride;
+	guchar *pixels;
+
+	/* Typically 3 channels, and on my machine, full screen is 1280x999
+	 * If there was an alpha channel, there would be 4 channels.
+	 * with an 800x800 display and 3 channels, rowstride is 3*800
+	 * (i.e. rowstride is n_channels * width).
+	 * a pixel address is: pixels + y*rowstride + x *n_channels;
+	 */
+	n_channels = gdk_pixbuf_get_n_channels (pixbuf);
+	width = gdk_pixbuf_get_width (pixbuf);
+        height = gdk_pixbuf_get_height (pixbuf);
+	rowstride = gdk_pixbuf_get_rowstride (pixbuf);
+
+	printf ( "pixbuf channels: %d\n", n_channels );
+	printf ( "pixbuf width: %d\n", width );
+	printf ( "pixbuf height: %d\n", height );
+	printf ( "pixbuf stride: %d\n", rowstride );
+
+	pixels = gdk_pixbuf_get_pixels ( pixbuf );
+#endif
+
+#ifdef notdef
+	/* quality 0 is least compressed (my test gets 1.9 M) */
+	gdk_pixbuf_save ( pixbuf, "gtopo0.png", "png", &error, "compression", "0", NULL );
+	/* quality 9 is most compressed (my test gets 1.9 M) */
+	gdk_pixbuf_save ( pixbuf, "gtopo9.png", "png", &error, "compression", "9", NULL );
+
+	/* quality 100 - (my test gives 0.8 M) */
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "100", NULL );
+
+	/* quality 50 - (my test gives 0.152 M) - and looks fine */
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "50", NULL );
+
+	/* quality 10 - (my test gives 0.058 M) - readable, but bad artifacts*/
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "10", NULL );
+
+	/* quality 25 - (my test gives 0.101 M) - some artifacts*/
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "25", NULL );
+
+#endif
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "50", NULL );
+}
+
 gint
 mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 {
@@ -419,13 +486,17 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
 	/* flip to new series, may be able to avoid redrawing the pixmap */
-	if ( event->button != 1 ) {
+	if ( event->button == 3 ) {
 	    toggle_series ();
 	    if ( ! info.series->pixels )
 		info.series->pixels = gdk_pixmap_new ( wp->window, vp_info.vx, vp_info.vy, -1 );
 	    if ( ! info.series->content )
 		pixmap_redraw ();
 	    pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+	    return TRUE;
+	}
+	if ( event->button == 2 ) {
+	    snap ();
 	    return TRUE;
 	}
 
@@ -532,6 +603,7 @@ main ( int argc, char **argv )
 	char *p;
 	char *file_name;
 	GtkWidget *focal;
+	int view;
 
 	if ( ! temp_init() ) {
 	    printf ("Sorry, I can't find a place to put temporary files\n");
@@ -546,8 +618,11 @@ main ( int argc, char **argv )
 
 	info.verbose = 0;
 	info.center_only = 0;
+	info.center_dot = 1;
 	info.series_info = series_info_buf;
 	info.show_maplets = 0;
+
+	view = INITIAL_VIEW;
 
 	while ( argc-- ) {
 	    p = *argv++;
@@ -555,8 +630,16 @@ main ( int argc, char **argv )
 	    	info.verbose = 999;
 	    if ( strcmp ( p, "-c" ) == 0 )
 	    	info.center_only = 1;
+	    if ( strcmp ( p, "-d" ) == 0 )
+	    	info.center_dot = 0;
 	    if ( strcmp ( p, "-m" ) == 0 )
 	    	info.show_maplets = 1;
+	    if ( strcmp ( p, "-s" ) == 0 ) {
+		if ( argc < 1 )
+		    usage ();
+		argc--;
+		view = atol ( *argv++ );
+	    }
 	    if ( strcmp ( p, "-f" ) == 0 ) {
 		if ( argc < 1 )
 		    usage ();
@@ -679,16 +762,16 @@ main ( int argc, char **argv )
 	 */
 #endif
 
-	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), INITIAL_VIEW, INITIAL_VIEW );
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), view, view );
 
 	/*
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), MINIMUM_VIEW, MINIMUM_VIEW );
-	gtk_widget_set_usize ( GTK_WIDGET(vp_info.da), INITIAL_VIEW, INITIAL_VIEW );
-	gdk_window_resize ( vp_info.da->window, INITIAL_VIEW, INITIAL_VIEW );
+	gtk_widget_set_usize ( GTK_WIDGET(vp_info.da), view, view );
+	gdk_window_resize ( vp_info.da->window, view, view );
 	*/
 
-	vp_info.vx = INITIAL_VIEW;
-	vp_info.vy = INITIAL_VIEW;
+	vp_info.vx = view;
+	vp_info.vy = view;
 
 	gtk_widget_show ( vp_info.da );
 

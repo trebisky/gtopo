@@ -9,3 +9,12 @@
 	* add pixel scale stuff to -i command output.
 	* get rid of S_FILE series
 	* make the broken series 1 STATE level work.
+
+8/8/2007
+	Version 0.9.2
+
+	* add .jpg output on middle mouse button
+	* -s option to set window size
+	* minor bug fixes
+	* discover and use GdkPixbufLoader
+	  (much faster!!)

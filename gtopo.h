@@ -59,6 +59,7 @@ struct topo_info {
 	/* stuff from command line options */
 	int verbose;
 	int center_only;
+	int center_dot;
 	int show_maplets;
 };
 
