@@ -102,14 +102,11 @@ load_maplet_scale ( struct maplet *mp )
 
 	tp = mp->tpq;
 
-	mp->lat_deg = tp->s_lat + mp->sheet_index_lat * tp->maplet_lat_deg +
-			tp->maplet_lat_deg / 2.0;
-
 	/* The usual situation here with a 7.5 minute quad is that the
 	 * maplets are 256 tall by 512 wide, before fussing with cos(lat)
 	 */
-	pixel_width = mp->ydim * mp->tpq->maplet_long_deg / mp->tpq->maplet_lat_deg;
-	pixel_width *= cos ( mp->lat_deg * DEGTORAD );
+	pixel_width = mp->ydim * tp->maplet_long_deg / tp->maplet_lat_deg;
+	pixel_width *= cos ( tp->mid_lat * DEGTORAD );
 	pixel_norm = pixel_width;
 	if ( info.verbose > 1 )
 	    printf ( "maplet scale: %d %d --> %d %d\n", mp->xdim, mp->ydim, pixel_norm, mp->ydim );

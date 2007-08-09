@@ -184,6 +184,12 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 	tp->n_lat = tpq_header.north_lat;
 	tp->s_lat = tpq_header.south_lat;
 
+	/* When we need to scale pixels, we want to do all maplets on a TPQ sheet
+	 * the same, and (based on the Mt. Hopkins quad) use the midpoint latitude
+	 * to calculate the scaling.
+	 */
+	tp->mid_lat = (tp->n_lat + tp->s_lat) / 2.0;
+
 	tp->lat_count = tpq_header.maplet.nlat;
 	tp->long_count = tpq_header.maplet.nlong;
 
@@ -361,7 +367,6 @@ load_tpq_maplet ( struct maplet *mp )
 	struct tpq_info *tp;
 	int x_index, y_index;
 	GdkPixbufLoader *loader;
-	GError *load_error = NULL;
 
 	tp = tpq_lookup ( mp->tpq_path );
 	if ( ! tp )
@@ -394,20 +399,25 @@ load_tpq_maplet ( struct maplet *mp )
 	lseek ( fd, tp->index[mp->tpq_index].offset, SEEK_SET );
 	size = tp->index[mp->tpq_index].size;
 
-	loader = gdk_pixbuf_loader_new_with_type ( "jpeg", &load_error );
+	/* XXX - I dunno here if we should be allocating a new
+	 * loader like this every time (it works), or reuse an
+	 * existing loader.  It would only matter in terms of
+	 * a memory leak kind of thing, if it matters at all.
+	 */
+	loader = gdk_pixbuf_loader_new_with_type ( "jpeg", NULL );
 
 	while ( size > 0 ) {
 	    nw = size < BUFSIZE ? size : BUFSIZE;
 	    if ( read( fd, buf, nw ) != nw )
 		error ( "TPQ file read error\n", mp->tpq_path );
-	    gdk_pixbuf_loader_write ( loader, buf, nw, &load_error );
+	    gdk_pixbuf_loader_write ( loader, buf, nw, NULL );
 	    size -= nw;
 	}
 
 	close ( fd );
 
 	/* The following two calls work in either order */
-	gdk_pixbuf_loader_close ( loader, &load_error );
+	gdk_pixbuf_loader_close ( loader, NULL );
 	mp->pixbuf = gdk_pixbuf_loader_get_pixbuf ( loader );
 #else
 	/* open a temp file for R/W */

@@ -130,9 +130,6 @@ struct maplet {
 	int sheet_index_lat;
 	int sheet_index_long;
 
-	/* Latitude at maplet center */
-	double lat_deg;
-
 	/* Use for possible cache entry aging */
 	int time;
 
@@ -165,6 +162,8 @@ struct tpq_info {
 	double e_long;
 	double s_lat;
 	double n_lat;
+
+	double mid_lat;
 
 	int long_count;
 	int lat_count;

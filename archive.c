@@ -221,7 +221,9 @@ file_info ( char *path )
 	struct maplet *mp;
 	struct tpq_info *tp;
 	struct series *sp;
-	double lat_scale, long_scale;
+	double lat_scale;
+	double long_scale;
+	double long_scale_raw;
 	int nn;
 
 	if ( ! is_file(path) ) {
@@ -244,7 +246,8 @@ file_info ( char *path )
 	info.series = sp;
 
 	lat_scale = mp->tpq->maplet_lat_deg / mp->ydim;
-	long_scale = mp->tpq->maplet_long_deg * cos ( mp->lat_deg * DEGTORAD ) / mp->xdim;
+	long_scale = mp->tpq->maplet_long_deg * cos ( tp->mid_lat * DEGTORAD ) / mp->xdim;
+	long_scale_raw = mp->tpq->maplet_long_deg / mp->xdim;
 
 	printf ( "File: %s\n", path );
 	printf ( " state: %s", tp->state );
@@ -262,7 +265,7 @@ file_info ( char *path )
 	printf ( " maplet size (long, lat) = %.4f to %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
 	printf ( " maplet pixels (x, y) = %d by %d\n", mp->xdim, mp->ydim );
 	printf ( " lat scale: %.8f\n", lat_scale );
-	printf ( " long scale: %.8f\n", long_scale );
+	printf ( " long scale: %.8f  (%.8f) at lat %.5f\n", long_scale, long_scale_raw, tp->mid_lat );
 	printf ( " series: %s\n", wonk_series ( tp->series ) );
 }
 
@@ -305,14 +308,9 @@ file_init ( char *path )
 	return 1;
 }
 
-/* This is the usual initialization when we want to setup to
- * view a whole collection of potentially multiple states.
- */
-int
-archive_init ( char *archives[] )
+void
+series_init_all ( void )
 {
-	char **p;
-	int nar;
 	struct series *sp;
 
 	/* 7.5 minute quadrangle files
@@ -421,6 +419,18 @@ archive_init ( char *archives[] )
 	    /* Arizona */
 	    sp->xdim = 484;
 	    sp->ydim = 549;
+}
+
+/* This is the usual initialization when we want to setup to
+ * view a whole collection of potentially multiple states.
+ */
+int
+archive_init ( char *archives[] )
+{
+	char **p;
+	int nar;
+
+	series_init_all ();
 
 	nar = 0;
 	for ( p=archives; *p; p++ ) {

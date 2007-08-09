@@ -231,14 +231,6 @@ state_handler ( struct maplet *mp )
 	if ( tp->s_lat > vpn )
 	    return;
 
-#ifdef notdef
-	/* Test if our center is not in this map */
-	if ( info.long_deg < tp->w_long || info.long_deg > tp->e_long )
-	    return;
-	if ( info.lat_deg < tp->s_lat || info.lat_deg > tp->n_lat )
-	    return;
-#endif
-
 	fx = (info.long_deg - tp->w_long ) / (tp->e_long - tp->w_long );
 	fy = 1.0 - (info.lat_deg - tp->s_lat ) / (tp->n_lat - tp->s_lat );
 
@@ -419,9 +411,16 @@ void
 snap ( void )
 {
 	GdkPixbuf *pixbuf;
-	GError *error = NULL;
 
 	printf ( "Snapshot\n" );
+
+	if ( info.series->series != S_STATE ) {
+	    struct maplet *mp;
+	    mp = load_maplet ( info.long_maplet, info.lat_maplet );
+	    printf ( " from file: %s\n", mp->tpq->path );
+	    printf ( " quad: %s (%s)\n", mp->tpq->quad, mp->tpq->state );
+	}
+
 	pixbuf = gdk_pixbuf_get_from_drawable(NULL, info.series->pixels, NULL,
 		0, 0, 0, 0, vp_info.vx, vp_info.vy );
 
@@ -452,24 +451,24 @@ snap ( void )
 
 #ifdef notdef
 	/* quality 0 is least compressed (my test gets 1.9 M) */
-	gdk_pixbuf_save ( pixbuf, "gtopo0.png", "png", &error, "compression", "0", NULL );
+	gdk_pixbuf_save ( pixbuf, "gtopo0.png", "png", NULL, "compression", "0", NULL );
 	/* quality 9 is most compressed (my test gets 1.9 M) */
-	gdk_pixbuf_save ( pixbuf, "gtopo9.png", "png", &error, "compression", "9", NULL );
+	gdk_pixbuf_save ( pixbuf, "gtopo9.png", "png", NULL, "compression", "9", NULL );
 
 	/* quality 100 - (my test gives 0.8 M) */
-	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "100", NULL );
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", NULL, "quality", "100", NULL );
 
 	/* quality 50 - (my test gives 0.152 M) - and looks fine */
-	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "50", NULL );
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", NULL, "quality", "50", NULL );
 
 	/* quality 10 - (my test gives 0.058 M) - readable, but bad artifacts*/
-	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "10", NULL );
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", NULL, "quality", "10", NULL );
 
 	/* quality 25 - (my test gives 0.101 M) - some artifacts*/
-	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "25", NULL );
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", NULL, "quality", "25", NULL );
 
 #endif
-	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", &error, "quality", "50", NULL );
+	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", NULL, "quality", "50", NULL );
 }
 
 gint
