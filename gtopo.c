@@ -264,7 +264,6 @@ pixmap_redraw ( void )
 	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
 	info.series->content = 1;
 
-#ifndef NO_STATE
 	/* The state series are a special case.  In fact the usual
 	 * thing here (if there is a usual thing) is that the whole
 	 * state is handled with a single tpq file with one big maplet,
@@ -273,7 +272,7 @@ pixmap_redraw ( void )
 	 * California (and Nevada) are a 11 long by 10 degree lat map of 751 by 789 pixels
 	 * Arizona is a 7 by 7 degree map of 484 by 549 pixels
 	 */
-	if ( info.series->series == S_STATE ) {
+	if ( ! info.have_usa && info.series->series == S_STATE ) {
 	    state_maplets ( state_handler );
 	    /* mark center */
 	    if ( info.center_dot )
@@ -281,7 +280,6 @@ pixmap_redraw ( void )
 			vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
 	    return;
 	}
-#endif
 
 	/* load the maplet containing the current position so
 	 * we can get the maplet pixel size up front.
@@ -329,16 +327,17 @@ pixmap_redraw ( void )
 
 	for ( y = ny1; y <= ny2; y++ ) {
 	    for ( x = nx1; x <= nx2; x++ ) {
-		if ( info.verbose > 3 )
-		    printf ( "redraw, load maplet  %d %d\n", x, y );
+
 		mp = load_maplet ( info.long_maplet + x, info.lat_maplet + y );
 		if ( ! mp ) {
 		    if ( info.verbose > 3 )
-			printf ( "Nope\n");
+			printf ( "redraw, no maplet at %d %d\n", x, y );
 		    continue;
 		}
+
 		if ( info.verbose > 3 )
-		    printf ( "OK, draw at %d %d\n", origx + mp->xdim*x, origy + mp->ydim*y );
+		    printf ( "redraw OK for %d %d, draw at %d %d\n",
+			x, y, origx + mp->xdim*x, origy + mp->ydim*y );
 		draw_maplet ( mp,
 			origx - mp->xdim * x,
 			origy - mp->ydim * y );
@@ -565,8 +564,12 @@ synch_position ( void )
 	 */
     	info.long_maplet = m_long;
     	info.lat_maplet = m_lat;
-	if ( info.verbose > 1 )
-	    printf ( "maplet indices of position: %d %d\n", m_long, m_lat );
+
+	if ( info.verbose > 1 ) {
+	    printf ( "Synch position: long/lat = %.3f %.3f\n", info.long_deg, info.lat_deg );
+	    printf ( "maplet indices of position: %d %d\n",
+		info.long_maplet, info.lat_maplet );
+	}
 
 	/* fractional offset of our position in that maplet
 	 */
@@ -579,9 +582,6 @@ set_position ( double long_deg, double lat_deg )
 {
 	info.long_deg = long_deg;
 	info.lat_deg = lat_deg;
-
-	if ( info.verbose )
-	    printf ("Set position: long/lat = %.3f %.3f\n", long_deg, lat_deg );
 
 	synch_position ();
 }
@@ -604,6 +604,7 @@ main ( int argc, char **argv )
 	char *file_name;
 	GtkWidget *focal;
 	int view;
+	int start_series;
 
 #ifdef notdef
 	if ( ! temp_init() ) {
@@ -627,6 +628,16 @@ main ( int argc, char **argv )
 
 	view = INITIAL_VIEW;
 
+	/*
+	start_series = S_STATE;
+	start_series = S_ATLAS;
+	start_series = S_500K;
+	start_series = S_100K;
+	start_series = S_24K;
+	*/
+
+	start_series = S_STATE;
+
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-v" ) == 0 )
@@ -638,6 +649,14 @@ main ( int argc, char **argv )
 	    if ( strcmp ( p, "-m" ) == 0 )
 	    	info.show_maplets = 1;
 	    if ( strcmp ( p, "-s" ) == 0 ) {
+		if ( argc < 1 )
+		    usage ();
+		argc--;
+		/* XXX */
+		start_series = atol ( *argv++ ) - 1;
+	    }
+	    	info.show_maplets = 1;
+	    if ( strcmp ( p, "-g" ) == 0 ) {
 		/* won't the standard geometry options
 		 * work here (if I cooperate and do not
 		 * brute force resize and override ...
@@ -739,15 +758,7 @@ main ( int argc, char **argv )
 	    info.long_deg = 0.0;
 	    info.lat_deg = 0.0;
 
-	    /*
-	    set_series ( S_STATE );
-	    set_series ( S_ATLAS );
-	    set_series ( S_500K );
-	    set_series ( S_100K );
-	    set_series ( S_24K );
-	    */
-
-	    set_series ( S_STATE );
+	    set_series ( start_series );
 
 #ifdef notdef
 	    /* Nevada */

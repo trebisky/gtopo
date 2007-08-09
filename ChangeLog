@@ -18,3 +18,9 @@
 	* minor bug fixes
 	* discover and use GdkPixbufLoader
 	  (much faster!!)
+
+8/9/2007
+	Version 0.9.3 
+
+	* do maplet scaling the same over a sheet.
+	* look into the nevada whole USA series 123

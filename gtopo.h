@@ -56,6 +56,8 @@ struct topo_info {
 	/* the current series */
 	struct series *series;
 
+	int have_usa;
+
 	/* stuff from command line options */
 	int verbose;
 	int center_only;

@@ -96,8 +96,11 @@ struct section {
 struct section *section_head = NULL;
 
 /* Prototypes ... */
-int add_archive ( char * );
-int add_disk ( char *, char * );
+static int add_archive ( char * );
+static int add_disk ( char *, char * );
+static void add_full_usa ( char *, char * );
+static int add_dir ( char *, char * );
+
 static struct section *lookup_section ( int );
 
 char *
@@ -119,6 +122,23 @@ str_lower ( char *data )
 	p = rv = strhide ( data );
 	for ( p = rv; *p; p++ )
 	    *p = tolower ( *p );
+	return rv;
+}
+
+/* Compare a test string to a reference string.
+ * The reference string is lower case.
+ * The test string may be any case.
+ * We assume the test string is not too big.
+ */
+int
+strcmp_l ( char *ref, char *test )
+{
+	char *lstr;
+	int rv;
+
+	lstr = str_lower ( test );
+	rv = strcmp ( ref, lstr );
+	free ( lstr );
 	return rv;
 }
 
@@ -190,7 +210,7 @@ add_section_method ( struct series *sp, struct section *ep )
 }
 
 static void
-series_init ( struct series *sp, enum s_type series )
+series_init_one ( struct series *sp, enum s_type series )
 {
 	sp->cache = (struct maplet *) NULL;
 	sp->cache_count = 0;
@@ -242,7 +262,7 @@ file_info ( char *path )
 	tp = mp->tpq;
 
 	sp = &info.series_info[tp->series];
-	series_init ( sp, tp->series );
+	series_init_one ( sp, tp->series );
 	info.series = sp;
 
 	lat_scale = mp->tpq->maplet_lat_deg / mp->ydim;
@@ -289,7 +309,7 @@ file_init ( char *path )
 	tp = mp->tpq;
 
 	sp = &info.series_info[tp->series];
-	series_init ( sp, tp->series );
+	series_init_one ( sp, tp->series );
 	info.series = sp;
 
 	if ( ! add_file_method ( sp, path ) )
@@ -309,7 +329,7 @@ file_init ( char *path )
 }
 
 void
-series_init_all ( void )
+series_init ( void )
 {
 	struct series *sp;
 
@@ -318,7 +338,7 @@ series_init_all ( void )
 	 * 64 of these in a square degree
 	 */
 	sp = &info.series_info[S_24K];
-	    series_init ( sp, S_24K );
+	    series_init_one ( sp, S_24K );
 
 	    /* Correct south of Tucson */
 	    sp->xdim = 435;
@@ -337,7 +357,7 @@ series_init_all ( void )
 	 * one of top of the other a1 and e1
 	 */
 	sp = &info.series_info[S_100K];
-	    series_init ( sp, S_100K );
+	    series_init_one ( sp, S_100K );
 
 	    /* Correct near Tucson */
 	    sp->xdim = 333;
@@ -357,7 +377,7 @@ series_init_all ( void )
 	 * are 0.5 by 0.5 degrees on a side.
 	 */
 	sp = &info.series_info[S_500K];
-	    series_init ( sp, S_500K );
+	    series_init_one ( sp, S_500K );
 
 	    /* Correct in Southern Nevada */
 	    sp->xdim = 380;
@@ -377,26 +397,27 @@ series_init_all ( void )
 
 	/* XXX */
 	sp = &info.series_info[S_ATLAS];
-	    series_init ( sp, S_ATLAS );
+	    series_init_one ( sp, S_ATLAS );
 
-	    /* XXX */
-	    sp->xdim = 400;
-	    sp->ydim = 400;
+	    /* true for full USA */
+	    sp->maplet_lat_deg = 1.0;
+	    sp->maplet_long_deg = 1.0;
+
+	    sp->xdim = 290;
+	    sp->ydim = 364;
 
 	    sp->lat_count = 1;
 	    sp->long_count = 1;
 	    sp->lat_count_d = 1;
 	    sp->long_count_d = 1;
-	    sp->maplet_lat_deg = 1.0;
-	    sp->maplet_long_deg = 1.0;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 
 	/* XXX - The entire state */
 	sp = &info.series_info[S_STATE];
-	    series_init ( sp, S_STATE );
+	    series_init_one ( sp, S_STATE );
 
-	    /* XXX */
+	    /* XXX - complete BS for this series */
 	    sp->lat_count = 1;
 	    sp->long_count = 1;
 	    sp->lat_count_d = 1;
@@ -404,6 +425,7 @@ series_init_all ( void )
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 
+#ifdef notdef
 	    /* XXX - true for california */
 	    sp->maplet_lat_deg = 10.0;
 	    sp->maplet_long_deg = 11.0;
@@ -419,6 +441,13 @@ series_init_all ( void )
 	    /* Arizona */
 	    sp->xdim = 484;
 	    sp->ydim = 549;
+#endif
+	    /* true for full USA */
+	    sp->maplet_lat_deg = 3.250;
+	    sp->maplet_long_deg = 4.9167;
+
+	    sp->xdim = 309;
+	    sp->ydim = 256;
 }
 
 /* This is the usual initialization when we want to setup to
@@ -430,14 +459,21 @@ archive_init ( char *archives[] )
 	char **p;
 	int nar;
 
-	series_init_all ();
+	series_init ();
 
 	nar = 0;
+
+	/* Look for the SI_D01 thing first off */
+	for ( p=archives; *p; p++ ) {
+	    if ( add_usa ( *p, 1 ) )
+		nar++;
+	}
+
+	info.have_usa = nar;
+
 	for ( p=archives; *p; p++ ) {
 	    if ( add_archive ( *p ) )
 		nar++;
-	    else if ( info.verbose )
-	    	printf ( "Not a topo archive: %s\n", *p );
 	}
 
 	/* XXX */
@@ -701,17 +737,60 @@ lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
 	return 0;
 }
 
+/* Look for the SI_D01 directory (either case)
+ * Notice recursion limited to one level.
+ */
 int
+add_usa ( char *archive, int depth )
+{
+	DIR *dd;
+	struct dirent *dp;
+
+	if ( ! is_directory ( archive ) )
+	    return 0;
+
+	if ( ! (dd = opendir ( archive )) )
+	    return 0;
+
+	/* Loop through this possible archive, looking
+	 * only for SI_D01
+	 */
+	for ( ;; ) {
+	    if ( ! (dp = readdir ( dd )) )
+	    	break;
+	    if ( strlen(dp->d_name) != 6 )
+	    	continue;
+	    if ( dp->d_name[2] != '_' )
+	    	continue;
+
+	    if ( strcmp_l("si_d01", dp->d_name) == 0 ) {
+	    	add_full_usa ( archive, dp->d_name );
+		closedir ( dd );
+		return 1;
+	    }
+
+	    if ( depth > 0 ) {
+		char ar_path[100];
+		sprintf ( ar_path, "%s/%s", archive, dp->d_name );
+		if ( add_usa ( ar_path, depth-1 ) ) {
+		    closedir ( dd );
+		    return 1;
+		}
+	    }
+	}
+
+	closedir ( dd );
+	return 0;
+}
+
+static int
 add_archive ( char *archive )
 {
-	struct stat stat_buf;
 	DIR *dd;
 	struct dirent *dp;
 	int rv = 0;
 
-	if ( stat ( archive, &stat_buf ) < 0 )
-	    return 0;
-	if ( ! S_ISDIR(stat_buf.st_mode) )
+	if ( ! is_directory ( archive ) )
 	    return 0;
 
 	if ( ! (dd = opendir ( archive )) )
@@ -739,7 +818,7 @@ add_archive ( char *archive )
 	return rv;
 }
 
-int
+static int
 add_disk ( char *archive, char *disk )
 {
 	DIR *dd;
@@ -764,12 +843,11 @@ add_disk ( char *archive, char *disk )
 	    	break;
 	    if ( strlen(dp->d_name) == 8 )
 	    	add_dir ( disk_path, dp->d_name );
-	    if ( strcmp(dp->d_name,"SI_D01") == 0 ) {
-	    	add_full_usa ( disk_path, dp->d_name );
-		continue;
-	    }
 	    if ( strlen(dp->d_name) != 6 )
 	    	continue;
+
+	    if ( strcmp_l("si_d01", dp->d_name) == 0 )
+		continue;
 	    if ( dp->d_name[0] == 'D' || dp->d_name[0] == 'd' )
 	    	add_section ( disk_path, dp->d_name );
 	}
@@ -932,43 +1010,50 @@ dir_lookup ( char *name )
 	return 0;
 }
 
-void
-add_dir_level ( int level, char *dirpath, char *name )
+static void
+add_dir_series ( int series, char *dirpath, char *name )
 {
 	char tpq_path[100];
 
 	sprintf ( tpq_path, "%s/%s", dirpath, name );
 	if ( info.verbose )
-	    printf ( "add dir level:  %s\n", tpq_path );
+	    printf ( "add dir series:  %s\n", tpq_path );
 
 	if ( is_directory ( tpq_path ) )
 	    return;
 
-	if ( info.verbose )
-	    printf ( "Add file/state method: %d  %s\n", level, tpq_path );
+	/* If we have the full USA, we don't need this */
+	/* XXX - check on 500K is a temporary hack */
 
-	if ( level == 1 )
-	    (void) add_file_method ( &info.series_info[S_STATE], tpq_path );
-	if ( level == 2 )
-	    (void) add_file_method ( &info.series_info[S_ATLAS], tpq_path );
-	if ( level == 3 )
-	    (void) add_file_method ( &info.series_info[S_500K], tpq_path );
+	if ( info.have_usa && series != S_500K )
+		return;
+
+	if ( info.verbose )
+	    printf ( "Add file/state method: %d  %s\n", series, tpq_path );
+
+	(void) add_file_method ( &info.series_info[series], tpq_path );
 }
 
 /* We are here when we have found an 8 character name within
  * a disk.  We are expecting something like az1_map1,
  * within which are TPQ files for levels 1 2 or 3
+ * (the final "1" or whatever determines the series)
  */
-int
+static int
 add_dir ( char *archive, char *dir )
 {
 	DIR *dd;
 	struct dirent *dp;
 	char dir_path[100];
-	int level;
+	int series;
 
-	level = dir[7] - '0';
-	if ( level < 1 || level > 3 )
+	if ( dir[7] == '1' )
+	    series = S_STATE;
+	else if ( dir[7] == '2' )
+	    series = S_ATLAS;
+	else if ( dir[7] == '3' )
+	    series = S_500K;
+	else
 	    return 0;
 
 	sprintf ( dir_path, "%s/%s", archive, dir );
@@ -983,7 +1068,7 @@ add_dir ( char *archive, char *dir )
 	    return 0;
 
 	if ( info.verbose )
-	    printf ( "add dir: %d %s\n", level, dir_path );
+	    printf ( "add dir: %d %s\n", series, dir_path );
 
 	if ( ! (dd = opendir ( dir_path )) )
 	    return 0;
@@ -991,7 +1076,7 @@ add_dir ( char *archive, char *dir )
 	for ( ;; ) {
 	    if ( ! (dp = readdir ( dd )) )
 	    	break;
-	    add_dir_level ( level, dir_path, dp->d_name );
+	    add_dir_series ( series, dir_path, dp->d_name );
 	}
 
 	closedir ( dd );
@@ -1022,15 +1107,56 @@ add_dir ( char *archive, char *dir )
  *  Anchorage is at 149:54 West and 61:13 North
  *  Honolulu  is at 157:50 West and 21:18 North
  */
-int
-add_full_usa ( char *disk, char *section )
+static void
+add_usa_file ( int series, char *path, char *name )
+{
+	char map_path[100];
+	char *new_path;
+
+	sprintf ( map_path, "%s/%s", path, name );
+	if ( is_file ( map_path ) ) {
+	    (void) add_file_method ( &info.series_info[series], map_path );
+	    return;
+	}
+
+	new_path = str_lower ( map_path );
+	if ( is_file ( new_path ) )
+	    (void) add_file_method ( &info.series_info[series], new_path );
+	free ( new_path );
+}
+
+static void
+add_full_usa ( char *path, char *name )
 {
 	char si_path[100];
+	char map_path[100];
 
-	sprintf ( si_path, "%s/%s", disk, section );
+	sprintf ( si_path, "%s/%s", path, name );
 
 	if ( info.verbose )
-	    printf ( "Found level 123 for full USA (cool!) at %s\n", si_path );
+	    printf ( "Found level 123 for full USA at %s\n", si_path );
+
+	/* believe it or not, these weird mixed case file names actually
+	 * are what appear, namely US1_MAP1.tpq
+	 */
+
+	sprintf ( map_path, "%s/USMAPS", si_path );
+	if ( is_directory ( map_path ) ) {
+	    add_usa_file ( S_STATE, map_path, "US1_MAP1.TPQ" );
+	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.TPQ" );
+	    add_usa_file ( S_STATE, map_path, "US1_MAP1.tpq" );
+	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.tpq" );
+	}
+
+	sprintf ( map_path, "%s/usmaps", si_path );
+	if ( is_directory ( map_path ) ) {
+	    add_usa_file ( S_STATE, map_path, "US1_MAP1.TPQ" );
+	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.TPQ" );
+	    add_usa_file ( S_STATE, map_path, "US1_MAP1.tpq" );
+	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.tpq" );
+	}
+
+	/* XXX - can also do series 3 */
 }
 
 /* THE END */
