@@ -15,4 +15,4 @@ cp ChangeLog ${SHIPDIR}
 cp TODO ${SHIPDIR}
 tar czvf ${SHIPTAR} ${SHIPDIR}
 
-cp ${SHIPTAR} /www/cholla/gtopo
+cp ${SHIPTAR} /www/cholla/gtopo/downloads

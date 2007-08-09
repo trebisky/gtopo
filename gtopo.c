@@ -605,10 +605,13 @@ main ( int argc, char **argv )
 	GtkWidget *focal;
 	int view;
 
+#ifdef notdef
 	if ( ! temp_init() ) {
 	    printf ("Sorry, I can't find a place to put temporary files\n");
 	    return 1;
 	}
+#endif
+
 	/* Let gtk strip off any of its arguments first
 	 */
 	gtk_init ( &argc, &argv );
@@ -635,6 +638,10 @@ main ( int argc, char **argv )
 	    if ( strcmp ( p, "-m" ) == 0 )
 	    	info.show_maplets = 1;
 	    if ( strcmp ( p, "-s" ) == 0 ) {
+		/* won't the standard geometry options
+		 * work here (if I cooperate and do not
+		 * brute force resize and override ...
+		 */
 		if ( argc < 1 )
 		    usage ();
 		argc--;

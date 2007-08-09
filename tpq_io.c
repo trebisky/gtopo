@@ -29,6 +29,11 @@
 
 extern struct topo_info info;
 
+/* Using this is by FAR the way to go, and eliminates all the temp file
+ * baloney
+ */
+#define LOADER
+
 /* ---------------------------------------------------------------- */
 /*  TPQ file handling stuff					*/
 /* ---------------------------------------------------------------- */
@@ -103,7 +108,6 @@ struct tpq_header {
  *  the cake with 6133 maps !!  ( US1_MAP2.tpq )
  *  This boils down to 1534 maps (59x26)
  */
-
 
 #ifdef BIG_ENDIAN_HACK
 #define JPEG_SOI_TAG	0xffd8
@@ -265,6 +269,7 @@ tpq_lookup ( char *path )
 	return tp;
 }
 
+#ifndef LOADER
 static char tmpdir[64];
 static char tmpname[128];
 
@@ -338,6 +343,7 @@ temp_init ( void )
 	    return 1;
 	return 0;
 }
+#endif
 
 #define BUFSIZE	1024
 
@@ -377,10 +383,9 @@ load_tpq_maplet ( struct maplet *mp )
 	    mp->tpq_index = y_index * tp->long_count + x_index;
 	}
 
-	if ( mp->tpq_index < 0 || mp->tpq_index >=tp->index_size )
+	if ( mp->tpq_index < 0 || mp->tpq_index >= tp->index_size )
 	    return 0;
 
-#define LOADER
 #ifdef LOADER
 	fd = open ( mp->tpq_path, O_RDONLY );
 	if ( fd < 0 )
@@ -401,8 +406,9 @@ load_tpq_maplet ( struct maplet *mp )
 
 	close ( fd );
 
-	mp->pixbuf = gdk_pixbuf_loader_get_pixbuf ( loader );
+	/* The following two calls work in either order */
 	gdk_pixbuf_loader_close ( loader, &load_error );
+	mp->pixbuf = gdk_pixbuf_loader_get_pixbuf ( loader );
 #else
 	/* open a temp file for R/W */
 	ofd = temp_file_open ();
@@ -433,7 +439,7 @@ load_tpq_maplet ( struct maplet *mp )
 #endif
 
 	if ( ! mp->pixbuf && info.verbose ) {
-	    printf ("Cannot get pixbuf from %s\n", tmpname );
+	    printf ("Cannot get pixbuf from %s (%d)\n", mp->tpq_path, mp->tpq_index );
 	    return 0;
 	}
 
