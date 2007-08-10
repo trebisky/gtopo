@@ -93,7 +93,8 @@ struct section {
 	int	q_code;
 };
 
-struct section *section_head = NULL;
+/* Used to build the basic level 1,2.3 section list */
+static struct section *temp_section_head = NULL;
 
 /* Prototypes ... */
 static int add_archive ( char * );
@@ -101,7 +102,7 @@ static int add_disk ( char *, char * );
 static void add_full_usa ( char *, char * );
 static int add_dir ( char *, char * );
 
-static struct section *lookup_section ( int );
+static struct section *lookup_section ( struct section *, int );
 
 char *
 strhide ( char *data )
@@ -194,7 +195,7 @@ add_file_method ( struct series *sp, char *path )
 }
 
 void
-add_section_method ( struct series *sp, struct section *ep )
+add_section_method ( struct series *sp, struct section *head )
 {
 	struct method *xp;
 
@@ -203,7 +204,7 @@ add_section_method ( struct series *sp, struct section *ep )
 	    error ("section method - out of memory\n", "" );
 
 	xp->type = M_SECTION;
-	xp->sections = ep;
+	xp->sections = head;
 	xp->next = sp->methods;
 
 	sp->methods = xp;
@@ -463,23 +464,29 @@ archive_init ( char *archives[] )
 
 	nar = 0;
 
+#ifdef notyet
 	/* Look for the SI_D01 thing first off */
 	for ( p=archives; *p; p++ ) {
 	    if ( add_usa ( *p, 1 ) )
 		nar++;
 	}
+#endif
 
 	info.have_usa = nar;
+
+	temp_section_head = NULL;
 
 	for ( p=archives; *p; p++ ) {
 	    if ( add_archive ( *p ) )
 		nar++;
 	}
 
-	/* XXX */
-	add_section_method ( &info.series_info[S_24K], section_head );
-	add_section_method ( &info.series_info[S_100K], section_head );
-	add_section_method ( &info.series_info[S_500K], section_head );
+	add_section_method ( &info.series_info[S_24K], temp_section_head );
+	add_section_method ( &info.series_info[S_100K], temp_section_head );
+
+	/* Won't need this if we have the full USA set */
+	if ( ! info.have_usa )
+	    add_section_method ( &info.series_info[S_500K], temp_section_head );
 
 	return nar;
 }
@@ -607,12 +614,12 @@ section_map_path ( struct section *ep, int lat_section, int long_section, int la
  * within the usual degree section setup.  Other states, who knows.
  */
 static char *
-section_find_map ( int lat_section, int long_section, int lat_quad, int long_quad )
+section_find_map ( struct section *head, int lat_section, int long_section, int lat_quad, int long_quad )
 {
 	struct section *ep;
 	char *rv;
 
-	ep = lookup_section ( lat_section * 1000 + long_section );
+	ep = lookup_section ( head, lat_section * 1000 + long_section );
 	if ( ! ep )
 	    return 0;
 
@@ -685,7 +692,7 @@ method_section ( struct maplet *mp, struct method *xp,
 
 	/* See if the map sheet is available.
 	 */
-	mp->tpq_path = section_find_map ( lat_section, long_section, lat_quad, long_quad );
+	mp->tpq_path = section_find_map ( xp->sections, lat_section, long_section, lat_quad, long_quad );
 	if ( ! mp->tpq_path )
 	    return 0;
 
@@ -849,7 +856,7 @@ add_disk ( char *archive, char *disk )
 	    if ( strcmp_l("si_d01", dp->d_name) == 0 )
 		continue;
 	    if ( dp->d_name[0] == 'D' || dp->d_name[0] == 'd' )
-	    	add_section ( disk_path, dp->d_name );
+	    	add_section ( disk_path, dp->d_name, temp_section_head );
 	}
 
 	closedir ( dd );
@@ -915,7 +922,7 @@ scan_section ( char *path )
  * if it is on the boundary of several states.
  */
 int
-add_section ( char *disk, char *section )
+add_section ( char *disk, char *section, struct section *head )
 {
 	char section_path[100];
 	struct section *ep;
@@ -938,7 +945,7 @@ add_section ( char *disk, char *section )
 	ep->next = (struct section *) NULL;
 	ep->q_code = quad_code;
 
-	eep = lookup_section ( ep->latlong );
+	eep = lookup_section ( head, ep->latlong );
 
 	/* already have an entry on the main list,
 	 * so add this onto that entries sublist
@@ -952,8 +959,8 @@ add_section ( char *disk, char *section )
 	}
 
 	/* entirely new entry, add to main list */
-	ep->next = section_head;
-	section_head = ep;
+	ep->next = head;
+	head = ep;
 
 	if ( info.verbose )
 	    printf ( "Added section: %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );
@@ -962,11 +969,11 @@ add_section ( char *disk, char *section )
 }
 
 static struct section *
-lookup_section ( int latlong )
+lookup_section ( struct section *head, int latlong )
 {
 	struct section *ep;
 
-	for ( ep = section_head; ep; ep = ep->next ) {
+	for ( ep = head; ep; ep = ep->next ) {
 	    if ( ep->latlong == latlong )
 	    	return ep;
 	}
@@ -1023,9 +1030,7 @@ add_dir_series ( int series, char *dirpath, char *name )
 	    return;
 
 	/* If we have the full USA, we don't need this */
-	/* XXX - check on 500K is a temporary hack */
-
-	if ( info.have_usa && series != S_500K )
+	if ( info.have_usa )
 		return;
 
 	if ( info.verbose )
@@ -1126,18 +1131,103 @@ add_usa_file ( int series, char *path, char *name )
 }
 
 static void
+add_usa_12 ( char *path, char *name )
+{
+	DIR *dd;
+	struct dirent *dp;
+	char map_path[100];
+
+	sprintf ( map_path, "%s/%s", path, name );
+
+	if ( ! is_directory ( map_path ) )
+	    return;
+
+	if ( ! (dd = opendir ( map_path )) )
+	    return;
+
+	/* Loop through this directory
+	 */
+	for ( ;; ) {
+	    if ( ! (dp = readdir ( dd )) )
+	    	break;
+
+	    if ( strcmp_l("us1_map1.tpq", dp->d_name) == 0 )
+		add_usa_file ( S_STATE, map_path, dp->d_name );
+	    if ( strcmp_l("us1_map2.tpq", dp->d_name) == 0 )
+		add_usa_file ( S_ATLAS, map_path, dp->d_name );
+	}
+
+	closedir ( dd );
+}
+
+/* We do one level of recursion
+ * the first call will see B directories
+ * the second call will see D directories
+ * D directories hold tpq files (like G35117a1.tpq).
+ * This would chase along forever, except that it
+ * only recurses when it sees a B directory.
+ */
+static void
+add_usa_500k ( char *path, char *name )
+{
+	DIR *dd;
+	struct dirent *dp;
+	char map_path[100];
+
+	sprintf ( map_path, "%s/%s", path, name );
+
+	if ( ! is_directory ( map_path ) )
+	    return;
+
+	if ( ! (dd = opendir ( map_path )) )
+	    return;
+
+	/* Loop through this directory
+	 * We expect to see directories
+	 *  like B30115 or D30117
+	 */
+	for ( ;; ) {
+	    if ( ! (dp = readdir ( dd )) )
+	    	break;
+	    if ( strlen(dp->d_name) != 6 )
+	    	continue;
+	    if ( dp->d_name[0] == 'b' || dp->d_name[0] == 'B' ) {
+		printf ( "500K: %s/%s\n", map_path, dp->d_name );
+		add_usa_500k ( map_path, dp->d_name );
+		continue;
+	    }
+	    if ( dp->d_name[0] == 'd' || dp->d_name[0] == 'D' ) {
+	    	add_section ( map_path, dp->d_name, temp_section_head );
+		continue;
+	    }
+	}
+
+	closedir ( dd );
+}
+
+static void
 add_full_usa ( char *path, char *name )
 {
+	DIR *dd;
+	struct dirent *dp;
+
 	char si_path[100];
 	char map_path[100];
 
 	sprintf ( si_path, "%s/%s", path, name );
 
+	if ( ! is_directory ( si_path ) )
+	    return;
+
 	if ( info.verbose )
 	    printf ( "Found level 123 for full USA at %s\n", si_path );
 
+#ifdef notdef
 	/* believe it or not, these weird mixed case file names actually
 	 * are what appear, namely US1_MAP1.tpq
+	 * XXX - this would be cleaner if we would just loop
+	 * through the names actually in the archive and do a
+	 * str_cmp_l against target names.
 	 */
 
 	sprintf ( map_path, "%s/USMAPS", si_path );
@@ -1155,8 +1245,33 @@ add_full_usa ( char *path, char *name )
 	    add_usa_file ( S_STATE, map_path, "US1_MAP1.tpq" );
 	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.tpq" );
 	}
+#endif
 
-	/* XXX - can also do series 3 */
+	if ( ! (dd = opendir ( si_path )) )
+	    return;
+
+	temp_section_head = NULL;
+
+	/* Loop through this directory
+	 */
+	for ( ;; ) {
+	    if ( ! (dp = readdir ( dd )) )
+	    	break;
+
+	    if ( strcmp_l("usmaps", dp->d_name) == 0 )
+		add_usa_12 ( si_path, dp->d_name );
+
+	    if ( strcmp_l("us_ne", dp->d_name) == 0 )
+		add_usa_500k ( si_path, dp->d_name );
+	    if ( strcmp_l("us_nw", dp->d_name) == 0 )
+		add_usa_500k ( si_path, dp->d_name );
+	    if ( strcmp_l("us_se", dp->d_name) == 0 )
+		add_usa_500k ( si_path, dp->d_name );
+	    if ( strcmp_l("us_sw", dp->d_name) == 0 )
+		add_usa_500k ( si_path, dp->d_name );
+	}
+
+	closedir ( dd );
 }
 
 /* THE END */
