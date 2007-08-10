@@ -94,7 +94,7 @@ struct section {
 };
 
 /* Used to build the basic level 1,2.3 section list */
-static struct section *temp_section_head = NULL;
+static struct section *temp_section_head;
 
 /* Prototypes ... */
 static int add_archive ( char * );
@@ -464,13 +464,11 @@ archive_init ( char *archives[] )
 
 	nar = 0;
 
-#ifdef notyet
 	/* Look for the SI_D01 thing first off */
 	for ( p=archives; *p; p++ ) {
 	    if ( add_usa ( *p, 1 ) )
 		nar++;
 	}
-#endif
 
 	info.have_usa = nar;
 
@@ -856,7 +854,7 @@ add_disk ( char *archive, char *disk )
 	    if ( strcmp_l("si_d01", dp->d_name) == 0 )
 		continue;
 	    if ( dp->d_name[0] == 'D' || dp->d_name[0] == 'd' )
-	    	add_section ( disk_path, dp->d_name, temp_section_head );
+	    	add_section ( disk_path, dp->d_name, &temp_section_head );
 	}
 
 	closedir ( dd );
@@ -922,7 +920,7 @@ scan_section ( char *path )
  * if it is on the boundary of several states.
  */
 int
-add_section ( char *disk, char *section, struct section *head )
+add_section ( char *disk, char *section, struct section **head )
 {
 	char section_path[100];
 	struct section *ep;
@@ -945,7 +943,7 @@ add_section ( char *disk, char *section, struct section *head )
 	ep->next = (struct section *) NULL;
 	ep->q_code = quad_code;
 
-	eep = lookup_section ( head, ep->latlong );
+	eep = lookup_section ( *head, ep->latlong );
 
 	/* already have an entry on the main list,
 	 * so add this onto that entries sublist
@@ -959,8 +957,8 @@ add_section ( char *disk, char *section, struct section *head )
 	}
 
 	/* entirely new entry, add to main list */
-	ep->next = head;
-	head = ep;
+	ep->next = *head;
+	*head = ep;
 
 	if ( info.verbose )
 	    printf ( "Added section: %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );
@@ -1197,7 +1195,7 @@ add_usa_500k ( char *path, char *name )
 		continue;
 	    }
 	    if ( dp->d_name[0] == 'd' || dp->d_name[0] == 'D' ) {
-	    	add_section ( map_path, dp->d_name, temp_section_head );
+	    	add_section ( map_path, dp->d_name, &temp_section_head );
 		continue;
 	    }
 	}
