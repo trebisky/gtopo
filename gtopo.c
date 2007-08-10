@@ -255,6 +255,7 @@ pixmap_redraw ( void )
 	int x, y;
 	struct maplet *mp;
 	int xx, yy;
+	int mx, my;
 
 	/* get the viewport size */
 	vxdim = vp_info.vx;
@@ -281,6 +282,12 @@ pixmap_redraw ( void )
 	    return;
 	}
 
+	/* A first guess, hopefull to be corrected
+	 * as soon as we actually read a maplet
+	 */
+	mx = info.series->xdim;
+	my = info.series->ydim;
+
 	/* load the maplet containing the current position so
 	 * we can get the maplet pixel size up front.
 	 */
@@ -293,15 +300,15 @@ pixmap_redraw ( void )
 	 * about maplet size -- with a hopefully better guess.
 	 */
 	if ( mp ) {
-	    info.series->xdim = mp->xdim;
-	    info.series->ydim = mp->ydim;
+	    info.series->xdim = mx = mp->xdim;
+	    info.series->ydim = my = mp->ydim;
 	    if ( info.verbose )
-		printf ( "Center maplet x,ydim = %d, %d\n", mp->xdim, mp->ydim );
+		printf ( "Center maplet x,ydim = %d, %d\n", mx, my );
 	}
 
 	/* location of the center within the maplet */
-	offx = info.fx * info.series->xdim;
-	offy = info.fy * info.series->ydim;
+	offx = info.fx * mx;
+	offy = info.fy * my;
 
 	origx = vp_info.vxcent - offx;
 	origy = vp_info.vycent - offy;
@@ -313,15 +320,15 @@ pixmap_redraw ( void )
 	    nx1 = nx2 = 0;
 	    ny1 = ny2 = 0;
 	} else {
-	    nx1 = - (vxdim - (origx + info.series->xdim) + info.series->xdim - 1 ) / info.series->xdim;
-	    nx2 = + (origx + info.series->xdim - 1 ) / info.series->xdim;
-	    ny1 = - (vydim - (origy + info.series->ydim) + info.series->ydim - 1 ) / info.series->ydim;
-	    ny2 = + (origy + info.series->ydim - 1 ) / info.series->ydim;
+	    nx1 = - (vxdim - (origx + mx) + mx - 1 ) / mx;
+	    nx2 = + (origx + mx - 1 ) / mx;
+	    ny1 = - (vydim - (origy + my) + my - 1 ) / my;
+	    ny2 = + (origy + my - 1 ) / my;
 	}
 
 	if ( info.verbose ) {
 	    printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
-		vxdim, vydim, info.series->xdim, info.series->ydim, offx, offy );
+		vxdim, vydim, mx, my, offx, offy );
 	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
 	}
 
@@ -346,12 +353,12 @@ pixmap_redraw ( void )
 
 	if ( info.show_maplets ) {
 	    for ( x = nx1+1; x <= nx2; x++ ) {
-		xx = origx - mp->xdim * x,
+		xx = origx - mx * x,
 		gdk_draw_line ( info.series->pixels, vp_info.da->style->black_gc,
 		    xx, 0, xx, vp_info.vy );
 	    }
 	    for ( y = ny1+1; y <= ny2; y++ ) {
-		yy = origy - mp->ydim * y,
+		yy = origy - my * y,
 		gdk_draw_line ( info.series->pixels, vp_info.da->style->black_gc,
 		    0, yy, vp_info.vx, yy );
 	    }
@@ -655,7 +662,6 @@ main ( int argc, char **argv )
 		/* XXX */
 		start_series = atol ( *argv++ ) - 1;
 	    }
-	    	info.show_maplets = 1;
 	    if ( strcmp ( p, "-g" ) == 0 ) {
 		/* won't the standard geometry options
 		 * work here (if I cooperate and do not

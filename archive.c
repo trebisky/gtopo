@@ -578,8 +578,8 @@ section_map_path ( struct section *ep, int lat_section, int long_section, int la
 		series_letter = 'c';
 	}
 	if ( info.series->series == S_500K ) {
-		/* Nevada */
-		series_letter = 'g';
+	    /* Nevada */
+	    series_letter = 'g';
 	}
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
@@ -909,6 +909,13 @@ scan_section ( char *path )
 	if ( letter_count['n'-'a'] > 0 )
 	    rv = 'n';
 
+	/* XXX - doesn't work ... yet.
+	 * the full usa sections have a single G file
+	 * such as G34118A1.tpq
+	 */
+	if ( letter_count['g'-'a'] > 0 )
+	    rv = 'g';
+
 	return rv;
 }
 
@@ -1190,7 +1197,6 @@ add_usa_500k ( char *path, char *name )
 	    if ( strlen(dp->d_name) != 6 )
 	    	continue;
 	    if ( dp->d_name[0] == 'b' || dp->d_name[0] == 'B' ) {
-		printf ( "500K: %s/%s\n", map_path, dp->d_name );
 		add_usa_500k ( map_path, dp->d_name );
 		continue;
 	    }
