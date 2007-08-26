@@ -26,6 +26,9 @@ be included in web pages or email or whatever.
 * Get keyboard stuff working and use +- to flip forward and
 back in the scale series, as well as other things.
 
+* Make it do byte swapping so it will run on a big endian
+machine (like a power PC mac, which it fails on as of 0.9.3).
+
 === Things to maybe do, or maybe not.
 
 * Use a notebook with tabs on the right side to switch
