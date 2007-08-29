@@ -30,6 +30,7 @@
 #include <math.h>
 
 #include "gtopo.h"
+#include "protos.h"
 
 extern struct topo_info info;
 

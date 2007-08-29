@@ -5,6 +5,22 @@ Tom Trebisky  August, 2007
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
 
+=== Things being worked on now (8/28/2007)
+
+* this currently does not run on an x86_64 machine, which my machine
+just became, so I am working on that, and worrying about regression
+testing (my home machine is a 32 bit, so I will just have to
+drag my feet upgrading it).
+
+* gtopo builds nicely on a big-endian OS-X mac laptop, but does
+not run.  This is due to endian issues reading the TPQ files,
+which hold parameters as little endian integers and doubles.
+Should be pretty easy to fix.
+
+* There is some grief with 100K series, as reported by a fellow
+trying to use gtopo with "backcountry explorer".  As soon as
+I get the program running on a 64 bit machine, will tackle this.
+
 === Things to definitely do, top priority
 
 * Series 2 maps also have a bug (sort of cosmetic)

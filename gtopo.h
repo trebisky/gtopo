@@ -187,22 +187,4 @@ struct tpq_index_e {
 	long	size;
 };
 
-/* from gtopo.c */
-void synch_position ( void );
-void set_position ( double, double );
-
-/* from tpq_io.c */
-int load_tpq_maplet ( struct maplet * );
-struct tpq_info *tpq_lookup ( char * );
-
-/* from maplet.c */
-struct maplet *load_maplet ( int, int );
-struct maplet *load_maplet_any ( char * );
-
-/* from archive.c */
-char *strhide ( char * );
-int archive_init ( char ** );
-int lookup_series ( struct maplet *, int, int );
-void set_series ( enum s_type );
-
 /* THE END */

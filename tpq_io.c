@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "gtopo.h"
+#include "protos.h"
 
 extern struct topo_info info;
 
@@ -39,18 +40,29 @@ extern struct topo_info info;
 /* ---------------------------------------------------------------- */
 
 #define TPQ_HEADER_SIZE	1024
+#define TPQ_FILE_SIZE	32
+
+/* XXX - 8-28-2007, this would not build correctly on a 64 bit
+ * intel target.  It turns out that long is 8 bytes on these
+ * machines.  Since this structure is a template for what is
+ * on disk, a long MUST be a 4 byte integer.  int works for now.
+ * ALSO, we have to introduce the packed attribute thing, since
+ * gcc now wants to put holes in this structure to place the
+ * doubles on 8-byte boundaries.
+ */
+typedef int INT4;
 
 /* We see 3 of these embedded in the header */
 struct tpq_file {
 	char ext[4];		/* ".jpg" or ".png" */
-	long _xxx[2];
-	long nlong;
-	long nlat;
+	INT4 _xxx[2];
+	INT4 nlong;
+	INT4 nlat;
 	char _xx[12];
 };
 
 struct tpq_header {
-	long version;		/* maybe, I always see 1 */
+	INT4  version;		/* maybe, I always see 1 */
 	double west_long;
 	double north_lat;
 	double east_long;
@@ -71,7 +83,7 @@ struct tpq_header {
 	char _pad3[28];
 	struct tpq_file png2;
 	char _pad4[332];
-};
+}__attribute__((packed));
 
 /* The above is the format of the TPQ file as found on disk.
  */
@@ -159,8 +171,16 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 {
 	struct tpq_header tpq_header;
 
+	printf ( "sizeof long = %d\n", sizeof(long) );
+	printf ( "sizeof int = %d\n", sizeof(int) );
+	printf ( "sizeof INT4 = %d\n", sizeof(INT4) );
+	printf ( "sizeof double = %d\n", sizeof(double) );
+
+	if ( sizeof(struct tpq_file) != TPQ_FILE_SIZE )
+	    error ( "Malformed TPQ file structure (my bug: %d)\n", (void *) sizeof(struct tpq_file) );
+
 	if ( sizeof(struct tpq_header) != TPQ_HEADER_SIZE )
-	    error ( "Malformed TPQ file header structure (my bug)\n", "" );
+	    error ( "Malformed TPQ header structure (my bug: %d)\n", (void *) sizeof(struct tpq_header) );
 
 	/* read header */
 	if ( read( fd, &tpq_header, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )

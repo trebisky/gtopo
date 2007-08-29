@@ -38,6 +38,7 @@
 #include <math.h>
 
 #include "gtopo.h"
+#include "protos.h"
 
 extern struct topo_info info;
 
@@ -103,70 +104,6 @@ static void add_full_usa ( char *, char * );
 static int add_dir ( char *, char * );
 
 static struct section *lookup_section ( struct section *, int );
-
-char *
-strhide ( char *data )
-{
-	int n = strlen(data);
-	char *rv;
-
-	rv = malloc ( n + 1 );
-	strcpy ( rv, data );
-	return rv;
-}
-
-char *
-str_lower ( char *data )
-{
-	char *rv, *p;
-
-	p = rv = strhide ( data );
-	for ( p = rv; *p; p++ )
-	    *p = tolower ( *p );
-	return rv;
-}
-
-/* Compare a test string to a reference string.
- * The reference string is lower case.
- * The test string may be any case.
- * We assume the test string is not too big.
- */
-int
-strcmp_l ( char *ref, char *test )
-{
-	char *lstr;
-	int rv;
-
-	lstr = str_lower ( test );
-	rv = strcmp ( ref, lstr );
-	free ( lstr );
-	return rv;
-}
-
-int
-is_directory ( char *path )
-{
-	struct stat stat_buf;
-
-	if ( stat ( path, &stat_buf ) < 0 )
-	    return 0;
-	if ( S_ISDIR(stat_buf.st_mode) )
-	    return 1;
-	return 0;
-}
-
-int
-is_file ( char *path )
-{
-	struct stat stat_buf;
-
-	if ( stat ( path, &stat_buf ) < 0 )
-	    return 0;
-	if ( S_ISREG(stat_buf.st_mode) )
-	    return 1;
-	return 0;
-}
-
 
 static int
 add_file_method ( struct series *sp, char *path )

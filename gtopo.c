@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "gtopo.h"
+#include "protos.h"
 
 #define MINIMUM_VIEW	100
 #define INITIAL_VIEW	800
@@ -127,24 +128,6 @@ struct viewport {
 
 /* Prototypes ..........
  */
-
-void
-error ( char *msg, char *arg )
-{
-	printf ( msg, arg );
-	exit ( 1 );
-}
-
-double
-dms2deg ( int deg, int min, int sec )
-{
-	double rv;
-
-	rv = deg;
-	rv += ((double)min/60.0);
-	rv += ((double)sec/3600.0);
-	return rv;
-}
 
 gint
 destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
