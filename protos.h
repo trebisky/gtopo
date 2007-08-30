@@ -39,7 +39,7 @@ int lookup_series ( struct maplet *, int, int );
 void set_series ( enum s_type );
 
 /* from utils.c */
-void error ( char *, void * );
+void error ( char *, ... );
 double dms2deg ( int, int, int );
 char * strhide ( char * );
 char * str_lower ( char * );

@@ -183,7 +183,7 @@ struct tpq_info {
 };
 
 struct tpq_index_e {
-	long	offset;
+	off_t	offset;
 	long	size;
 };
 

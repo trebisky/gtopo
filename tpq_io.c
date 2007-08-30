@@ -166,6 +166,74 @@ build_index ( struct tpq_info *tp, int fd, long *info )
 	tp->index_size = num_jpeg;
 }
 
+static void
+build_index_new ( struct tpq_info *tp, int fd )
+{
+	int i;
+	unsigned short tag;
+	int num_index;
+	int num_jpeg;
+	struct tpq_index_e *proto_index;
+	struct tpq_index_e *index;
+	char ebuf[16];
+	long offset;
+	void *fbp;
+
+	fbp = filebuf_init ( fd, (off_t) TPQ_HEADER_SIZE );
+
+	/* Read the offset to the first maplet, and
+	 * use it to compute the size of the offset table.
+	 */
+	offset = filebuf_i4 ( fbp );
+	filebuf_skip ( fbp, -4 );
+
+	/* We won't need ALL of these, since some of the
+	 * pointers point to the non-JPEG stuff at the
+	 * end of the TPQ file
+	 */
+	num_index = (offset - TPQ_HEADER_SIZE)/4 - 4;
+
+	proto_index = (struct tpq_index_e *) malloc ( num_index * sizeof(struct tpq_index_e) );
+	if ( ! proto_index )
+	    error ("Build index: too many thingies %d!\n", num_index );
+
+	/* Read the offset table, verify as we go that we
+	 * point to a JPEG SOI tag, and terminate when
+	 * that is no longer true.
+	 */
+	num_jpeg = 0;
+	for ( i=0; i<num_index; i++ ) {
+	    proto_index[i].offset = filebuf_i4 ( fbp );
+
+	    tag = filebuf_i2_off ( fd, proto_index[i].offset );
+	    if ( tag != JPEG_SOI_TAG )
+		break;
+
+	    num_jpeg++;
+	}
+
+	/* Compute maplet sizes:
+	 * Since the above search will have loaded one offset beyond
+	 * the last JPEG maplet, the "look ahead" here will work.
+	 */
+	for ( i=0; i<num_jpeg; i++ )
+	    proto_index[i].size = proto_index[i+1].offset - proto_index[i].offset;
+
+	/* Now copy to a smaller index buffer, and free the big one
+	 * we have been working in
+	 */
+        index = (struct tpq_index_e *) malloc ( num_jpeg * sizeof(struct tpq_index_e) );
+        if ( ! index )
+	    error ("Build index: too many maplets %d!\n", num_jpeg );
+
+	memcpy ( index, proto_index, num_jpeg * sizeof(struct tpq_index_e) );
+	free ( (char *) proto_index );
+
+	tp->index = index;
+	tp->index_size = num_jpeg;
+}
+
+
 static int
 read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 {
@@ -266,10 +334,14 @@ tpq_new ( char *path )
 	if ( ! read_tpq_header ( tp, fd, info.verbose ) )
 	    return NULL;
 
+#ifdef notdef
 	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
 	    return NULL;
 
 	build_index ( tp, fd, (long *) buf );
+#endif
+
+	build_index_new ( tp, fd );
 
 	close ( fd );
 
