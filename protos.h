@@ -47,4 +47,11 @@ int strcmp_l ( char *, char * );
 int is_directory ( char *path );
 int is_file ( char * );
 
+void filebuf_free ( void * );
+void * filebuf_init ( int, off_t );
+long filebuf_i4 ( void * );
+long filebuf_i2 ( void * );
+void filebuf_skip ( void *, int );
+int filebuf_i2_off ( int, off_t );
+
 /* THE END */

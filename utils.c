@@ -148,12 +148,12 @@ is_big_endian ( void )
 #define FILEBUF_SIZE	1024
 
 struct filebuf {
-	char buf[FILEBUF_SIZE];
+	unsigned char buf[FILEBUF_SIZE];
 	int fd;
 	int bufsize;
 	off_t next_off;
-	char *next;
-	char *limit;
+	unsigned char *next;
+	unsigned char *limit;
 	int big_endian;
 };
 
@@ -185,7 +185,7 @@ filebuf_next_byte ( struct filebuf *fp )
 
 	/* XXX */
 	if ( filebuf_load_buf ( fp ) < 0 )
-	    error ( "filebuf next byte fails\n", 0 );
+	    error ( "filebuf next byte fails\n" );
 
 	return *fp->next++;
 }

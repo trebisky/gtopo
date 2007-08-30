@@ -53,7 +53,7 @@ maplet_new ( void )
 
 	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
 	if ( ! mp )
-	    error ("maplet_new, out of mem\n", "" );
+	    error ("maplet_new, out of mem\n");
 
 	return mp;
 }

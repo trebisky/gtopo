@@ -113,7 +113,7 @@ add_file_method ( struct series *sp, char *path )
 
 	xp = (struct method *) malloc ( sizeof(struct method) );
 	if ( ! xp )
-	    error ("file method - out of memory\n", "" );
+	    error ("file method - out of memory\n");
 
 	/* This reads the TPQ header, but NOT any maplet(s) */
 	tp = tpq_lookup ( path );
@@ -138,7 +138,7 @@ add_section_method ( struct series *sp, struct section *head )
 
 	xp = (struct method *) malloc ( sizeof(struct method) );
 	if ( ! xp )
-	    error ("section method - out of memory\n", "" );
+	    error ("section method - out of memory\n");
 
 	xp->type = M_SECTION;
 	xp->sections = head;
@@ -879,7 +879,7 @@ add_section ( char *disk, char *section, struct section **head )
 
 	ep = (struct section *) malloc ( sizeof(struct section) );
 	if ( ! ep )
-	    error ("Section new - out of memory\n", "" );
+	    error ("Section new - out of memory\n");
 
 	ep->latlong = atol ( &section[1] );
 	ep->path = strhide ( section_path );
@@ -951,7 +951,7 @@ dir_lookup ( char *name )
 
 	dp = (struct dir_table *) malloc ( sizeof(struct dir_table) );
 	if ( ! dp )
-	    error ("dir_lookup - out of memory\n", "" );
+	    error ("dir_lookup - out of memory\n");
 
 	dp->name = lower;
 	dp->next = dir_head;

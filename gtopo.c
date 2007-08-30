@@ -602,10 +602,6 @@ main ( int argc, char **argv )
 	    return 1;
 	}
 #endif
-	if ( is_big_endian() )
-	    printf ("Big endian\n");
-	else
-	    printf ("Little endian\n");
 
 	/* Let gtk strip off any of its arguments first
 	 */
