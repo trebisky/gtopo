@@ -665,9 +665,13 @@ main ( int argc, char **argv )
 	    if ( strcmp ( p, "-i" ) == 0 ) {
 		if ( argc < 1 )
 		    usage ();
-		argc--;
-		file_name = *argv++;
-		file_info ( file_name );
+		file_info ( *argv, 0 );
+		return 0;
+	    }
+	    if ( strcmp ( p, "-j" ) == 0 ) {
+		if ( argc < 1 )
+		    usage ();
+		file_info ( *argv, 1 );
 		return 0;
 	    }
 	}

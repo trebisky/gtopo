@@ -122,6 +122,7 @@ is_file ( char *path )
 /* figure out if we are running on
  * a big endian machine.
  * (like a sparc or powerpc).
+ * this works, but hasn't been needed.
  */
 int
 is_big_endian ( void )

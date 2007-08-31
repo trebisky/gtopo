@@ -179,13 +179,13 @@ build_index ( struct tpq_info *tp, int fd )
 	offset = filebuf_i4 ( fbp );
 	filebuf_skip ( fbp, -4 );
 
-	printf ( "build_index, first offset = %08x, %d\n", offset, offset );
-
 	/* We won't need ALL of these, since some of the
 	 * pointers point to the non-JPEG stuff at the
-	 * end of the TPQ file
+	 * end of the TPQ file, BUT we need to fetch at
+	 * least one index past the JPEG stuff to be
+	 * able to calculate the last maplet size.
 	 */
-	num_index = (offset - TPQ_HEADER_SIZE)/4 - 4;
+	num_index = (offset - TPQ_HEADER_SIZE)/4;
 
 	proto_index = (struct tpq_index_e *) malloc ( num_index * sizeof(struct tpq_index_e) );
 	if ( ! proto_index )
@@ -200,6 +200,9 @@ build_index ( struct tpq_info *tp, int fd )
 	    proto_index[i].offset = filebuf_i4 ( fbp );
 
 	    tag = filebuf_i2_off ( fd, proto_index[i].offset );
+	    /*
+	    printf ( "Build index: offset %d = %d %x\n", i+1, proto_index[i].offset, tag );
+	    */
 	    if ( tag != JPEG_SOI_TAG )
 		break;
 
@@ -233,10 +236,12 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 {
 	struct tpq_header tpq_header;
 
+	/*
 	printf ( "sizeof long = %d\n", sizeof(long) );
 	printf ( "sizeof int = %d\n", sizeof(int) );
 	printf ( "sizeof INT4 = %d\n", sizeof(INT4) );
 	printf ( "sizeof double = %d\n", sizeof(double) );
+	*/
 
 	if ( sizeof(struct tpq_file) != TPQ_FILE_SIZE )
 	    error ( "Malformed TPQ file structure (my bug: %d)\n", sizeof(struct tpq_file) );
@@ -451,6 +456,7 @@ load_tpq_maplet ( struct maplet *mp )
 	char buf[BUFSIZE];
 	int fd, ofd;
 	int size;
+	off_t off;
 	int nw;
 	int nlong;
 	struct tpq_info *tp;
@@ -485,7 +491,8 @@ load_tpq_maplet ( struct maplet *mp )
 	if ( fd < 0 )
 	    return 0;
 
-	lseek ( fd, tp->index[mp->tpq_index].offset, SEEK_SET );
+	off = tp->index[mp->tpq_index].offset;
+	lseek ( fd, off, SEEK_SET );
 	size = tp->index[mp->tpq_index].size;
 
 	/* XXX - I dunno here if we should be allocating a new
@@ -498,7 +505,7 @@ load_tpq_maplet ( struct maplet *mp )
 	while ( size > 0 ) {
 	    nw = size < BUFSIZE ? size : BUFSIZE;
 	    if ( read( fd, buf, nw ) != nw )
-		error ( "TPQ file read error %s\n", mp->tpq_path );
+		error ( "TPQ file read error %s %d %d\n", mp->tpq_path, off, size );
 	    gdk_pixbuf_loader_write ( loader, buf, nw, NULL );
 	    size -= nw;
 	}
@@ -524,7 +531,7 @@ load_tpq_maplet ( struct maplet *mp )
 	while ( size > 0 ) {
 	    nw = size < BUFSIZE ? size : BUFSIZE;
 	    if ( read( fd, buf, nw ) != nw )
-		error ( "TPQ file read error %s\n", mp->tpq_path );
+		error ( "TPQ file read error %s %d\n", mp->tpq_path, size );
 	    if ( write ( ofd, buf, nw ) != nw )
 		error ( "tmp file write error %s\n", tmpname );
 	    size -= nw;

@@ -174,7 +174,7 @@ char *wonk_series ( enum s_type series )
 
 /* Print info about one TPQ file and exit */
 void
-file_info ( char *path )
+file_info ( char *path, int extra )
 {
 	struct maplet *mp;
 	struct tpq_info *tp;
@@ -183,6 +183,7 @@ file_info ( char *path )
 	double long_scale;
 	double long_scale_raw;
 	int nn;
+	int i;
 
 	if ( ! is_file(path) ) {
 	    printf ( "No such file: %s\n", path );
@@ -225,6 +226,13 @@ file_info ( char *path )
 	printf ( " lat scale: %.8f\n", lat_scale );
 	printf ( " long scale: %.8f  (%.8f) at lat %.5f\n", long_scale, long_scale_raw, tp->mid_lat );
 	printf ( " series: %s\n", wonk_series ( tp->series ) );
+	printf ( " index size: %d\n", tp->index_size );
+
+	if ( ! extra )
+	    return;
+
+	for ( i=0; i<tp->index_size; i++ )
+	    printf ( "%4d) %10d %10d\n", i+1, tp->index[i].offset, tp->index[i].size );
 }
 
 /* This is called when we are initializing to view just
