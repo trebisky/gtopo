@@ -214,6 +214,15 @@ build_index ( struct tpq_info *tp, int fd )
 	    num_jpeg++;
 	}
 
+	/* If this ever happens, I don't know how we figure the size of the last
+	 * maplet.  Well actually, I do!  We can use the size of the file itself,
+	 * which we can get from a stat call.  However, there doesn't seem to
+	 * be any need for this complexity, as every TPQ file I have seen has
+	 * at least one PNG file section after the JPEG maplets.
+	 */
+	if ( tag == JPEG_SOI_TAG )
+	    error ( "Build index fails for %s\n", tp->path );
+
 	/* Compute maplet sizes:
 	 * Since the above search will have loaded one offset beyond
 	 * the last JPEG maplet, the "look ahead" here will work.
@@ -247,7 +256,6 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 	printf ( "sizeof INT4 = %d\n", sizeof(INT4) );
 	printf ( "sizeof double = %d\n", sizeof(double) );
 	*/
-	printf ( "sizeof double = %d\n", sizeof(double) );
 
 	if ( sizeof(struct tpq_file) != TPQ_FILE_SIZE )
 	    error ( "Malformed TPQ file structure (my bug: %d)\n", sizeof(struct tpq_file) );
@@ -445,7 +453,6 @@ tpq_new ( char *path )
 	    build_index_OLD ( tp, fd, (long *) buf );
 	}
 #endif
-
 
 	close ( fd );
 
