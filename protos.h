@@ -53,5 +53,7 @@ long filebuf_i4 ( void * );
 long filebuf_i2 ( void * );
 void filebuf_skip ( void *, int );
 int filebuf_i2_off ( int, off_t );
+char * filebuf_string ( void *, int );
+double filebuf_double ( void * );
 
 /* THE END */

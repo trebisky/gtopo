@@ -122,7 +122,6 @@ is_file ( char *path )
 /* figure out if we are running on
  * a big endian machine.
  * (like a sparc or powerpc).
- * this works, but hasn't been needed.
  */
 int
 is_big_endian ( void )
@@ -258,6 +257,61 @@ filebuf_i2 ( void *cookie )
 	return rv;
 }
 
+#ifdef notdef
+void
+double_dump ( double val )
+{
+	union {
+	    double d_val;
+	    int i_val[2];
+	} u_d;
+
+	printf ( "sizeof double = %d\n", sizeof(double) );
+	u_d.d_val = 37.00;
+	printf ( "dval 37.00 = %08x  %08x\n", u_d.i_val[0], u_d.i_val[1] );
+	u_d.d_val = val;
+	printf ( "dval val = %08x  %08x\n", u_d.i_val[0], u_d.i_val[1] );
+}
+#endif
+
+/* This is pretty gross, but amazingly seems to
+ * work on all the 32 and 64 bit machines I can
+ * get my hands on with IEEE floating point math.
+ */
+double
+filebuf_double ( void *cookie )
+{
+	struct filebuf *fp;
+	union {
+		double dval;
+		char cval[8];
+	} u_d;
+
+	fp = (struct filebuf *) cookie;
+
+	if ( fp->big_endian ) {
+	    u_d.cval[7] = filebuf_next_byte ( fp );
+	    u_d.cval[6] = filebuf_next_byte ( fp );
+	    u_d.cval[5] = filebuf_next_byte ( fp );
+	    u_d.cval[4] = filebuf_next_byte ( fp );
+	    u_d.cval[3] = filebuf_next_byte ( fp );
+	    u_d.cval[2] = filebuf_next_byte ( fp );
+	    u_d.cval[1] = filebuf_next_byte ( fp );
+	    u_d.cval[0] = filebuf_next_byte ( fp );
+	} else {
+	    u_d.cval[0] = filebuf_next_byte ( fp );
+	    u_d.cval[1] = filebuf_next_byte ( fp );
+	    u_d.cval[2] = filebuf_next_byte ( fp );
+	    u_d.cval[3] = filebuf_next_byte ( fp );
+	    u_d.cval[4] = filebuf_next_byte ( fp );
+	    u_d.cval[5] = filebuf_next_byte ( fp );
+	    u_d.cval[6] = filebuf_next_byte ( fp );
+	    u_d.cval[7] = filebuf_next_byte ( fp );
+	}
+
+	return u_d.dval;
+}
+
 void
 filebuf_skip ( void *cookie, int count )
 {
@@ -279,6 +333,28 @@ filebuf_skip ( void *cookie, int count )
 	count -= fp->limit - fp->next;
 	fp->next = fp->limit;
 	fp->next_off += count;
+}
+
+/* Copy out a fixed length string.
+ * Allow enough room to put a "safety"
+ * null byte at the end.
+ */
+char *
+filebuf_string ( void *cookie, int count )
+{
+	struct filebuf *fp;
+	char *rv;
+	char *p;
+
+	fp = (struct filebuf *) cookie;
+
+	p = rv = malloc ( count + 1 );
+
+	while ( count-- )
+	    *p++ = filebuf_next_byte ( fp );
+	*p = '\0';
+
+	return rv;
 }
 
 /* This is swatting a fly with a sledge-hammer.

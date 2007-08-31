@@ -42,6 +42,9 @@ extern struct topo_info info;
 #define TPQ_HEADER_SIZE	1024
 #define TPQ_FILE_SIZE	32
 
+#define NEW_HEADER
+
+#ifndef NEW_HEADER
 /* XXX - 8-28-2007, this would not build correctly on a 64 bit
  * intel target.  It turns out that long is 8 bytes on these
  * machines.  Since this structure is a template for what is
@@ -87,7 +90,9 @@ struct tpq_header {
 
 /* The above is the format of the TPQ file as found on disk.
  */
+#endif
 
+#ifdef notdef
 /* The biggest thing I have seen yet was in the california
  * level 3 map (22x20), which has 440 jpeg maplets and 767
  * table entries.
@@ -104,25 +109,6 @@ struct tpq_header {
  */
 #define TPQ_MAX_MAPLETS	7000
 #define INDEX_BUFSIZE  32000
-
-/* For a q-series TPQ file representing a 7.5 minute quadrangle,
- * there are 50 maplets within the file.  These begin in the upper
- * left (the far NW) and then move W to E for 5 maplets
- * then down just like you read lines of text in a book.
- * There are 10 maplets N to S
- *
- * For a F series TPQ file representing a 5x5 degree area,
- * there are 100 maplets in the file in a 10x10 pattern,
- * the same order as above.
- * (For the California level 3, it is one huge TPQ file
- *  with 440 maplets as 22x20). 440x4 is 1760 bytes.
- * (The level 2 in the Nevada set for the entire US takes
- *  the cake with 6133 maps !!  ( US1_MAP2.tpq )
- *  This boils down to 1534 maps (59x26)
- */
-
-#define JPEG_SOI_TAG	0xd8ff
-
 static void
 build_index_OLD ( struct tpq_info *tp, int fd, long *info )
 {
@@ -158,6 +144,25 @@ build_index_OLD ( struct tpq_info *tp, int fd, long *info )
 	tp->index = index;
 	tp->index_size = num_jpeg;
 }
+#endif
+
+/* For a q-series TPQ file representing a 7.5 minute quadrangle,
+ * there are 50 maplets within the file.  These begin in the upper
+ * left (the far NW) and then move W to E for 5 maplets
+ * then down just like you read lines of text in a book.
+ * There are 10 maplets N to S
+ *
+ * For a F series TPQ file representing a 5x5 degree area,
+ * there are 100 maplets in the file in a 10x10 pattern,
+ * the same order as above.
+ * (For the California level 3, it is one huge TPQ file
+ *  with 440 maplets as 22x20). 440x4 is 1760 bytes.
+ * (The level 2 in the Nevada set for the entire US takes
+ *  the cake with 6133 maps !!  ( US1_MAP2.tpq )
+ *  This boils down to 1534 maps (59x26)
+ */
+
+#define JPEG_SOI_TAG	0xd8ff
 
 static void
 build_index ( struct tpq_info *tp, int fd )
@@ -230,7 +235,7 @@ build_index ( struct tpq_info *tp, int fd )
 	tp->index_size = num_jpeg;
 }
 
-
+#ifndef NEW_HEADER
 static int
 read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 {
@@ -242,6 +247,7 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 	printf ( "sizeof INT4 = %d\n", sizeof(INT4) );
 	printf ( "sizeof double = %d\n", sizeof(double) );
 	*/
+	printf ( "sizeof double = %d\n", sizeof(double) );
 
 	if ( sizeof(struct tpq_file) != TPQ_FILE_SIZE )
 	    error ( "Malformed TPQ file structure (my bug: %d)\n", sizeof(struct tpq_file) );
@@ -310,6 +316,99 @@ read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
 
 	return 1;
 }
+#endif
+
+#ifdef NEW_HEADER
+static int
+read_tpq_header ( struct tpq_info *tp, int fd, int verbose )
+{
+	void *fbp;
+
+	fbp = filebuf_init ( fd, (off_t) 0 );
+
+	filebuf_skip ( fbp, 4 );	/* skip version */
+
+	tp->w_long = filebuf_double ( fbp );
+	tp->n_lat = filebuf_double ( fbp );
+	tp->e_long = filebuf_double ( fbp );
+	tp->s_lat = filebuf_double ( fbp );
+
+	filebuf_skip ( fbp, 12 );	/* TOPO! string */
+	filebuf_skip ( fbp, 208 );
+
+	tp->quad = filebuf_string ( fbp, 128 );
+	tp->state = filebuf_string ( fbp, 32 );
+
+	filebuf_skip ( fbp, 32 );	/* source - like USGS */
+	filebuf_skip ( fbp, 4 );	/* year1 - like 1994 */
+	filebuf_skip ( fbp, 4 );	/* year2 - like 1994 */
+	filebuf_skip ( fbp, 8 );	/* contour - like "20 ft" */
+	filebuf_skip ( fbp, 16 );
+
+	/* now a 32 byte tpq_file thingie
+	 * for the jpeg maplets.
+	 */
+	filebuf_skip ( fbp, 4 );	/* string ".jpg" */
+	filebuf_skip ( fbp, 8 );	/* two int4 things */
+
+	tp->long_count = filebuf_i4 ( fbp );
+	tp->lat_count = filebuf_i4 ( fbp );
+
+	filebuf_skip ( fbp, 12 );
+
+#ifdef notdef
+	filebuf_skip ( fbp, 88 );
+	filebuf_skip ( fbp, 32 );	/* TPQ file thingie for a png */
+	filebuf_skip ( fbp, 28 );
+	filebuf_skip ( fbp, 32 );	/* TPQ file thingie for a png */
+	filebuf_skip ( fbp, 332 );
+	/* End of header */
+#endif
+	tp->maplet_long_deg = (tp->e_long - tp->w_long) / tp->long_count;
+	tp->maplet_lat_deg = (tp->n_lat - tp->s_lat) / tp->lat_count;
+
+	if ( verbose ) {
+	    printf ( "TPQ file for %s quadrangle: %s\n", tp->state, tp->quad );
+	    printf ( "TPQ file maplet counts long/lat: %d %d\n", tp->long_count, tp->lat_count );
+	    printf ( "TPQ file long range: %.3f %3f\n", tp->w_long, tp->e_long );
+	    printf ( "TPQ file lat range: %.3f %3f\n", tp->s_lat, tp->n_lat );
+	    printf ( "TPQ maplet size: %.5f %.5f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
+	}
+
+	/* When we need to scale pixels, we want to do all maplets on a TPQ sheet
+	 * the same, and (based on the Mt. Hopkins quad) use the midpoint latitude
+	 * to calculate the scaling.
+	 */
+	tp->mid_lat = (tp->n_lat + tp->s_lat) / 2.0;
+
+	/* Figure out the corner indices of our map */
+        tp->sheet_lat = tp->s_lat / tp->maplet_lat_deg;
+	tp->sheet_long = - tp->e_long / tp->maplet_long_deg;
+
+	/* What we see so far, and I believe to be an invariant, is the following
+	 * sizes of maplets in the given series:
+	 *   24K  series = 0.0250 long by 0.0125 lat
+	 *  100K  series = 0.0625 long by 0.0625 lat
+	 *  500K  series = 0.5000 long by 0.5000 lat
+	 *  Atlas series = 1.0000 long by 1.0000 lat
+	 *  State series = quite variable
+	 *  (AZ = 7x7, CA = 11x10)
+	 *  (the new NV set has the entire USA as 4.9167 by 3.25)
+	 */
+	if ( tp->maplet_long_deg < 0.0350 )
+	    tp->series = S_24K;
+	else if ( tp->maplet_long_deg < 0.1 )
+	    tp->series = S_100K;
+	else if ( tp->maplet_long_deg < 0.75 )
+	    tp->series = S_500K;
+	else if ( tp->maplet_long_deg < 2.0 )
+	    tp->series = S_ATLAS;
+	else
+	    tp->series = S_STATE;
+
+	return 1;
+}
+#endif
 
 static struct tpq_info *tpq_head = NULL;
 
@@ -317,7 +416,6 @@ static struct tpq_info *
 tpq_new ( char *path )
 {
         struct tpq_info *tp;
-	char buf[INDEX_BUFSIZE];
 	int fd;
 
 	if ( info.verbose )
@@ -336,14 +434,18 @@ tpq_new ( char *path )
 	if ( ! read_tpq_header ( tp, fd, info.verbose ) )
 	    return NULL;
 
-#ifdef notdef
-	if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
-	    return NULL;
+	build_index ( tp, fd );
 
-	build_index_OLD ( tp, fd, (long *) buf );
+#ifdef notdef
+	{
+	char buf[INDEX_BUFSIZE];
+	    if ( read( fd, buf, INDEX_BUFSIZE ) != INDEX_BUFSIZE )
+		return NULL;
+
+	    build_index_OLD ( tp, fd, (long *) buf );
+	}
 #endif
 
-	build_index ( tp, fd );
 
 	close ( fd );
 
