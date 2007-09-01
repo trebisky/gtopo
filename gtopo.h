@@ -47,7 +47,11 @@ enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE };
 #define	V_MAPLET	0x0040
 #define	V_TPQ		0x0040
 
+/*
 #define INITIAL_VERBOSITY	(V_BASIC | V_ARCHIVE )
+*/
+
+#define INITIAL_VERBOSITY	0
 
 /* Structure to hold our current position */
 struct topo_info {

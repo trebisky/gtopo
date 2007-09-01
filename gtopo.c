@@ -181,7 +181,8 @@ gint
 destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 {
 	gtk_main_quit ();
-	show_statistics ();
+	if ( info.verbose & V_BASIC )
+	    show_statistics ();
 
 	return FALSE;
 }

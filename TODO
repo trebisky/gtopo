@@ -10,38 +10,35 @@ them arises, but will give you an idea where gtopo is heading.
 * When using the SI_D01 full US maps, when it zooms
 from STATE to ATLAS, it looses position substantially.
 
-* When using the SI_D01 full US maps, when zooming
-from ATLAS to 500K, it can find no maps.
-
-* Certain map sets (like backcountry explorer), which
-have C and G named tpq files can display nothing in 100K
-and maybe 500k.  This seems fine with lower case names,
-and this is probably the same bug as the 500K case above.
-
-=== Things being worked on now (8/28/2007)
-
-* this currently does not run on an x86_64 machine, which my machine
-just became, so I am working on that, and worrying about regression
-testing (my home machine is a 32 bit, so I will just have to
-drag my feet upgrading it).
-
-* gtopo builds nicely on a big-endian OS-X mac laptop, but does
-not run.  This is due to endian issues reading the TPQ files,
-which hold parameters as little endian integers and doubles.
-Should be pretty easy to fix.
-
-* There is some grief with 100K series, as reported by a fellow
-trying to use gtopo with "backcountry explorer".  As soon as
-I get the program running on a 64 bit machine, will tackle this.
-
-=== Things to definitely do, top priority
-
-* Series 2 maps also have a bug (sort of cosmetic)
+* Series 2 maps have a bug (sort of cosmetic)
 The maplets only match at the center of the viewed area,
 apparently there is a pixel change issue at this scale
 as latitude changes (the same issue is there with other
 map series, but is never a real issue with the size of
 screen usually used).
+
+-- fixed bugs (9/1/2007)
+
+* When using the SI_D01 full US maps, and zooming
+from ATLAS to 500K, it can find no maps.  Fixed,
+now it sees all 3 map series over the entire USA.
+
+* Certain map sets (like backcountry explorer), which
+have C and G named tpq files can display nothing in 100K
+and maybe 500k.  This seems fine with lower case names.
+Fixed 9/1/2007, this wasa problem with mixed case filenames
+such as C37120E1.tpq or some such nonsense, now OK.
+
+* this currently does not run on an x86_64 machine, which my machine
+just became, so I am working on that, and worrying about regression
+testing (my home machine is a 32 bit, so I will just have to
+drag my feet upgrading it).  Fixed 8-28-2007, so it now runs on
+both 64 and 32 bit intel machines, and while things were being
+generalized, it was made to work on a big endian machine too.
+
+* gtopo builds nicely on a big-endian OS-X mac laptop, and
+runs with some reported problems, what I need is access to
+such a machine for half a day or so.
 
 === Things to definitely do, but not top priority
 
