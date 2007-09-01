@@ -23,7 +23,7 @@
 
 enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
-#define N_SERIES	6
+#define N_SERIES	5
 
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
@@ -33,6 +33,21 @@ enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
  * list of methods to try until one works.
  */
 enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE };
+
+/* We have a series of bits in the "verbose" variable to
+ * trigger debug from different subsystems.
+ */
+
+#define	V_BASIC		0x0001
+#define	V_WINDOW	0x0002
+#define	V_DRAW		0x0004
+#define	V_DRAW2		0x0008
+#define	V_EVENT		0x0010
+#define	V_ARCHIVE	0x0020
+#define	V_MAPLET	0x0040
+#define	V_TPQ		0x0040
+
+#define INITIAL_VERBOSITY	(V_BASIC | V_ARCHIVE )
 
 /* Structure to hold our current position */
 struct topo_info {

@@ -488,15 +488,26 @@ show_methods ( struct series *sp )
 void
 set_series ( enum s_type s )
 {
+    	if ( s < 0 || s >= N_SERIES )
+	    error ( "set_series, impossible value: %d\n", s );
+
 	info.series = &info.series_info[s];
+
 	synch_position ();
-	if ( info.verbose > 0 ) {
+	if ( info.verbose & V_BASIC ) {
 	    printf ( "Switch to series %d\n", s );
 	    show_methods ( info.series );
 	}
 }
 
-/* Try both upper and lower case path names for the tpq file
+/* Try both upper and lower case path names for the tpq file.
+ * It turns out we have to allow the file extension to be
+ * lower case, while the name may be upper case, i.e. we
+ * must try:
+ * 	c41120A1.tpq
+ * 	C41120A1.TPQ
+ * 	C41120A1.tpq
+ * 	c41120A1.TPQ
  */
 static char *
 section_map_path ( struct section *ep, int lat_section, int long_section, int lat_quad, int long_quad )
@@ -527,19 +538,39 @@ section_map_path ( struct section *ep, int lat_section, int long_section, int la
 	    series_letter = 'g';
 	}
 
+	/* 1 - try all lower case */
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
-	if ( info.verbose )
+	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( is_file(path_buf) )
 	    return strhide ( path_buf );
 
-	/* Try upper case */
+	/* 2 - try all upper case */
 	lat_q  = toupper(lat_q);
 	series_letter = toupper(series_letter);
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
-	if ( info.verbose )
+	if ( info.verbose & V_ARCHIVE )
+	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
+
+	if ( is_file(path_buf) )
+	    return strhide ( path_buf );
+
+	/* 3 - try upper case name, with lower case .tpq */
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
+	if ( info.verbose & V_ARCHIVE )
+	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
+
+	if ( is_file(path_buf) )
+	    return strhide ( path_buf );
+
+	/* 4 - unlikely, but try lower case name, with upper case .TPQ */
+	lat_q  = tolower(lat_q);
+	series_letter = tolower(series_letter);
+
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
+	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( is_file(path_buf) )
@@ -591,7 +622,7 @@ method_file ( struct maplet *mp, struct method *xp,
 	mp->sheet_index_long = maplet_long - xp->tpq->sheet_long;
 	mp->sheet_index_lat = maplet_lat - xp->tpq->sheet_lat;
 
-	if ( info.verbose > 2 ) {
+	if ( info.verbose & V_ARCHIVE ) {
 	    printf ( "MF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
 	    printf ( "MF point : %d %d\n", maplet_long, maplet_lat );
 	    printf ( "MF index: %d %d\n", mp->sheet_index_long, mp->sheet_index_lat );
@@ -627,7 +658,7 @@ method_section ( struct maplet *mp, struct method *xp,
 	lat_section = maplet_lat / (sp->lat_count_d * sp->lat_count);
 	long_section = maplet_long / (sp->long_count_d * sp->long_count);
 
-	if ( info.verbose )
+	if ( info.verbose & V_ARCHIVE )
 	    printf ( "lookup_quad, section: %d %d\n", lat_section, long_section );
 
 	lat_quad = maplet_lat / sp->lat_count - lat_section * sp->lat_count_d;
@@ -644,7 +675,7 @@ method_section ( struct maplet *mp, struct method *xp,
 	mp->sheet_index_long = maplet_long - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
 	mp->sheet_index_lat = maplet_lat - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
 
-	if ( info.verbose )
+	if ( info.verbose & V_ARCHIVE )
 	    printf ( "lat/long quad, lat/long maplet: %d %d  %d %d\n", lat_quad, long_quad, maplet_lat, maplet_long );
 
 	/* flip the count to origin from the NW corner */
@@ -783,7 +814,7 @@ add_disk ( char *archive, char *disk )
 	if ( ! (dd = opendir ( disk_path )) )
 	    return 0;
 
-	if ( info.verbose )
+	if ( info.verbose & V_BASIC )
 	    printf ( "Found disk: %s\n", disk_path );
 
 	/* Loop through this disk image.
@@ -903,7 +934,7 @@ add_section ( char *disk, char *section, struct section **head )
 	if ( eep ) {
 	    ep->next_ll = eep->next_ll;
 	    eep->next_ll = ep;
-	    if ( info.verbose )
+	    if ( info.verbose & V_ARCHIVE )
 		printf ( "Added section (on border): %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );
 	    return 1;
 	}
@@ -912,7 +943,7 @@ add_section ( char *disk, char *section, struct section **head )
 	ep->next = *head;
 	*head = ep;
 
-	if ( info.verbose )
+	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Added section: %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );
 
 	return 1;
@@ -973,7 +1004,7 @@ add_dir_series ( int series, char *dirpath, char *name )
 	char tpq_path[100];
 
 	sprintf ( tpq_path, "%s/%s", dirpath, name );
-	if ( info.verbose )
+	if ( info.verbose & V_ARCHIVE )
 	    printf ( "add dir series:  %s\n", tpq_path );
 
 	if ( is_directory ( tpq_path ) )
@@ -983,7 +1014,7 @@ add_dir_series ( int series, char *dirpath, char *name )
 	if ( info.have_usa )
 		return;
 
-	if ( info.verbose )
+	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Add file/state method: %d  %s\n", series, tpq_path );
 
 	(void) add_file_method ( &info.series_info[series], tpq_path );
@@ -1022,7 +1053,7 @@ add_dir ( char *archive, char *dir )
 	if ( dir_lookup ( dir ) )
 	    return 0;
 
-	if ( info.verbose )
+	if ( info.verbose & V_ARCHIVE )
 	    printf ( "add dir: %d %s\n", series, dir_path );
 
 	if ( ! (dd = opendir ( dir_path )) )
@@ -1168,7 +1199,7 @@ add_full_usa ( char *path, char *name )
 	if ( ! is_directory ( si_path ) )
 	    return;
 
-	if ( info.verbose )
+	if ( info.verbose & V_BASIC )
 	    printf ( "Found level 123 for full USA at %s\n", si_path );
 
 #ifdef notdef

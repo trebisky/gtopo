@@ -28,22 +28,25 @@
 #include "gtopo.h"
 #include "protos.h"
 
+#define MINIMUM_VIEW	100
+#define INITIAL_VIEW	800
+
 /* I have tried to group some "commonly fiddled"
  * parameters here for your convenience.  Someday
  * this will be handled by a .gtopo settings file
  */
 
-#define MINIMUM_VIEW	100
-#define INITIAL_VIEW	800
-
 /*
-    start_series = S_STATE;
-    start_series = S_ATLAS;
-    start_series = S_500K;
-    start_series = S_100K;
-    start_series = S_24K;
+ Possible series are the 5 following:
+
+    S_STATE;
+    S_ATLAS;
+    S_500K;
+    S_100K;
+    S_24K;
 */
-#define INITIAL_SERIES	S_100K
+
+#define INITIAL_SERIES	S_STATE
 
 /*
 #define INITIAL_ARCHIVE	"/u1/backroads"
@@ -58,7 +61,7 @@
 #define INITIAL_LONG	-dms2deg ( 118, 31, 0 )
 #define INITIAL_LAT	dms2deg ( 37, 1, 0 )
 
-/* Near Alturas, Nevada */
+/* Near Alturas, NE California */
 #define INITIAL_LONG	-120.5
 #define INITIAL_LAT	41.5
 
@@ -195,7 +198,7 @@ static int expose_count = 0;
 gint
 expose_handler ( GtkWidget *wp, GdkEventExpose *ep, gpointer data )
 {
-	if ( info.verbose && expose_count < 4 )
+	if ( info.verbose & V_WINDOW && expose_count < 4 )
 	    printf ( "Expose event %d\n", expose_count++ );
 
     	pixmap_expose ( ep->area.x, ep->area.y, ep->area.width, ep->area.height );
@@ -232,7 +235,7 @@ state_handler ( struct maplet *mp )
 
 	tp = mp->tpq;
 
-	if ( info.verbose ) {
+	if ( info.verbose & V_BASIC ) {
 	    printf ( "State handler %s\n", mp->tpq->path );
 	    printf ( "Position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
 	    printf ( "Sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
@@ -330,7 +333,7 @@ pixmap_redraw ( void )
 	if ( mp ) {
 	    info.series->xdim = mx = mp->xdim;
 	    info.series->ydim = my = mp->ydim;
-	    if ( info.verbose )
+	    if ( info.verbose & V_DRAW )
 		printf ( "Center maplet x,ydim = %d, %d\n", mx, my );
 	}
 
@@ -341,7 +344,7 @@ pixmap_redraw ( void )
 	origx = vp_info.vxcent - offx;
 	origy = vp_info.vycent - offy;
 
-	if ( info.verbose )
+	if ( info.verbose & V_DRAW )
 	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 
 	if ( info.center_only ) {
@@ -354,7 +357,7 @@ pixmap_redraw ( void )
 	    ny2 = + (origy + my - 1 ) / my;
 	}
 
-	if ( info.verbose ) {
+	if ( info.verbose & V_DRAW ) {
 	    printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
 		vxdim, vydim, mx, my, offx, offy );
 	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
@@ -365,12 +368,12 @@ pixmap_redraw ( void )
 
 		mp = load_maplet ( info.long_maplet + x, info.lat_maplet + y );
 		if ( ! mp ) {
-		    if ( info.verbose > 3 )
+		    if ( info.verbose & V_DRAW2 )
 			printf ( "redraw, no maplet at %d %d\n", x, y );
 		    continue;
 		}
 
-		if ( info.verbose > 3 )
+		if ( info.verbose & V_DRAW2 )
 		    printf ( "redraw OK for %d %d, draw at %d %d\n",
 			x, y, origx + mp->xdim*x, origy + mp->ydim*y );
 		draw_maplet ( mp,
@@ -417,7 +420,7 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	vp_info.vxcent = vp_info.vx / 2;
 	vp_info.vycent = vp_info.vy / 2;
 
-	if ( info.verbose )
+	if ( info.verbose & V_WINDOW )
 	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
 
 	for ( i=0; i<N_SERIES; i++ ) {
@@ -515,7 +518,7 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	float x, y;
 	int i;
 
-	if ( info.verbose )
+	if ( info.verbose & V_EVENT )
 	    printf ( "Button event %d %.3f %.3f in (%d %d)\n",
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
@@ -538,8 +541,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	vxcent = vp_info.vx / 2;
 	vycent = vp_info.vy / 2;
 
-	if ( info.verbose )
-	    printf ( "Orig position (lat/long) %.4f %.4f\n",
+	if ( info.verbose & V_EVENT )
+	    printf ( "Button: orig position (lat/long) %.4f %.4f\n",
 		info.lat_deg, info.long_deg );
 
 	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
@@ -548,8 +551,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	dlat  = (event->y - (double)vycent) * y_pixel_scale;
 	dlong = (event->x - (double)vxcent) * x_pixel_scale;
 
-	if ( info.verbose )
-	    printf ( "Delta position (lat/long) %.4f %.4f\n", dlat, dlong );
+	if ( info.verbose & V_EVENT )
+	    printf ( "Button: delta position (lat/long) %.4f %.4f\n", dlat, dlong );
 
 	/* Make location of the mouse click be the current position */
 	set_position ( info.long_deg + dlong, info.lat_deg - dlat );
@@ -584,7 +587,8 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 gint
 focus_handler ( GtkWidget *wp, GdkEventFocus *event, gpointer data )
 {
-	printf ( "Focus event %d\n", event->in );
+	if ( info.verbose & V_EVENT )
+	    printf ( "Focus event %d\n", event->in );
 }
 
 void
@@ -600,7 +604,7 @@ synch_position ( void )
     	info.long_maplet = m_long;
     	info.lat_maplet = m_lat;
 
-	if ( info.verbose > 1 ) {
+	if ( info.verbose & V_BASIC ) {
 	    printf ( "Synch position: long/lat = %.3f %.3f\n", info.long_deg, info.lat_deg );
 	    printf ( "maplet indices of position: %d %d\n",
 		info.long_maplet, info.lat_maplet );
@@ -655,7 +659,8 @@ main ( int argc, char **argv )
 	argc--;
 	argv++;
 
-	info.verbose = 0;
+	info.verbose = INITIAL_VERBOSITY;
+
 	info.center_only = 0;
 	info.center_dot = 1;
 	info.series_info = series_info_buf;
@@ -668,7 +673,7 @@ main ( int argc, char **argv )
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-v" ) == 0 )
-	    	info.verbose = 999;
+	    	info.verbose = 0xffff;
 	    if ( strcmp ( p, "-c" ) == 0 )
 	    	info.center_only = 1;
 	    if ( strcmp ( p, "-d" ) == 0 )
@@ -679,12 +684,12 @@ main ( int argc, char **argv )
 		if ( argc < 1 )
 		    usage ();
 		argc--;
-		/* XXX */
+		/* XXX - accept a number 1-5, pretty gross */
 		start_series = atol ( *argv++ ) - 1;
 	    }
 	    if ( strcmp ( p, "-g" ) == 0 ) {
-		/* won't the standard geometry options
-		 * work here (if I cooperate and do not
+		/* won't the standard X geometry options work here?
+		 * (if I cooperate and do not
 		 * brute force resize and override ...
 		 */
 		if ( argc < 1 )
@@ -693,6 +698,7 @@ main ( int argc, char **argv )
 		view = atol ( *argv++ );
 	    }
 	    if ( strcmp ( p, "-f" ) == 0 ) {
+		/* show a single tpq file */
 		if ( argc < 1 )
 		    usage ();
 		argc--;
@@ -700,12 +706,14 @@ main ( int argc, char **argv )
 		file_opt = 1;
 	    }
 	    if ( strcmp ( p, "-i" ) == 0 ) {
+		/* show file information */
 		if ( argc < 1 )
 		    usage ();
 		file_info ( *argv, 0 );
 		return 0;
 	    }
 	    if ( strcmp ( p, "-j" ) == 0 ) {
+		/* show file information, include index to maplets */
 		if ( argc < 1 )
 		    usage ();
 		file_info ( *argv, 1 );
