@@ -424,6 +424,7 @@ archive_init ( char *archives[] )
 		nar++;
 	}
 
+	/* XXX - These all use the same section list */
 	add_section_method ( &info.series_info[S_24K], temp_section_head );
 	add_section_method ( &info.series_info[S_100K], temp_section_head );
 
@@ -432,6 +433,43 @@ archive_init ( char *archives[] )
 	    add_section_method ( &info.series_info[S_500K], temp_section_head );
 
 	return nar;
+}
+
+static char *
+wonk_method ( int type )
+{
+    	if ( type == M_FILE )
+	    return "File";
+    	if ( type == M_STATE )
+	    return "State";
+	else if ( type == M_SECTION )
+	    return "Section";
+	else
+	    return "Unknown";
+}
+
+static void
+show_methods ( struct series *sp )
+{
+	struct method *xp;
+
+	for ( xp = sp->methods; xp; xp = xp->next ) {
+	    printf ( "%s method: ", wonk_method(xp->type) );
+	    if ( xp->type != M_SECTION )
+		printf ( " %s", xp->tpq->path );
+	    printf ( "\n" );
+	}
+}
+
+void
+show_statistics ( void )
+{
+    	int s;
+
+	for ( s=0; s<N_SERIES; s++ ) {
+	    printf ( "Map series %d\n", s );
+	    show_methods ( &info.series_info[s] );
+	}
 }
 
 void
@@ -457,32 +495,6 @@ toggle_series ( void )
 	/* fall out the end when no other series has
 	 * methods (always happens in -f mode )
 	 */
-}
-
-static char *
-wonk_method ( int type )
-{
-    	if ( type == M_FILE )
-	    return "File";
-    	if ( type == M_STATE )
-	    return "State";
-	else if ( type == M_SECTION )
-	    return "Section";
-	else
-	    return "Unknown";
-}
-
-void
-show_methods ( struct series *sp )
-{
-	struct method *xp;
-
-	for ( xp = sp->methods; xp; xp = xp->next ) {
-	    printf ( "%s method: ", wonk_method(xp->type) );
-	    if ( xp->type != M_SECTION )
-		printf ( " %s", xp->tpq->path );
-	    printf ( "\n" );
-	}
 }
 
 void
@@ -1252,6 +1264,8 @@ add_full_usa ( char *path, char *name )
 	}
 
 	closedir ( dd );
+
+	add_section_method ( &info.series_info[S_500K], temp_section_head );
 }
 
 /* THE END */
