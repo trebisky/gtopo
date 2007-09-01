@@ -5,6 +5,19 @@ Tom Trebisky  August, 2007
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
 
+-- Known and not yet fixed bugs (9/1/2007)
+
+* When using the SI_D01 full US maps, when it zooms
+from STATE to ATLAS, it looses position substantially.
+
+* When using the SI_D01 full US maps, when zooming
+from ATLAS to 500K, it can find no maps.
+
+* Certain map sets (like backcountry explorer), which
+have C and G named tpq files can display nothing in 100K
+and maybe 500k.  This seems fine with lower case names,
+and this is probably the same bug as the 500K case above.
+
 === Things being worked on now (8/28/2007)
 
 * this currently does not run on an x86_64 machine, which my machine

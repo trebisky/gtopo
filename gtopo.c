@@ -28,8 +28,48 @@
 #include "gtopo.h"
 #include "protos.h"
 
+/* I have tried to group some "commonly fiddled"
+ * parameters here for your convenience.  Someday
+ * this will be handled by a .gtopo settings file
+ */
+
 #define MINIMUM_VIEW	100
 #define INITIAL_VIEW	800
+
+/*
+    start_series = S_STATE;
+    start_series = S_ATLAS;
+    start_series = S_500K;
+    start_series = S_100K;
+    start_series = S_24K;
+*/
+#define INITIAL_SERIES	S_100K
+
+/*
+#define INITIAL_ARCHIVE	"/u1/backroads"
+*/
+
+#ifdef notdef
+/* Mt. Hopkins, Arizona */
+#define INITIAL_LONG	-110.88
+#define INITIAL_LAT	31.69
+
+/* In California west of Taboose Pass */
+#define INITIAL_LONG	-dms2deg ( 118, 31, 0 )
+#define INITIAL_LAT	dms2deg ( 37, 1, 0 )
+
+/* Near Alturas, Nevada */
+#define INITIAL_LONG	-120.5
+#define INITIAL_LAT	41.5
+
+/* Near Las Vegas, Nevada */
+#define INITIAL_LONG	-114.9894
+#define INITIAL_LAT	36.2338
+#endif
+
+/* In California west of Taboose Pass */
+#define INITIAL_LONG	-dms2deg ( 118, 31, 0 )
+#define INITIAL_LAT	dms2deg ( 37, 1, 0 )
 
 /* gtopo.c - the main file for gtopo
  *
@@ -114,7 +154,12 @@ struct series series_info_buf[N_SERIES];
  * This allows a path to be set up that will work on multiple
  * machines that keep the topos in different places.
  */
+
+#ifdef INITIAL_ARCHIVE
+char *topo_archives[] = { INITIAL_ARCHIVE, NULL };
+#else
 char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", NULL };
+#endif
 
 GdkColormap *syscm;
 
@@ -618,15 +663,7 @@ main ( int argc, char **argv )
 
 	view = INITIAL_VIEW;
 
-	/*
-	start_series = S_STATE;
-	start_series = S_ATLAS;
-	start_series = S_500K;
-	start_series = S_100K;
-	start_series = S_24K;
-	*/
-
-	start_series = S_STATE;
+	start_series = INITIAL_SERIES;
 
 	while ( argc-- ) {
 	    p = *argv++;
@@ -753,17 +790,7 @@ main ( int argc, char **argv )
 
 	    set_series ( start_series );
 
-#ifdef notdef
-	    /* Nevada */
-	    set_position ( -114.9894, 36.2338 );
-
-	    /* Mt. Hopkins, Arizona */
-	    set_position ( -110.88, 31.69 );
-#endif
-
-	    /* In California west of Taboose Pass */
-	    set_position ( -dms2deg ( 118, 31, 0 ), dms2deg ( 37, 1, 0 ) );
-
+	    set_position ( INITIAL_LONG, INITIAL_LAT );
 	}
 
 #ifdef notdef

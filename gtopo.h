@@ -63,6 +63,9 @@ struct topo_info {
 	int center_only;
 	int center_dot;
 	int show_maplets;
+
+	/* statistics to show when gtopo exits */
+	int max_maplets;
 };
 
 struct method {
