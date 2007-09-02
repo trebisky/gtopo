@@ -974,10 +974,10 @@ scan_section ( char *path, int codes[], int count[] )
 
 	closedir ( dd );
 
-	codes[S_STATE] = 0;
-	codes[S_ATLAS] = 0;
+	codes[S_STATE] = ' ';
+	codes[S_ATLAS] = ' ';
 
-	codes[S_500K] = 0;
+	codes[S_500K] = ' ';
 	if ( letter_count['G'] ) {
 	    codes[S_500K] = 'G';
 	    count[S_500K] += letter_count['G'];
@@ -988,35 +988,33 @@ scan_section ( char *path, int codes[], int count[] )
 	    count[S_500K] += letter_count['g'];
 	}
 
-	codes[S_100K] = 0;
+	codes[S_100K] = ' ';
 	if ( letter_count['c'] ) {
-	    codes[S_500K] = 'c';
-	    count[S_500K] += letter_count['c'];
+	    codes[S_100K] = 'c';
+	    count[S_100K] += letter_count['c'];
 	}
 	if ( letter_count['k'] ) {
-	    codes[S_500K] = 'k';
-	    count[S_500K] += letter_count['k'];
+	    codes[S_100K] = 'k';
+	    count[S_100K] += letter_count['k'];
 	}
 	if ( letter_count['K'] ) {
-	    codes[S_500K] = 'K';
-	    count[S_500K] += letter_count['K'];
+	    codes[S_100K] = 'K';
+	    count[S_100K] += letter_count['K'];
 	}
 
-	codes[S_24K] = 0;
+	codes[S_24K] = ' ';
 	if ( letter_count['n'] ) {
-	    codes[S_500K] = 'n';
-	    count[S_500K] += letter_count['n'];
+	    codes[S_24K] = 'n';
+	    count[S_24K] += letter_count['n'];
 	}
 	if ( letter_count['q'] ) {
-	    codes[S_500K] = 'q';
-	    count[S_500K] += letter_count['q'];
+	    codes[S_24K] = 'q';
+	    count[S_24K] += letter_count['q'];
 	}
 	if ( letter_count['Q'] ) {
-	    codes[S_500K] = 'Q';
-	    count[S_500K] += letter_count['Q'];
+	    codes[S_24K] = 'Q';
+	    count[S_24K] += letter_count['Q'];
 	}
-
-	return;
 }
 
 /* A section is a term we use only in this program for a 1x1 degree
