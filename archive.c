@@ -91,13 +91,21 @@ extern struct topo_info info;
  */
 struct section {
 	struct section *next;
-	struct section *next_ll;
+    	struct section_dir *dir_head;
 	int	latlong;
+	/* OLD follows */
+	struct section *next_ll;
 	char	*path;
 	int	q_code;
 };
 
-/* Used to build the basic level 1,2.3 section list */
+struct section_dir {
+    	struct section_dir *next;
+	char *path;
+	int q_code[N_SERIES];
+};
+
+/* Used to build the comprehensive level 3,4,5 section list */
 static struct section *temp_section_head;
 
 /* Prototypes ... */
@@ -114,6 +122,7 @@ static struct section *lookup_section ( struct section *, int );
  * The file method is just a single file with known lat/long limits.
  * The state method is a special variant of the file method with
  *   the file containing one giant maplet.
+ *   the difference is in how this is displayed in gtopo.c
  * The section method is a list of section structures representing
  *   1x1 degree land areas with various files in it.
  *
@@ -659,8 +668,9 @@ section_find_map ( struct section *head, int lat_section, int long_section, int 
 	if ( ! ep )
 	    return 0;
 
-	/* Handle the case along state boundaries where multiple section
-	 * directories cover the same area
+	/* Handle the case where multiple section directories
+	 * cover the same area (such as along state boundaries
+	 * where one section directory comes from each state).
 	 */
 	for ( ; ep; ep = ep->next_ll ) {
 	    rv = section_map_path ( ep, lat_section, long_section, lat_quad, long_quad );
