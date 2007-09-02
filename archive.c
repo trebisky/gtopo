@@ -56,7 +56,7 @@ extern struct topo_info info;
  * The pixel scale is true at latitude 36.87 degrees north
  * Level 3 covers 114W to 125W and 32N to 42N.
  *
- * For Arizona, level 3 is 4 TPQ files, each
+ * For Arizona, level 3 (500K) is 4 TPQ files, each
  * covering a 5x5 degree area:
  *	F30105 F30110 F35105 F35110
  * Each tpq file holds 100 maplets (10x10),
@@ -71,13 +71,16 @@ extern struct topo_info info;
  *
  * My really new Nevada set is different yet.
  *  for level 3, there is a g41117a1 file that
- *  contains 4 maplets.  The maplets for all of
- *  the 3 states I have are 0.5 by 0.5 degrees.
- *  For nevada there is one file per section,
- *  with 4 maplets in it.  Arizona has the big
- *  5x5 degree files with 100 maplets,
- *  California has the one monster file for
- *  the entire state.
+ *  contains 4 maplets.
+ *
+ * In summary, the three states I have are all quite
+ *  different for level 3, although the maplets are
+ *  all the same size (0.5 by 0.5 degrees).
+ *
+ * Nevada has one file per section with 4 maplets in it.
+ * Arizona has four big 5x5 degree files with 100 maplets,
+ * California has one monster file for the entire state.
+ *
  */
 
 /* This subsystem keeps a linked list of "sections"
@@ -104,6 +107,48 @@ static void add_full_usa ( char *, char * );
 static int add_dir ( char *, char * );
 
 static struct section *lookup_section ( struct section *, int );
+
+/* Each level has a list of methods that need to be run through
+ * in an attempt to find the desired maplet.
+ *
+ * The file method is just a single file with known lat/long limits.
+ * The state method is a special variant of the file method with
+ *   the file containing one giant maplet.
+ * The section method is a list of section structures representing
+ *   1x1 degree land areas with various files in it.
+ *
+ * Back when I had just the Arizona and California sets,
+ *  the scheme was as follows:
+ *
+ * level 1 - state method for each state.
+ * level 2 - file method for each state.
+ * level 3 - file method for arizona, section for california
+ * level 4 - section method
+ * level 4 - section method
+ *
+ * When the Nevada set came along and added the nicely organized SI_D01
+ *  the scheme became:
+ * level 1 - file method (one file for entire US)
+ * level 2 - file method (one file for entire US)
+ * level 3 - section method
+ * level 4 - section method
+ * level 5 - section method
+ *
+ * notice that here, level 3 has sections covering the entire country, but only
+ * with level 3 maps.  Arizona sections add maps for levels 4 and 5.
+ * We can ignore the Arizona level 3 file method stuff if we have SI_D01
+ * California sections add maps for levels 3, 4, and 5
+ * (the level 3 maps added are redundant with the SI_D01 stuff)
+ * Nevada seems to be just like California, the sections add maps for
+ * levels 3, 4, and 5 and the level 3 stuff is redundant.
+ *
+ * So, should we have separate section lists for levels 3, 4, and 5 ?
+ * I argue not, even though the level 3 section list is quite big.
+ * (The program reports 1359 sections)
+ * If we want to know for a given lat and long what level coverage we have
+ * (and we do, to avoid changing scale to a white screen), we want to
+ * have all the section stuff in one data structure.
+ */
 
 static int
 add_file_method ( struct series *sp, char *path )
@@ -158,7 +203,8 @@ series_init_one ( struct series *sp, enum s_type series )
 	sp->series = series;
 }
 
-char *wonk_series ( enum s_type series )
+char *
+wonk_series ( enum s_type series )
 {
 	if ( series == S_24K )
 	    return "24K";
@@ -409,6 +455,8 @@ archive_init ( char *archives[] )
 
 	nar = 0;
 
+	info.n_sections = 0;
+
 	/* Look for the SI_D01 thing first off */
 	for ( p=archives; *p; p++ ) {
 	    if ( add_usa ( *p, 1 ) )
@@ -454,9 +502,9 @@ show_methods ( struct series *sp )
 	struct method *xp;
 
 	for ( xp = sp->methods; xp; xp = xp->next ) {
-	    printf ( "%s method: ", wonk_method(xp->type) );
+	    printf ( "%s method", wonk_method(xp->type) );
 	    if ( xp->type != M_SECTION )
-		printf ( " %s", xp->tpq->path );
+		printf ( ": %s", xp->tpq->path );
 	    printf ( "\n" );
 	}
 }
@@ -466,8 +514,10 @@ show_statistics ( void )
 {
     	int s;
 
+	printf ( "Total sections: %d\n", info.n_sections );
+
 	for ( s=0; s<N_SERIES; s++ ) {
-	    printf ( "Map series %d\n", s );
+	    printf ( "Map series %d (%s)\n", s+1, wonk_series(s) );
 	    show_methods ( &info.series_info[s] );
 	}
 }
@@ -954,6 +1004,8 @@ add_section ( char *disk, char *section, struct section **head )
 	/* entirely new entry, add to main list */
 	ep->next = *head;
 	*head = ep;
+
+	info.n_sections++;
 
 	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Added section: %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );

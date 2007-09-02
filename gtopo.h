@@ -49,9 +49,9 @@ enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE };
 
 /*
 #define INITIAL_VERBOSITY	(V_BASIC | V_ARCHIVE )
-*/
-
 #define INITIAL_VERBOSITY	0
+*/
+#define INITIAL_VERBOSITY	(V_BASIC | V_ARCHIVE )
 
 /* Structure to hold our current position */
 struct topo_info {
@@ -84,7 +84,7 @@ struct topo_info {
 	int show_maplets;
 
 	/* statistics to show when gtopo exits */
-	int max_maplets;
+	int n_sections;
 };
 
 struct method {
