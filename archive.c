@@ -93,16 +93,17 @@ struct section {
 	struct section *next;
     	struct section_dir *dir_head;
 	int	latlong;
-	/* OLD follows */
+#ifdef notdef
 	struct section *next_ll;
 	char	*path;
-	int	q_code;
+#endif
 };
 
 struct section_dir {
     	struct section_dir *next;
 	char *path;
-	int q_code[N_SERIES];
+	int tpq_code[N_SERIES];
+	int	q_code;		/* XXX */
 };
 
 /* Used to build the comprehensive level 3,4,5 section list */
@@ -581,7 +582,7 @@ set_series ( enum s_type s )
  * 	c41120A1.TPQ
  */
 static char *
-section_map_path ( struct section *ep, int lat_section, int long_section, int lat_quad, int long_quad )
+section_map_path ( struct section_dir *dp, int lat_section, int long_section, int lat_quad, int long_quad )
 {
 	char path_buf[100];
 	int lat_q, long_q;
@@ -597,7 +598,7 @@ section_map_path ( struct section *ep, int lat_section, int long_section, int la
 	long_q = '1' + long_quad * info.series->quad_long_count;
 
 	/* XXX */
-	series_letter = ep->q_code;
+	series_letter = dp->q_code;
 	if ( info.series->series == S_100K ) {
 	    if ( series_letter == 'q' )
 		series_letter = 'k';
@@ -610,7 +611,7 @@ section_map_path ( struct section *ep, int lat_section, int long_section, int la
 	}
 
 	/* 1 - try all lower case */
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
 	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
@@ -621,7 +622,7 @@ section_map_path ( struct section *ep, int lat_section, int long_section, int la
 	lat_q  = toupper(lat_q);
 	series_letter = toupper(series_letter);
 
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
 	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
@@ -629,7 +630,7 @@ section_map_path ( struct section *ep, int lat_section, int long_section, int la
 	    return strhide ( path_buf );
 
 	/* 3 - try upper case name, with lower case .tpq */
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
 	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
@@ -640,7 +641,7 @@ section_map_path ( struct section *ep, int lat_section, int long_section, int la
 	lat_q  = tolower(lat_q);
 	series_letter = tolower(series_letter);
 
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", ep->path, series_letter, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
 	if ( info.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
@@ -662,6 +663,7 @@ static char *
 section_find_map ( struct section *head, int lat_section, int long_section, int lat_quad, int long_quad )
 {
 	struct section *ep;
+	struct section_dir *dp;
 	char *rv;
 
 	ep = lookup_section ( head, lat_section * 1000 + long_section );
@@ -672,8 +674,8 @@ section_find_map ( struct section *head, int lat_section, int long_section, int 
 	 * cover the same area (such as along state boundaries
 	 * where one section directory comes from each state).
 	 */
-	for ( ; ep; ep = ep->next_ll ) {
-	    rv = section_map_path ( ep, lat_section, long_section, lat_quad, long_quad );
+	for ( dp=ep->dir_head; dp; dp = dp->next ) {
+	    rv = section_map_path ( dp, lat_section, long_section, lat_quad, long_quad );
 	    if ( rv )
 	    	return rv;
 	}
@@ -909,17 +911,35 @@ add_disk ( char *archive, char *disk )
 	return 1;
 }
 
-#define N_LETTERS	26
-static int letter_count[N_LETTERS];
-
 /* We have a directory that looks like a section.
  * Open and scan it, doing a tally of the TPQ files inside
  * and what the lead letters are in this directory.
- * For old 2.7 version TOPO directories the 7.5 minute
- * quads have the lead letter 'q', but in version 4.2
- * this changed to 'n'
+ *
+ * Here is what I have seen in the sets I have so far:
+ * Arizona:
+ * 	Q = 7.5 minute (24K)  16 of these
+ * 	K = 100K ( 2 of these)
+ * California:
+ * 	q = 7.5 minute (24K)  16 of these
+ * 	k = 100K ( 2 of these)
+ * Nevada
+ * 	n = 7.5 minute (24K)  16 of these
+ * 	c = 100K ( 2 of these)
+ * 	g = 500K
+ * Full USA (SI_D01)
+ * 	G = 500K
+ *
+ * Note that in the nevada case, the 500K files here
+ * are redundant with the capital G files in the SI directories
+ * 	I have seen some 't' files that seem to be
+ * 	derelict temporary files that duplicate one of
+ * 	the "standard" letters which is also present.
+ * 	
  * XXX - a lot could be changed and improved here
  */
+#define N_LETTERS	26
+static int letter_count[N_LETTERS];
+
 int
 scan_section ( char *path )
 {
@@ -978,47 +998,52 @@ int
 add_section ( char *disk, char *section, struct section **head )
 {
 	char section_path[100];
+	struct section_dir *dp;
 	struct section *ep;
-	struct section *eep;
-	int quad_code;
+	int latlong;
 
 	sprintf ( section_path, "%s/%s", disk, section );
 
-	quad_code = scan_section ( section_path );
-	if ( ! quad_code )
+	dp = (struct section_dir *) malloc ( sizeof(struct section_dir) );
+	if ( ! dp )
+	    error ("Section new (dir) - out of memory\n");
+
+	latlong = atol ( &section[1] );
+
+	dp->path = strhide ( section_path );
+	dp->next = (struct section_dir *) NULL;
+
+	/* XXX */
+	dp->q_code = scan_section ( section_path );
+	if ( ! dp->q_code ) {
+	    free ( (char *) dp );
 	    return 0;
-
-	ep = (struct section *) malloc ( sizeof(struct section) );
-	if ( ! ep )
-	    error ("Section new - out of memory\n");
-
-	ep->latlong = atol ( &section[1] );
-	ep->path = strhide ( section_path );
-	ep->next_ll = (struct section *) NULL;
-	ep->next = (struct section *) NULL;
-	ep->q_code = quad_code;
-
-	eep = lookup_section ( *head, ep->latlong );
-
-	/* already have an entry on the main list,
-	 * so add this onto that entries sublist
-	 */
-	if ( eep ) {
-	    ep->next_ll = eep->next_ll;
-	    eep->next_ll = ep;
-	    if ( info.verbose & V_ARCHIVE )
-		printf ( "Added section (on border): %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );
-	    return 1;
 	}
 
-	/* entirely new entry, add to main list */
-	ep->next = *head;
-	*head = ep;
+	ep = lookup_section ( *head, latlong );
 
-	info.n_sections++;
+	/* Does not yet exist on main list */
+	if ( ! ep ) {
+	    ep = (struct section *) malloc ( sizeof(struct section) );
+	    if ( ! ep )
+		error ("Section new - out of memory\n");
 
-	if ( info.verbose & V_ARCHIVE )
-	    printf ( "Added section: %d  %s  %c\n", ep->latlong, ep->path, ep->q_code );
+	    ep->latlong = latlong;
+	    ep->dir_head = (struct section_dir *) NULL;
+
+	    if ( info.verbose & V_ARCHIVE )
+		printf ( "Added section: %d  %s\n", latlong, dp->path );
+
+	    ep->next = *head;
+	    *head = ep;
+	    info.n_sections++;
+	} else {
+	    if ( info.verbose & V_ARCHIVE )
+		printf ( "Added section (border): %d  %s\n", latlong, dp->path );
+	}
+
+	dp->next = ep->dir_head;
+	ep->dir_head = dp;
 
 	return 1;
 }
