@@ -93,17 +93,13 @@ struct section {
 	struct section *next;
     	struct section_dir *dir_head;
 	int	latlong;
-#ifdef notdef
-	struct section *next_ll;
-	char	*path;
-#endif
 };
 
 struct section_dir {
     	struct section_dir *next;
 	char *path;
 	int tpq_code[N_SERIES];
-	int	q_code;		/* XXX */
+	int tpq_count[N_SERIES];
 };
 
 /* Used to build the comprehensive level 3,4,5 section list */
@@ -597,6 +593,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	lat_q  = 'a' + lat_quad * info.series->quad_lat_count;
 	long_q = '1' + long_quad * info.series->quad_long_count;
 
+#ifdef notdef
 	/* XXX */
 	series_letter = dp->q_code;
 	if ( info.series->series == S_100K ) {
@@ -609,6 +606,8 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	    /* Nevada */
 	    series_letter = 'g';
 	}
+#endif
+	series_letter = dp->tpq_code[info.series->series];
 
 	/* 1 - try all lower case */
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
@@ -934,26 +933,29 @@ add_disk ( char *archive, char *disk )
  * 	I have seen some 't' files that seem to be
  * 	derelict temporary files that duplicate one of
  * 	the "standard" letters which is also present.
- * 	
- * XXX - a lot could be changed and improved here
  */
-#define N_LETTERS	26
+
+#define N_LETTERS	256
 static int letter_count[N_LETTERS];
 
-int
-scan_section ( char *path )
+static void
+scan_section ( char *path, int codes[], int count[] )
 {
 	DIR *dd;
 	struct dirent *dp;
 	int i;
-	int ch;
-	int rv = 'q';
+
+	count[S_STATE] = 0;
+	count[S_ATLAS] = 0;
+	count[S_500K] = 0;
+	count[S_100K] = 0;
+	count[S_24K] = 0;
 
 	if ( ! is_directory ( path ) )
-	    return 0;
+	    return;
 
 	if ( ! (dd = opendir ( path )) )
-	    return 0;
+	    return;
 
 	for ( i=0; i< N_LETTERS; i++ )
 	    letter_count[i] = 0;
@@ -963,28 +965,58 @@ scan_section ( char *path )
 	    	break;
 	    if ( strlen(dp->d_name) != 12 )
 	    	continue;
+	    /* XXX - what is this about ? */
 	    if ( dp->d_name[9] != 't' && dp->d_name[9] != 'T' )
 	    	continue;
-	    ch = dp->d_name[0];
-	    if ( ch >= 'a' && ch <= 'z' )
-	    	letter_count[ch-'a']++;
-	    if ( ch >= 'A' && ch <= 'Z' )
-	    	letter_count[ch-'A']++;
+
+	    letter_count[dp->d_name[0]]++;
 	}
 
 	closedir ( dd );
 
-	if ( letter_count['n'-'a'] > 0 )
-	    rv = 'n';
+	codes[S_STATE] = 0;
+	codes[S_ATLAS] = 0;
 
-	/* XXX - doesn't work ... yet.
-	 * the full usa sections have a single G file
-	 * such as G34118A1.tpq
-	 */
-	if ( letter_count['g'-'a'] > 0 )
-	    rv = 'g';
+	codes[S_500K] = 0;
+	if ( letter_count['G'] ) {
+	    codes[S_500K] = 'G';
+	    count[S_500K] += letter_count['G'];
+	}
 
-	return rv;
+	if ( letter_count['g'] ) {
+	    codes[S_500K] = 'g';
+	    count[S_500K] += letter_count['g'];
+	}
+
+	codes[S_100K] = 0;
+	if ( letter_count['c'] ) {
+	    codes[S_500K] = 'c';
+	    count[S_500K] += letter_count['c'];
+	}
+	if ( letter_count['k'] ) {
+	    codes[S_500K] = 'k';
+	    count[S_500K] += letter_count['k'];
+	}
+	if ( letter_count['K'] ) {
+	    codes[S_500K] = 'K';
+	    count[S_500K] += letter_count['K'];
+	}
+
+	codes[S_24K] = 0;
+	if ( letter_count['n'] ) {
+	    codes[S_500K] = 'n';
+	    count[S_500K] += letter_count['n'];
+	}
+	if ( letter_count['q'] ) {
+	    codes[S_500K] = 'q';
+	    count[S_500K] += letter_count['q'];
+	}
+	if ( letter_count['Q'] ) {
+	    codes[S_500K] = 'Q';
+	    count[S_500K] += letter_count['Q'];
+	}
+
+	return;
 }
 
 /* A section is a term we use only in this program for a 1x1 degree
@@ -1001,6 +1033,7 @@ add_section ( char *disk, char *section, struct section **head )
 	struct section_dir *dp;
 	struct section *ep;
 	int latlong;
+	int count;
 
 	sprintf ( section_path, "%s/%s", disk, section );
 
@@ -1013,9 +1046,9 @@ add_section ( char *disk, char *section, struct section **head )
 	dp->path = strhide ( section_path );
 	dp->next = (struct section_dir *) NULL;
 
-	/* XXX */
-	dp->q_code = scan_section ( section_path );
-	if ( ! dp->q_code ) {
+	scan_section ( section_path, dp->tpq_code, dp->tpq_count );
+	count = dp->tpq_count[S_500K] + dp->tpq_count[S_100K] + dp->tpq_count[S_24K];
+	if ( count == 0 ) {
 	    free ( (char *) dp );
 	    return 0;
 	}
