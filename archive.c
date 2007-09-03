@@ -93,6 +93,7 @@ struct section {
 	struct section *next;
     	struct section_dir *dir_head;
 	int	latlong;
+	int	dir_count;
 };
 
 struct section_dir {
@@ -532,25 +533,43 @@ void
 toggle_series ( void )
 {
 	int series;
-	int nseries;
+	int new_series;
 
+	/* remember where we started */
 	series = info.series->series;
 
-	nseries = series;
-	do {
-	    if ( nseries == S_24K )
-	    	nseries = S_STATE;
-	    else
-		++nseries;
+	if ( info.verbose & V_BASIC )
+	    printf ( "toggle from series %d (%s)\n", series+1, wonk_series ( series ) );
 
-	    if ( info.series_info[nseries].methods ) {
-		set_series ( nseries );
+	new_series = series;
+	do {
+	    if ( new_series == S_24K )
+	    	new_series = S_STATE;
+	    else
+		++new_series;
+
+	    /* Give it a whirl, see if we can load a maplet
+	     * for this series at the center position.
+	     * Trying to load the maplet avoids changing to
+	     * a white screen in areas where we have no coverage.
+	     */
+	    info.series = &info.series_info[new_series];
+	    synch_position ();
+
+	    /* No harm done in loading the maplet, this gets it
+	     * into the cache, and we will soon be fetching it
+	     * to display anyway.
+	     */
+	    if ( load_maplet ( info.long_maplet, info.lat_maplet ) )
 		return;
-	    }
-	} while ( nseries != series );
+
+	} while ( new_series != series );
+
 	/* fall out the end when no other series has
 	 * methods (always happens in -f mode )
 	 */
+	info.series = &info.series_info[series];
+	synch_position ();
 }
 
 void
@@ -563,7 +582,7 @@ set_series ( enum s_type s )
 
 	synch_position ();
 	if ( info.verbose & V_BASIC ) {
-	    printf ( "Switch to series %d\n", s );
+	    printf ( "Switch to series %d (%s)\n", s+1, wonk_series ( s ) );
 	    show_methods ( info.series );
 	}
 }
@@ -1053,28 +1072,38 @@ add_section ( char *disk, char *section, struct section **head )
 
 	ep = lookup_section ( *head, latlong );
 
-	/* Does not yet exist on main list */
 	if ( ! ep ) {
+	    /* Does not yet exist on main list */
 	    ep = (struct section *) malloc ( sizeof(struct section) );
 	    if ( ! ep )
 		error ("Section new - out of memory\n");
 
 	    ep->latlong = latlong;
 	    ep->dir_head = (struct section_dir *) NULL;
+	    ep->dir_count = 0;
 
 	    if ( info.verbose & V_ARCHIVE )
-		printf ( "Added section: %d  %s\n", latlong, dp->path );
+		printf ( "Added section:" );
 
 	    ep->next = *head;
 	    *head = ep;
 	    info.n_sections++;
 	} else {
 	    if ( info.verbose & V_ARCHIVE )
-		printf ( "Added section (border): %d  %s\n", latlong, dp->path );
+		printf ( "Added section (border):" );
+	}
+
+	if ( info.verbose & V_ARCHIVE ) {
+	    printf ( " %d  %s", latlong, dp->path );
+	    printf ( " %c %c %c\n",
+		    dp->tpq_code[S_500K],
+		    dp->tpq_code[S_100K],
+		    dp->tpq_code[S_24K] );
 	}
 
 	dp->next = ep->dir_head;
 	ep->dir_head = dp;
+	ep->dir_count++;
 
 	return 1;
 }
