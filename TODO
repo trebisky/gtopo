@@ -19,6 +19,14 @@ screen usually used).
 
 -- fixed bugs (9/1/2007)
 
+* I have made it a lot harder to wander off the edges of
+the map coverage and get lost in white screen regions,
+both while using the mouse to move and when changing
+scale.  Some of the map images include sizeable sections
+of scanned white paper, and there is nothing I can (at
+least not easily) do about preventing wandering into
+these areas.
+
 * When using the SI_D01 full US maps, and zooming
 from ATLAS to 500K, it can find no maps.  Fixed,
 now it sees all 3 map series over the entire USA.

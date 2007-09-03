@@ -109,6 +109,8 @@
  * version 0.9.0 - first release  8/3/2007, add GPL stuff
  * version 0.9.1 - 8/5/2007 - make series 1 work for AZ, CA
  * version 0.9.2 - 8/8/2007 - discover GdkPixbufLoader
+ * version 0.9.3 - 8/30/2007 - works on x86_64 and powerpc
+ * version 0.9.4 - 9/1/2007 - eliminate moves to white screen
  *
  *  TODO
  *   - add age field to maplet cache and expire/recycle
@@ -558,7 +560,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	    printf ( "Button: delta position (lat/long) %.4f %.4f\n", dlat, dlong );
 
 	/* Make location of the mouse click be the current position */
-	set_position ( info.long_deg + dlong, info.lat_deg - dlat );
+	if ( ! try_position ( info.long_deg + dlong, info.lat_deg - dlat ) )
+	    return TRUE;
 
 	for ( i=0; i<N_SERIES; i++ )
 	    info.series_info[i].content = 0;
@@ -619,6 +622,30 @@ synch_position ( void )
 	info.fx = 1.0 - (m_long - info.long_maplet);
 }
 
+/* Used by mouse routine to check that a possible new
+ * position still has map coverage.
+ */
+int
+try_position ( double new_long, double new_lat )
+{
+    	double orig_long, orig_lat;
+
+	orig_long = info.long_deg;
+	orig_lat = info.lat_deg;
+
+	info.long_deg = new_long;
+	info.lat_deg = new_lat;
+	synch_position ();
+
+	if ( load_maplet ( info.long_maplet, info.lat_maplet ) )
+	    return 1;
+
+	info.long_deg = orig_long;
+	info.lat_deg = orig_lat;
+	synch_position ();
+
+	return 0;
+}
 void
 set_position ( double long_deg, double lat_deg )
 {
