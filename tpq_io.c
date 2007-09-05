@@ -106,6 +106,7 @@ struct tpq_header {
  giant read.  The index array will need to be big enough
  though, but 1600 entries  would do ...
  For now, this works by brute force.
+ And now, this is OBSOLETE !!
  */
 #define TPQ_MAX_MAPLETS	7000
 #define INDEX_BUFSIZE  32000
@@ -249,6 +250,7 @@ static int
 read_tpq_header ( struct tpq_info *tp, int fd )
 {
 	struct tpq_header tpq_header;
+	int maplets;
 
 	/*
 	printf ( "sizeof long = %d\n", sizeof(long) );
@@ -297,9 +299,22 @@ read_tpq_header ( struct tpq_info *tp, int fd )
 	tp->maplet_lat_deg = (tp->n_lat - tp->s_lat) / tp->lat_count;
 	tp->maplet_long_deg = (tp->e_long - tp->w_long) / tp->long_count;
 
+	/* Not all maps place their maplet grid to coincide with the origin.
+	 * This is in particular the case for the level 1 full USA map,
+	 * which covers long -66 to -125 in 12 maplets (4.917 degrees each)
+	 *   and covers lat   24 to   50 in  8 maplets (3.25  degrees each)
+	 * XXX - this junk needs to get copied into the series structure
+	 *   during the archive setup phase.  For now, we hand initialize,
+	 *   but someday we will be sorry about this.
+	 */
+	maplets = tp->e_long / tp->maplet_long_deg;
+	tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
+	maplets = tp->s_lat / tp->maplet_lat_deg;
+	tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
+
 	/* Figure out the corner indices of our map */
-        tp->sheet_lat = tp->s_lat / tp->maplet_lat_deg;
-	tp->sheet_long = - tp->e_long / tp->maplet_long_deg;
+        tp->sheet_lat = (tp->s_lat - tp->lat_offset) / tp->maplet_lat_deg;
+	tp->sheet_long = - (tp->e_long - tp->long_offset) / tp->maplet_long_deg;
 
 	/* What we see so far, and I believe to be an invariant, is the following
 	 * sizes of maplets in the given series:
@@ -331,6 +346,7 @@ static int
 read_tpq_header ( struct tpq_info *tp, int fd )
 {
 	void *fbp;
+	int maplets;
 
 	fbp = filebuf_init ( fd, (off_t) 0 );
 
@@ -389,9 +405,22 @@ read_tpq_header ( struct tpq_info *tp, int fd )
 	 */
 	tp->mid_lat = (tp->n_lat + tp->s_lat) / 2.0;
 
+	/* Not all maps place their maplet grid to coincide with the origin.
+	 * This is in particular the case for the level 1 full USA map,
+	 * which covers long -66 to -125 in 12 maplets (4.917 degrees each)
+	 *   and covers lat   24 to   50 in  8 maplets (3.25  degrees each)
+	 * XXX - this junk needs to get copied into the series structure
+	 *   during the archive setup phase.  For now, we hand initialize,
+	 *   but someday we will be sorry about this.
+	 */
+	maplets = tp->e_long / tp->maplet_long_deg;
+	tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
+	maplets = tp->s_lat / tp->maplet_lat_deg;
+	tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
+
 	/* Figure out the corner indices of our map */
-        tp->sheet_lat = tp->s_lat / tp->maplet_lat_deg;
-	tp->sheet_long = - tp->e_long / tp->maplet_long_deg;
+        tp->sheet_lat = (tp->s_lat - tp->lat_offset) / tp->maplet_lat_deg;
+	tp->sheet_long = - (tp->e_long - tp->long_offset) / tp->maplet_long_deg;
 
 	/* What we see so far, and I believe to be an invariant, is the following
 	 * sizes of maplets in the given series:

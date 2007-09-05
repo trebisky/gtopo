@@ -135,6 +135,10 @@ struct series {
 	int quad_lat_count;
 	int quad_long_count;
 
+	/* When things don't start at zero */
+	double lat_offset;
+	double long_offset;
+
 	/* size of each maplet */
 	double maplet_lat_deg;
 	double maplet_long_deg;
@@ -192,6 +196,9 @@ struct tpq_info {
 
 	int long_count;
 	int lat_count;
+
+	double long_offset;
+	double lat_offset;
 
 	double maplet_long_deg;
 	double maplet_lat_deg;

@@ -208,6 +208,8 @@ series_init_one ( struct series *sp, enum s_type series )
 	sp->content = 0;
 	sp->methods = NULL;
 	sp->series = series;
+	sp->lat_offset = 0.0;
+	sp->long_offset = 0.0;
 }
 
 char *
@@ -444,6 +446,13 @@ series_init ( void )
 	    /* true for full USA */
 	    sp->maplet_lat_deg = 3.250;
 	    sp->maplet_long_deg = 4.9167;
+
+	    /* XXX - yecch, this should get calculated from
+	     * the file when we read the header.
+	     * (as the above)
+	     */
+	    sp->lat_offset = 1.25;
+	    sp->long_offset = -2.079;
 
 	    sp->xdim = 309;
 	    sp->ydim = 256;

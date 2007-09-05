@@ -70,9 +70,9 @@
 #define INITIAL_LAT	36.2338
 #endif
 
-/* In California west of Taboose Pass */
-#define INITIAL_LONG	-dms2deg ( 118, 31, 0 )
-#define INITIAL_LAT	dms2deg ( 37, 1, 0 )
+/* Flagstaff, Arizona */
+#define INITIAL_LONG	-111.6722
+#define INITIAL_LAT	35.18
 
 /* gtopo.c - the main file for gtopo
  *
@@ -608,8 +608,16 @@ synch_position ( void )
 {
     	double m_lat, m_long;
 
-    	m_lat = info.lat_deg / info.series->maplet_lat_deg;
-    	m_long = - info.long_deg / info.series->maplet_long_deg;
+	/*
+	int maplets;
+	maplets = tp->e_long / tp->maplet_long_deg;
+	tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
+	maplets = tp->s_lat / tp->maplet_lat_deg;
+	tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
+	*/
+
+    	m_lat = (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
+    	m_long = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
 
 	/* indices of the maplet we are in
 	 */
