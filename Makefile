@@ -30,8 +30,8 @@
 # -g switch gets debugging information.
 
 # -m32 lets you build a 32 bit version on a 64 bit system
-COPTS = -g -m32
-#COPTS = -g
+#COPTS = -g -m32
+COPTS = -g
 
 CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
