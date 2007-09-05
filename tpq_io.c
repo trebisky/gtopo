@@ -414,9 +414,9 @@ read_tpq_header ( struct tpq_info *tp, int fd )
 	 *   but someday we will be sorry about this.
 	 */
 	maplets = tp->e_long / tp->maplet_long_deg;
-	tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
+	tp->long_offset = tp->e_long - maplets * tp->maplet_long_deg;
 	maplets = tp->s_lat / tp->maplet_lat_deg;
-	tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
+	tp->lat_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
 
 	/* Figure out the corner indices of our map */
         tp->sheet_lat = (tp->s_lat - tp->lat_offset) / tp->maplet_lat_deg;

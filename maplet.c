@@ -36,7 +36,7 @@ extern struct topo_info info;
 
 /* I have had the maplet cache get up to 2500 entries without
  * any trouble, but someday may want to monitor the size and
- * recycle entries with an old timestamp.
+ * recycle entries with an age timestamp.
  * Also, it may be possible to use a more sophisticated data
  * structure than a linear linked list to speed up the search.
  * (use the low bits as a hash index, this puts local blocks
