@@ -109,11 +109,11 @@ load_maplet_scale ( struct maplet *mp )
 	pixel_width = mp->ydim * tp->maplet_long_deg / tp->maplet_lat_deg;
 	pixel_width *= cos ( tp->mid_lat * DEGTORAD );
 	pixel_norm = pixel_width;
-	if ( info.verbose & V_MAPLET )
+	if ( info.verbose & V_SCALE )
 	    printf ( "maplet scale: %d %d --> %d %d\n", mp->xdim, mp->ydim, pixel_norm, mp->ydim );
 
 	if ( mp->xdim < pixel_norm - 8 || mp->xdim > pixel_norm + 8 ) {
-	    if ( info.verbose & V_MAPLET )
+	    if ( info.verbose & V_SCALE )
 		printf ( "SCALING\n" );
 	    tmp = mp->pixbuf;
 	    mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, pixel_norm, mp->ydim, GDK_INTERP_BILINEAR );

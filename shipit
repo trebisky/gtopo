@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SHIPVER=0.9.4
+SHIPVER=0.9.5
 SHIPDIR=gtopo-${SHIPVER}
 SHIPTAR=${SHIPDIR}.tar.gz
 

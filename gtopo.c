@@ -318,7 +318,7 @@ pixmap_redraw ( void )
 	    return;
 	}
 
-	/* A first guess, hopefull to be corrected
+	/* A first guess, hopefuly to be corrected
 	 * as soon as we actually read a maplet
 	 */
 	mx = info.series->xdim;
@@ -513,6 +513,12 @@ snap ( void )
 	gdk_pixbuf_save ( pixbuf, "gtopo.jpg", "jpeg", NULL, "quality", "50", NULL );
 }
 
+void
+show_pos ( void )
+{
+	printf ( "Current center position (lat/long) %.4f %.4f\n", info.lat_deg, info.long_deg );
+}
+
 gint
 mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 {
@@ -538,7 +544,7 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	    return TRUE;
 	}
 	if ( event->button == 2 ) {
-	    snap ();
+	    show_pos ();
 	    return TRUE;
 	}
 

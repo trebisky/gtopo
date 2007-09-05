@@ -29,7 +29,10 @@
 # The following will get you gtk-2.10.12
 # -g switch gets debugging information.
 
-COPTS = -g
+# -m32 lets you build a 32 bit version on a 64 bit system
+COPTS = -g -m32
+#COPTS = -g
+
 CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
 
@@ -40,8 +43,11 @@ all:	gtopo
 clean:
 	rm -f gtopo $(OBJS)
 
-install:
+hinstall:
 	scp gtopo hacksaw:/mmt/bin
+	scp gtopo-32 hacksaw:/mmt/bin
+
+install:
 	cp gtopo /home/tom/bin
 
 .c.o:	
@@ -53,6 +59,10 @@ archive.o:	archive.c gtopo.h
 tpq_io.o:	tpq_io.c gtopo.h
 
 gtopo:	$(OBJS)
+	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
+
+# same as above, different name
+gtopo-32:	$(OBJS)
 	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
 
 # even though I have gtk 2.10.12, this shows 2.10.8
