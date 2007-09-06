@@ -17,4 +17,5 @@ tar czvf ${SHIPTAR} ${SHIPDIR}
 rm -rf ${SHIPDIR}
 
 cp ${SHIPTAR} /www/cholla/gtopo/downloads
+cp TODO /www/cholla/gtopo/TODO
 rm ${SHIPTAR}
