@@ -681,11 +681,12 @@ static int file_opt = 0;
 int
 main ( int argc, char **argv )
 {
-	GtkWidget *main_window;
+	GtkWidget *mw;
 	GtkWidget *vb;
+	GtkWidget *da;
+	GtkWidget *eb;
 	char *p;
 	char *file_name;
-	GtkWidget *focal;
 	int view;
 	int start_series;
 
@@ -778,56 +779,79 @@ main ( int argc, char **argv )
 	    }
 	}
 
-	main_window = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
+	mw = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
 
-	gtk_widget_show ( main_window );
+	gtk_widget_show ( mw );
 
-	gtk_signal_connect ( GTK_OBJECT(main_window), "delete_event",
+	g_signal_connect ( GTK_OBJECT(mw), "delete_event",
 			GTK_SIGNAL_FUNC(destroy_handler), NULL );
 
 	vb = gtk_vbox_new ( FALSE, 0 );
-	gtk_widget_show ( vb );
-	gtk_container_add ( GTK_CONTAINER(main_window), vb );
 
-	vp_info.da = gtk_drawing_area_new ();
-	gtk_box_pack_start ( GTK_BOX(vb), vp_info.da, TRUE, TRUE, 0 );
+	vp_info.da = da = gtk_drawing_area_new ();
 
 	/* Hook up the expose and configure signals, we could also
 	 * connect to the "realize" signal, but I haven't found a need
 	 * for that yet
 	 */
-	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "expose_event",
+	g_signal_connect ( GTK_OBJECT(da), "expose_event",
 			GTK_SIGNAL_FUNC(expose_handler), NULL );
-	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "configure_event",
+	g_signal_connect ( GTK_OBJECT(da), "configure_event",
 			GTK_SIGNAL_FUNC(configure_handler), NULL );
 
 	/* We never see the release event, unless we add the press
 	 * event to the mask.
 	 */
-	gtk_signal_connect ( GTK_OBJECT(vp_info.da), "button_release_event",
+	g_signal_connect ( GTK_OBJECT(da), "button_release_event",
 			GTK_SIGNAL_FUNC(mouse_handler), NULL );
-	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_BUTTON_RELEASE_MASK );
-	gtk_widget_add_events ( GTK_WIDGET(vp_info.da), GDK_BUTTON_PRESS_MASK );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_BUTTON_RELEASE_MASK );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_BUTTON_PRESS_MASK );
 
-	focal = vp_info.da;
-	/*
-	focal = vp_info.da->window;
-	*/
+	gtk_widget_show ( vb );
+	gtk_container_add ( GTK_CONTAINER(mw), vb );
+
+#ifdef dont_work
+	/* See if wrapping the drawing area in an event box will help
+	 * us to catch keyboard signals on it -- no dice thus far ...
+	 */
+	eb = gtk_event_box_new ();
+	gtk_widget_show ( eb );
+	gtk_container_add ( GTK_CONTAINER(), da );
+#endif
+
+	gtk_box_pack_start ( GTK_BOX(vb), da, TRUE, TRUE, 0 );
+
 #ifdef notyet
+	focal = da;
+	/*
+	focal = da->window;
+	*/
 	/* XXX - doesn't work yet */
-	gtk_signal_connect ( GTK_OBJECT(focal), "focus_event",
+	g_signal_connect ( GTK_OBJECT(focal), "focus_event",
 			GTK_SIGNAL_FUNC(focus_handler), NULL );
 	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_FOCUS_CHANGE );
 
 	/* XXX - doesn't work yet */
-	gtk_signal_connect ( GTK_OBJECT(focal), "key_press_event",
+	g_signal_connect ( GTK_OBJECT(focal), "key_press_event",
 			GTK_SIGNAL_FUNC(keyboard_handler), NULL );
-	GTK_WIDGET_SET_FLAGS ( GTK_WIDGET(focal), GTK_CAN_FOCUS );
 	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_KEY_PRESS );
+	GTK_WIDGET_SET_FLAGS ( GTK_WIDGET(focal), GTK_CAN_FOCUS );
 	/*
 	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_KEY_RELEASE );
 	*/
 	gtk_grab_focus ( focal );
+#endif
+
+	GTK_WIDGET_SET_FLAGS ( da, GTK_CAN_FOCUS );
+
+	g_signal_connect ( GTK_OBJECT(da), "focus_event",
+			GTK_SIGNAL_FUNC(focus_handler), NULL );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_FOCUS_CHANGE );
+
+#ifdef notdef
+	g_signal_connect ( GTK_OBJECT(da), "key_press_event",
+			GTK_SIGNAL_FUNC(keyboard_handler), NULL );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_KEY_PRESS );
 #endif
 
 	syscm = gdk_colormap_get_system ();
@@ -852,18 +876,18 @@ main ( int argc, char **argv )
 	 */
 #endif
 
-	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), view, view );
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(da), view, view );
 
 	/*
-	gtk_drawing_area_size ( GTK_DRAWING_AREA(vp_info.da), MINIMUM_VIEW, MINIMUM_VIEW );
-	gtk_widget_set_usize ( GTK_WIDGET(vp_info.da), view, view );
-	gdk_window_resize ( vp_info.da->window, view, view );
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(da), MINIMUM_VIEW, MINIMUM_VIEW );
+	gtk_widget_set_usize ( GTK_WIDGET(da), view, view );
+	gdk_window_resize ( da->window, view, view );
 	*/
 
 	vp_info.vx = view;
 	vp_info.vy = view;
 
-	gtk_widget_show ( vp_info.da );
+	gtk_widget_show ( da );
 
 	gtk_main ();
 

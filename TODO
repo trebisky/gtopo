@@ -16,6 +16,8 @@ screen usually used).
 
 -- fixed bugs
 
+9/5/2007 - put version 0.9.5 up for download.
+
 9/4/2007 - When using the SI_D01 full US maps, when it zooms
 from STATE to ATLAS, it looses position substantially.
 This is now understood and much better, there is still some
@@ -29,6 +31,11 @@ of scanned white paper, and there is nothing I can (at
 least not easily) do about preventing wandering into
 these areas.
 
+9/1/2007 - put version 0.9.4 up for download.
+Version 0.9.4 fixes two major bugs.  One was preventing it from viewing
+the filesets from Backcountry explorer, the other from viewing the 500K
+series when the SI_D01 full USA information was present.
+
 8/30/2007 -  When using the SI_D01 full US maps, and zooming
 from ATLAS to 500K, it can find no maps.  Fixed,
 now it sees all 3 map series over the entire USA.
@@ -38,6 +45,15 @@ have C and G named tpq files can display nothing in 100K
 and maybe 500k.  This seems fine with lower case names.
 Fixed 9/1/2007, this wasa problem with mixed case filenames
 such as C37120E1.tpq or some such nonsense, now OK.
+
+8/30/2007 - put version 0.9.3 up for download.
+I made a number of changes to this version so it now runs on 64 bit machines
+(in particular linux x86_64 systems).  It also will run on big endian machines
+(like Mac OS-X with powerPC processors, but my ability to test on these
+targets is limited.  And it still runs on 32 bit i386 machines!
+It still needs some work to handle the 100K series properly in the new
+generation TOPO! releases (such as my 4.2 Nevada set).  It handles 100K
+just fine with my old Arizona and California 2.6.9 and 2.7.6 version sets.
 
 8/30/2007 - this currently does not run on an x86_64 machine, which my machine
 just became, so I am working on that, and worrying about regression
