@@ -538,6 +538,58 @@ show_statistics ( void )
 	}
 }
 
+int
+try_series ( int new_series )
+{
+	/* Give it a whirl, see if we can load a maplet
+	 * for this series at the center position.
+	 * Trying to load the maplet avoids changing to
+	 * a white screen in areas where we have no coverage.
+	 */
+	info.series = &info.series_info[new_series];
+	synch_position ();
+
+	/* No harm done in loading the maplet, this gets it
+	 * into the cache, and we will soon be fetching it
+	 * to display anyway.
+	 */
+	if ( load_maplet ( info.long_maplet, info.lat_maplet ) )
+	    return 1;
+	return 0;
+}
+
+/* Move to a less detailed series */
+void
+up_series ( void )
+{
+	int series = info.series->series;
+
+	if ( series == 0 )
+	    return;
+
+	if ( try_series ( series - 1 ) )
+	    return;
+
+	info.series = &info.series_info[series];
+	synch_position ();
+}
+
+/* Move to a more detailed series */
+void
+down_series ( void )
+{
+	int series = info.series->series;
+
+	if ( series == N_SERIES - 1 )
+	    return;
+
+	if ( try_series ( series + 1 ) )
+	    return;
+
+	info.series = &info.series_info[series];
+	synch_position ();
+}
+
 void
 toggle_series ( void )
 {
@@ -557,20 +609,8 @@ toggle_series ( void )
 	    else
 		++new_series;
 
-	    /* Give it a whirl, see if we can load a maplet
-	     * for this series at the center position.
-	     * Trying to load the maplet avoids changing to
-	     * a white screen in areas where we have no coverage.
-	     */
-	    info.series = &info.series_info[new_series];
-	    synch_position ();
-
-	    /* No harm done in loading the maplet, this gets it
-	     * into the cache, and we will soon be fetching it
-	     * to display anyway.
-	     */
-	    if ( load_maplet ( info.long_maplet, info.lat_maplet ) )
-		return;
+	    if ( try_series ( new_series ) )
+	    	return;
 
 	} while ( new_series != series );
 

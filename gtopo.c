@@ -581,14 +581,23 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	return TRUE;
 }
 
+#define KV_PAGE_UP	65365
+#define KV_PAGE_DOWN	65366
+
 gint
 keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 {
 	if ( event->length > 0 )
-		printf ("Keyboard event string: %s\n", event->string );
-
-	printf ( "Keyboard event %d %s)\n",
+	    printf ( "Keyboard event %d %s %s)\n",
+		event->keyval, gdk_keyval_name(event->keyval), event->string );
+	else
+	    printf ( "Keyboard event %d %s)\n",
 		event->keyval, gdk_keyval_name(event->keyval) );
+
+	if ( event->keyval == KV_PAGE_UP )
+	    up_series ();
+	else if ( event->keyval == KV_PAGE_DOWN )
+	    down_series ();
 
 	return TRUE;
 }
@@ -779,83 +788,6 @@ main ( int argc, char **argv )
 	    }
 	}
 
-	mw = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
-
-	gtk_widget_show ( mw );
-
-	g_signal_connect ( GTK_OBJECT(mw), "delete_event",
-			GTK_SIGNAL_FUNC(destroy_handler), NULL );
-
-	vb = gtk_vbox_new ( FALSE, 0 );
-
-	vp_info.da = da = gtk_drawing_area_new ();
-
-	/* Hook up the expose and configure signals, we could also
-	 * connect to the "realize" signal, but I haven't found a need
-	 * for that yet
-	 */
-	g_signal_connect ( GTK_OBJECT(da), "expose_event",
-			GTK_SIGNAL_FUNC(expose_handler), NULL );
-	g_signal_connect ( GTK_OBJECT(da), "configure_event",
-			GTK_SIGNAL_FUNC(configure_handler), NULL );
-
-	/* We never see the release event, unless we add the press
-	 * event to the mask.
-	 */
-	g_signal_connect ( GTK_OBJECT(da), "button_release_event",
-			GTK_SIGNAL_FUNC(mouse_handler), NULL );
-	gtk_widget_add_events ( GTK_WIDGET(da), GDK_BUTTON_RELEASE_MASK );
-	gtk_widget_add_events ( GTK_WIDGET(da), GDK_BUTTON_PRESS_MASK );
-
-	gtk_widget_show ( vb );
-	gtk_container_add ( GTK_CONTAINER(mw), vb );
-
-#ifdef dont_work
-	/* See if wrapping the drawing area in an event box will help
-	 * us to catch keyboard signals on it -- no dice thus far ...
-	 */
-	eb = gtk_event_box_new ();
-	gtk_widget_show ( eb );
-	gtk_container_add ( GTK_CONTAINER(), da );
-#endif
-
-	gtk_box_pack_start ( GTK_BOX(vb), da, TRUE, TRUE, 0 );
-
-#ifdef notyet
-	focal = da;
-	/*
-	focal = da->window;
-	*/
-	/* XXX - doesn't work yet */
-	g_signal_connect ( GTK_OBJECT(focal), "focus_event",
-			GTK_SIGNAL_FUNC(focus_handler), NULL );
-	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_FOCUS_CHANGE );
-
-	/* XXX - doesn't work yet */
-	g_signal_connect ( GTK_OBJECT(focal), "key_press_event",
-			GTK_SIGNAL_FUNC(keyboard_handler), NULL );
-	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_KEY_PRESS );
-	GTK_WIDGET_SET_FLAGS ( GTK_WIDGET(focal), GTK_CAN_FOCUS );
-	/*
-	gtk_widget_add_events ( GTK_WIDGET(focal), GDK_KEY_RELEASE );
-	*/
-	gtk_grab_focus ( focal );
-#endif
-
-	GTK_WIDGET_SET_FLAGS ( da, GTK_CAN_FOCUS );
-
-	g_signal_connect ( GTK_OBJECT(da), "focus_event",
-			GTK_SIGNAL_FUNC(focus_handler), NULL );
-	gtk_widget_add_events ( GTK_WIDGET(da), GDK_FOCUS_CHANGE );
-
-#ifdef notdef
-	g_signal_connect ( GTK_OBJECT(da), "key_press_event",
-			GTK_SIGNAL_FUNC(keyboard_handler), NULL );
-	gtk_widget_add_events ( GTK_WIDGET(da), GDK_KEY_PRESS );
-#endif
-
-	syscm = gdk_colormap_get_system ();
-
 	if ( ! file_opt ) {
 
 	    /* not strictly needed, but set_series will access
@@ -868,6 +800,58 @@ main ( int argc, char **argv )
 
 	    set_position ( INITIAL_LONG, INITIAL_LAT );
 	}
+
+	/* --- set up the GTK stuff we need */
+
+	/* ### First - the main window */
+	mw = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
+
+	g_signal_connect ( mw, "delete_event",
+			G_CALLBACK(destroy_handler), NULL );
+
+	/* ### Second - a drawing area */
+	vp_info.da = da = gtk_drawing_area_new ();
+
+	/* Hook up the expose and configure signals, we could also
+	 * connect to the "realize" signal, but I haven't found a need
+	 * for that yet
+	 */
+	g_signal_connect ( da, "expose_event",
+			G_CALLBACK(expose_handler), NULL );
+	g_signal_connect ( da, "configure_event",
+			G_CALLBACK(configure_handler), NULL );
+
+	/* We never see the release event, unless we add the press
+	 * event to the mask.
+	 */
+	g_signal_connect ( da, "button_release_event",
+			G_CALLBACK(mouse_handler), NULL );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_BUTTON_RELEASE_MASK );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_BUTTON_PRESS_MASK );
+
+	/* Now, try to work the magic to get keyboard events */
+	GTK_WIDGET_SET_FLAGS ( da, GTK_CAN_FOCUS );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_FOCUS_CHANGE_MASK );
+	g_signal_connect ( da, "focus_in_event", G_CALLBACK(focus_handler), NULL );
+	g_signal_connect ( da, "focus_out_event", G_CALLBACK(focus_handler), NULL );
+
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_KEY_PRESS_MASK );
+	g_signal_connect ( da, "key_press_event", G_CALLBACK(keyboard_handler), NULL );
+
+#ifdef notyet
+	/* I don't know where this come from,
+	 * but it seems gone in gtk 2.0
+	 */
+	gtk_grab_focus ( focal );
+#endif
+
+	/* ### Third - a vbox to hold the drawing area */
+	vb = gtk_vbox_new ( FALSE, 0 );
+	gtk_box_pack_start ( GTK_BOX(vb), da, TRUE, TRUE, 0 );
+	gtk_container_add ( GTK_CONTAINER(mw), vb );
+
+	/* In case we ever need this */
+	syscm = gdk_colormap_get_system ();
 
 #ifdef notdef
 	/* XXX - Someday what we would like to do is make a way so
@@ -884,10 +868,10 @@ main ( int argc, char **argv )
 	gdk_window_resize ( da->window, view, view );
 	*/
 
+	gtk_widget_show_all ( mw );
+
 	vp_info.vx = view;
 	vp_info.vy = view;
-
-	gtk_widget_show ( da );
 
 	gtk_main ();
 
