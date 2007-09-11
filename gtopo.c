@@ -519,6 +519,57 @@ show_pos ( void )
 	printf ( "Current center position (lat/long) %.4f %.4f\n", info.lat_deg, info.long_deg );
 }
 
+void
+move_xy ( int new_x, int new_y )
+{
+	int vxcent, vycent;
+	double dlat, dlong;
+	double x_pixel_scale, y_pixel_scale;
+	int i;
+
+	/* viewport center */
+	vxcent = vp_info.vx / 2;
+	vycent = vp_info.vy / 2;
+
+	if ( info.verbose & V_EVENT )
+	    printf ( "Button: orig position (lat/long) %.4f %.4f\n",
+		info.lat_deg, info.long_deg );
+
+	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
+	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
+
+	dlat  = (new_y - (double)vycent) * y_pixel_scale;
+	dlong = (new_x - (double)vxcent) * x_pixel_scale;
+
+	if ( info.verbose & V_EVENT )
+	    printf ( "Button: delta position (lat/long) %.4f %.4f\n", dlat, dlong );
+
+	/* Make location of the mouse click be the current position */
+	if ( ! try_position ( info.long_deg + dlong, info.lat_deg - dlat ) )
+	    return;
+
+	for ( i=0; i<N_SERIES; i++ )
+	    info.series_info[i].content = 0;
+
+	/* redraw on the new center */
+	pixmap_redraw ();
+
+	/* put the new pixmap on the screen */
+	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+}
+
+void
+move_map ( int dx, int dy )
+{
+	int xpos, ypos;
+
+	/* viewport center */
+	xpos = vp_info.vx / 2 + dx * vp_info.vx / 4;
+	ypos = vp_info.vy / 2 + dy * vp_info.vy / 4;
+
+	move_xy ( xpos, ypos );
+}
+
 /* flip to new series, may be able to avoid redrawing the pixmap
  * Called from the mouse handler, and from routines in archive.c
  * that are called by the keyboard_handler
@@ -537,11 +588,6 @@ gint
 mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 {
 	int button;
-	int vxcent, vycent;
-	double dlat, dlong;
-	double x_pixel_scale, y_pixel_scale;
-	float x, y;
-	int i;
 
 	if ( info.verbose & V_EVENT )
 	    printf ( "Button event %d %.3f %.3f in (%d %d)\n",
@@ -557,41 +603,18 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	    return TRUE;
 	}
 
-	/* viewport center */
-	vxcent = vp_info.vx / 2;
-	vycent = vp_info.vy / 2;
-
-	if ( info.verbose & V_EVENT )
-	    printf ( "Button: orig position (lat/long) %.4f %.4f\n",
-		info.lat_deg, info.long_deg );
-
-	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
-	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
-
-	dlat  = (event->y - (double)vycent) * y_pixel_scale;
-	dlong = (event->x - (double)vxcent) * x_pixel_scale;
-
-	if ( info.verbose & V_EVENT )
-	    printf ( "Button: delta position (lat/long) %.4f %.4f\n", dlat, dlong );
-
-	/* Make location of the mouse click be the current position */
-	if ( ! try_position ( info.long_deg + dlong, info.lat_deg - dlat ) )
-	    return TRUE;
-
-	for ( i=0; i<N_SERIES; i++ )
-	    info.series_info[i].content = 0;
-
-	/* redraw on the new center */
-	pixmap_redraw ();
-
-	/* put the new pixmap on the screen */
-	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+	move_xy ( event->x, event->y );
 
 	return TRUE;
 }
 
 #define KV_PAGE_UP	65365
 #define KV_PAGE_DOWN	65366
+
+#define KV_LEFT		65361
+#define KV_UP		65362
+#define KV_RIGHT	65363
+#define KV_DOWN		65364
 
 gint
 keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
@@ -609,6 +632,14 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 	    up_series ();
 	else if ( event->keyval == KV_PAGE_DOWN )
 	    down_series ();
+	else if ( event->keyval == KV_LEFT )
+	    move_map ( -1, 0 );
+	else if ( event->keyval == KV_UP )
+	    move_map ( 0, -1 );
+	else if ( event->keyval == KV_RIGHT )
+	    move_map ( 1, 0 );
+	else if ( event->keyval == KV_DOWN )
+	    move_map ( 0, 1 );
 
 	return TRUE;
 }
@@ -619,6 +650,7 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 gint
 focus_handler ( GtkWidget *wp, GdkEventFocus *event, gpointer data )
 {
+	/* We get 1 when we go in, 0 when we go out */
 	if ( info.verbose & V_EVENT )
 	    printf ( "Focus event %d\n", event->in );
 }
