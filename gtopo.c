@@ -519,6 +519,20 @@ show_pos ( void )
 	printf ( "Current center position (lat/long) %.4f %.4f\n", info.lat_deg, info.long_deg );
 }
 
+/* flip to new series, may be able to avoid redrawing the pixmap
+ * Called from the mouse handler, and from routines in archive.c
+ * that are called by the keyboard_handler
+ */
+void
+redraw_series ( void )
+{
+	if ( ! info.series->pixels )
+	    info.series->pixels = gdk_pixmap_new ( vp_info.da->window, vp_info.vx, vp_info.vy, -1 );
+	if ( ! info.series->content )
+	    pixmap_redraw ();
+	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+}
+
 gint
 mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 {
@@ -533,14 +547,9 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	    printf ( "Button event %d %.3f %.3f in (%d %d)\n",
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
-	/* flip to new series, may be able to avoid redrawing the pixmap */
 	if ( event->button == 3 ) {
-	    toggle_series ();
-	    if ( ! info.series->pixels )
-		info.series->pixels = gdk_pixmap_new ( wp->window, vp_info.vx, vp_info.vy, -1 );
-	    if ( ! info.series->content )
-		pixmap_redraw ();
-	    pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+	    if ( toggle_series () )
+	    	redraw_series ();
 	    return TRUE;
 	}
 	if ( event->button == 2 ) {
@@ -587,12 +596,14 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 gint
 keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 {
-	if ( event->length > 0 )
-	    printf ( "Keyboard event %d %s %s)\n",
-		event->keyval, gdk_keyval_name(event->keyval), event->string );
-	else
-	    printf ( "Keyboard event %d %s)\n",
-		event->keyval, gdk_keyval_name(event->keyval) );
+	if ( info.verbose & V_EVENT ) {
+	    if ( event->length > 0 )
+		printf ( "Keyboard event %d %s, string: %s\n",
+		    event->keyval, gdk_keyval_name(event->keyval), event->string );
+	    else
+		printf ( "Keyboard event %d %s\n",
+		    event->keyval, gdk_keyval_name(event->keyval) );
+	}
 
 	if ( event->keyval == KV_PAGE_UP )
 	    up_series ();

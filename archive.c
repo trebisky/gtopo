@@ -567,8 +567,10 @@ up_series ( void )
 	if ( series == 0 )
 	    return;
 
-	if ( try_series ( series - 1 ) )
+	if ( try_series ( series - 1 ) ) {
+	    redraw_series ();
 	    return;
+	}
 
 	info.series = &info.series_info[series];
 	synch_position ();
@@ -583,8 +585,10 @@ down_series ( void )
 	if ( series == N_SERIES - 1 )
 	    return;
 
-	if ( try_series ( series + 1 ) )
+	if ( try_series ( series + 1 ) ) {
+	    redraw_series ();
 	    return;
+	}
 
 	info.series = &info.series_info[series];
 	synch_position ();

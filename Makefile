@@ -30,8 +30,8 @@
 # -g switch gets debugging information.
 
 # -m32 lets you build a 32 bit version on a 64 bit system
-COPTS = -g -m32
-#COPTS = -g
+#COPTS = -g -m32
+COPTS = -g
 
 CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
@@ -65,8 +65,9 @@ gtopo:	$(OBJS)
 gtopo-32:	$(OBJS)
 	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
 
-# even though I have gtk 2.10.12, this shows 2.10.8
-# my home machine (trona) gives 2.8.15
+# initial development with 2.10.8 and 2.10.12
+# my home machine (32 bit trona) has 2.8.15
+# now with Fedora core 7 this is 2.10.14
 gtkversion:
 	pkg-config --modversion gtk+-2.0
 
