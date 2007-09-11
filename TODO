@@ -1,6 +1,6 @@
 TODO file for Gtopo
 
-Tom Trebisky  9/4/2007
+Tom Trebisky  9/11/2007
 
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
@@ -15,6 +15,11 @@ map series, but is never a real issue with the size of
 screen usually used).
 
 -- fixed bugs
+
+9/11/2007 - put version 0.9.6 up for download.
+This is a feature addition version, now the keyboard is involved
+and page up/down change map series, and keyboard arrow keys move
+around.  Left mouse clicks still recenter on the spot clicked.
 
 9/5/2007 - put version 0.9.5 up for download.
 

@@ -633,10 +633,8 @@ load_tpq_maplet ( struct maplet *mp )
 	lseek ( fd, off, SEEK_SET );
 	size = tp->index[mp->tpq_index].size;
 
-	/* XXX - I dunno here if we should be allocating a new
-	 * loader like this every time (it works), or reuse an
-	 * existing loader.  It would only matter in terms of
-	 * a memory leak kind of thing, if it matters at all.
+	/* Rumor has it that a loader cannot be reused, so
+	 * we must allocate a new loader each time.
 	 */
 	loader = gdk_pixbuf_loader_new_with_type ( "jpeg", NULL );
 
@@ -653,6 +651,12 @@ load_tpq_maplet ( struct maplet *mp )
 	/* The following two calls work in either order */
 	gdk_pixbuf_loader_close ( loader, NULL );
 	mp->pixbuf = gdk_pixbuf_loader_get_pixbuf ( loader );
+
+	/* try to be a good citizen and avoid a memory leak,
+	 * but really bad stuff happens as the pixbuf gets
+	 * released as well.
+	g_object_unref ( loader );
+	 */
 #else
 	/* open a temp file for R/W */
 	ofd = temp_file_open ();
