@@ -652,11 +652,10 @@ load_tpq_maplet ( struct maplet *mp )
 	gdk_pixbuf_loader_close ( loader, NULL );
 	mp->pixbuf = gdk_pixbuf_loader_get_pixbuf ( loader );
 
-	/* try to be a good citizen and avoid a memory leak,
-	 * but really bad stuff happens as the pixbuf gets
-	 * released as well.
-	g_object_unref ( loader );
+	/* be a good citizen and avoid a memory leak,
 	 */
+	g_object_ref ( mp->pixbuf );
+	g_object_unref ( loader );
 #else
 	/* open a temp file for R/W */
 	ofd = temp_file_open ();
