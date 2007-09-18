@@ -608,6 +608,41 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	return TRUE;
 }
 
+/* The hint business is either poorly documented, poorly explained, or
+ * poorly understood.  Or all the above.  The idea is that events get
+ * lumped together and we get the first event when the mouse first enters
+ * the window (more or less), and subsequent events only when and if we
+ * say we are ready for them by calling gdk_window_get_pointer.
+ */
+gint
+motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
+{
+	int button;
+	int x, y;
+	GdkModifierType state;
+
+	/*
+	if ( info.verbose & V_EVENT )
+	*/
+	    printf ( "Motion event %8x %.3f %.3f in (%d %d)\n",
+		event->state, event->x, event->y, vp_info.vx, vp_info.vy );
+
+	/*
+	move_xy ( event->x, event->y );
+	*/
+
+	/* It seems silly to call gdk_window_get_pointer since we get all
+	 * the same info anyway in the event structure, BUT this is not
+	 * quite true, notice the check on is_hint, This lets GDK know we
+	 * are done processing this event and are ready for another one,
+	 * and indeed without this call, we maybe get one event per second.
+	 */
+	if ( event->is_hint )
+	    gdk_window_get_pointer ( event->window, &x, &y, &state );
+
+	return TRUE;
+}
+
 #define KV_PAGE_UP	65365
 #define KV_PAGE_DOWN	65366
 
@@ -871,6 +906,12 @@ main ( int argc, char **argv )
 			G_CALLBACK(mouse_handler), NULL );
 	gtk_widget_add_events ( GTK_WIDGET(da), GDK_BUTTON_RELEASE_MASK );
 	gtk_widget_add_events ( GTK_WIDGET(da), GDK_BUTTON_PRESS_MASK );
+
+	/* Now get this CPU intensive mouse motion stuff */
+	g_signal_connect ( da, "motion_notify_event",
+			G_CALLBACK(motion_handler), NULL );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_POINTER_MOTION_MASK );
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_POINTER_MOTION_HINT_MASK );
 
 	/* Now, try to work the magic to get keyboard events */
 	GTK_WIDGET_SET_FLAGS ( da, GTK_CAN_FOCUS );
