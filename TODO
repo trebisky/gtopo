@@ -1,6 +1,6 @@
 TODO file for Gtopo
 
-Tom Trebisky  9/11/2007
+Tom Trebisky  9/18/2007
 
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
@@ -14,7 +14,26 @@ as latitude changes (the same issue is there with other
 map series, but is never a real issue with the size of
 screen usually used).
 
--- fixed bugs
+* Now that I have 4 states on my machine, gtopo can be a little
+slow starting up.  This isn't bad on my fast computer with a
+decently fast disk, but other people may object.  What I may
+want to do is to build and keep an index on disk to speed this
+up.  Actually on a linux system, this may be slow the first time,
+but subsequent gtopo startups are fast thanks to the disk cache,
+but this may mostly benefit me as a developer, most people will
+just start it once and then use it for long periods.
+
+-- fixed bugs, release notes, activity log.
+
+9/18/2007 - putting version 0.9.7 up for download.
+Changed the static "box" for map center position to a tiny
+blinking cross that is easy to locate and hard to confuse with
+a symbol for a structure on the map.  Changed the right mouse
+key to zoom scales one way when clicked, the other way when
+clicked with control held down.  This now does the same function
+as the page up/down to change scales and does not go in a cycle
+as it used to.  Getting ready to allow the mouse to be used to
+move around in a much different way (just grab map and slide it).
 
 9/11/2007 - put version 0.9.6 up for download.
 This is a feature addition version, now the keyboard is involved

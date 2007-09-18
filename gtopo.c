@@ -178,6 +178,7 @@ struct viewport {
 
 /* Prototypes ..........
  */
+static void cursor_show ( int );
 
 gint
 destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
@@ -196,6 +197,8 @@ pixmap_expose ( gint x, gint y, gint nx, gint ny )
 		vp_info.da->style->fg_gc[GTK_WIDGET_STATE(vp_info.da)],
 		info.series->pixels,
 		x, y, x, y, nx, ny );
+
+	cursor_show ( 1 );
 }
 
 static int expose_count = 0;
@@ -311,10 +314,6 @@ pixmap_redraw ( void )
 	 */
 	if ( ! info.have_usa && info.series->series == S_STATE ) {
 	    state_maplets ( state_handler );
-	    /* mark center */
-	    if ( info.center_dot )
-		gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE,
-			vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
 	    return;
 	}
 
@@ -399,12 +398,6 @@ pixmap_redraw ( void )
 		    0, yy, vp_info.vx, yy );
 	    }
 	}
-
-
-	/* mark center */
-	if ( info.center_dot )
-	    gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->black_gc, TRUE,
-		vp_info.vxcent-1, vp_info.vycent-1, 3, 3 );
 }
 
 static int config_count = 0;
@@ -584,6 +577,118 @@ redraw_series ( void )
 	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
 }
 
+#define KV_PAGE_UP	65365
+#define KV_PAGE_DOWN	65366
+
+#define KV_LEFT		65361
+#define KV_UP		65362
+#define KV_RIGHT	65363
+#define KV_DOWN		65364
+
+#define KV_CTRL		65507
+
+/* Used to modify mouse actions */
+int ctrl_key_pressed = 0;
+
+gint
+keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
+{
+	if ( info.verbose & V_EVENT ) {
+	    printf ( "Keyboard event %d %s",
+		event->keyval, gdk_keyval_name(event->keyval) );
+
+	    if ( event->type == GDK_KEY_PRESS )
+	    	printf ( " pressed" );
+	    else if ( event->type == GDK_KEY_RELEASE )
+	    	printf ( " released" );
+	    else
+	    	printf ( " event-type-%d", event->type );
+
+	    if ( event->length > 0 )
+		printf ( " string: %s", event->string );
+	    printf ( "\n" );
+	}
+
+	if ( event->keyval == KV_CTRL ) {
+	    if ( event->type == GDK_KEY_PRESS )
+	    	ctrl_key_pressed = 1;
+	    if ( event->type == GDK_KEY_RELEASE )
+	    	ctrl_key_pressed = 0;
+	    return TRUE;
+	}
+
+	if ( event->type != GDK_KEY_PRESS )
+	    return TRUE;
+	
+	if ( event->keyval == KV_PAGE_UP )
+	    up_series ();
+	else if ( event->keyval == KV_PAGE_DOWN )
+	    down_series ();
+	else if ( event->keyval == KV_LEFT )
+	    move_map ( -1, 0 );
+	else if ( event->keyval == KV_UP )
+	    move_map ( 0, -1 );
+	else if ( event->keyval == KV_RIGHT )
+	    move_map ( 1, 0 );
+	else if ( event->keyval == KV_DOWN )
+	    move_map ( 0, 1 );
+
+	return TRUE;
+}
+
+static int cursor_mode = 0;
+
+static void
+cursor_show ( int clean )
+{
+	if ( ! info.center_dot )
+	    return;
+
+	if ( clean )
+	    cursor_mode = 1;
+	else
+	    cursor_mode = 1 - cursor_mode;
+
+	if ( cursor_mode ) {
+	    gdk_draw_line ( vp_info.da->window,
+		vp_info.da->style->white_gc,
+		vp_info.vxcent, vp_info.vycent-2,
+		vp_info.vxcent, vp_info.vycent+2 );
+	    gdk_draw_line ( vp_info.da->window,
+		vp_info.da->style->white_gc,
+		vp_info.vxcent-2, vp_info.vycent,
+		vp_info.vxcent+2, vp_info.vycent );
+	    gdk_draw_line ( vp_info.da->window,
+		vp_info.da->style->black_gc,
+		vp_info.vxcent, vp_info.vycent-1,
+		vp_info.vxcent, vp_info.vycent+1 );
+	    gdk_draw_line ( vp_info.da->window,
+		vp_info.da->style->black_gc,
+		vp_info.vxcent-1, vp_info.vycent,
+		vp_info.vxcent+1, vp_info.vycent );
+	} else {
+	    gdk_draw_line ( vp_info.da->window,
+		vp_info.da->style->black_gc,
+		vp_info.vxcent, vp_info.vycent-2,
+		vp_info.vxcent, vp_info.vycent+2 );
+	    gdk_draw_line ( vp_info.da->window,
+		vp_info.da->style->black_gc,
+		vp_info.vxcent-2, vp_info.vycent,
+		vp_info.vxcent+2, vp_info.vycent );
+	}
+}
+
+/* in milliseconds */
+#define TICK_DELAY	500
+
+gint
+tick_handler ( gpointer data )
+{
+	cursor_show ( 0 );
+
+	return TRUE;
+}
+
 gint
 mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 {
@@ -594,10 +699,13 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
 	if ( event->button == 3 ) {
-	    if ( toggle_series () )
-	    	redraw_series ();
+	    if ( ctrl_key_pressed )
+	    	up_series ();
+	    else
+	    	down_series ();
 	    return TRUE;
 	}
+
 	if ( event->button == 2 ) {
 	    show_pos ();
 	    return TRUE;
@@ -623,9 +731,9 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 
 	/*
 	if ( info.verbose & V_EVENT )
-	*/
 	    printf ( "Motion event %8x %.3f %.3f in (%d %d)\n",
 		event->state, event->x, event->y, vp_info.vx, vp_info.vy );
+	*/
 
 	/*
 	move_xy ( event->x, event->y );
@@ -639,42 +747,6 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	 */
 	if ( event->is_hint )
 	    gdk_window_get_pointer ( event->window, &x, &y, &state );
-
-	return TRUE;
-}
-
-#define KV_PAGE_UP	65365
-#define KV_PAGE_DOWN	65366
-
-#define KV_LEFT		65361
-#define KV_UP		65362
-#define KV_RIGHT	65363
-#define KV_DOWN		65364
-
-gint
-keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
-{
-	if ( info.verbose & V_EVENT ) {
-	    if ( event->length > 0 )
-		printf ( "Keyboard event %d %s, string: %s\n",
-		    event->keyval, gdk_keyval_name(event->keyval), event->string );
-	    else
-		printf ( "Keyboard event %d %s\n",
-		    event->keyval, gdk_keyval_name(event->keyval) );
-	}
-
-	if ( event->keyval == KV_PAGE_UP )
-	    up_series ();
-	else if ( event->keyval == KV_PAGE_DOWN )
-	    down_series ();
-	else if ( event->keyval == KV_LEFT )
-	    move_map ( -1, 0 );
-	else if ( event->keyval == KV_UP )
-	    move_map ( 0, -1 );
-	else if ( event->keyval == KV_RIGHT )
-	    move_map ( 1, 0 );
-	else if ( event->keyval == KV_DOWN )
-	    move_map ( 0, 1 );
 
 	return TRUE;
 }
@@ -921,6 +993,9 @@ main ( int argc, char **argv )
 
 	gtk_widget_add_events ( GTK_WIDGET(da), GDK_KEY_PRESS_MASK );
 	g_signal_connect ( da, "key_press_event", G_CALLBACK(keyboard_handler), NULL );
+	g_signal_connect ( da, "key_release_event", G_CALLBACK(keyboard_handler), NULL );
+
+	g_timeout_add ( TICK_DELAY, tick_handler, NULL );
 
 #ifdef notyet
 	/* I don't know where this come from,

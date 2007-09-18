@@ -594,6 +594,8 @@ down_series ( void )
 	synch_position ();
 }
 
+#ifdef notdef
+/* no longer used, up/down series make more sense */
 void
 toggle_series ( void )
 {
@@ -624,6 +626,7 @@ toggle_series ( void )
 	info.series = &info.series_info[series];
 	synch_position ();
 }
+#endif
 
 void
 set_series ( enum s_type s )
