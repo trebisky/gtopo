@@ -23,7 +23,7 @@ but subsequent gtopo startups are fast thanks to the disk cache,
 but this may mostly benefit me as a developer, most people will
 just start it once and then use it for long periods.
 
--- fixed bugs, release notes, activity log.
+-- fixed bugs, new features, activity log.
 
 9/18/2007 - putting version 0.9.7 up for download.
 Changed the static "box" for map center position to a tiny

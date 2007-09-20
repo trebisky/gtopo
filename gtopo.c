@@ -28,8 +28,11 @@
 #include "gtopo.h"
 #include "protos.h"
 
-#define MINIMUM_VIEW	100
-#define INITIAL_VIEW	800
+/* 640 x 800 works pretty well for printing onto
+ * 8.5 x 11 inch paper.
+ */
+#define INITIAL_VIEW_X	640
+#define INITIAL_VIEW_Y	800
 
 /* I have tried to group some "commonly fiddled"
  * parameters here for your convenience.  Someday
@@ -441,19 +444,40 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
  * them around and handling expose events very fast).
  * but to fiddle with pixel values, we need to copy them
  * to a client side Image or Pixbuf.
+ *
+ * With a 640 wide by 800 tall viewport, we get a pretty good
+ * fit to a single 8.5 x 11 sheet of paper.
+ * The "s" key spits out gtopo.jpg
+ * convert gtopo.jpg gtopo.ps ; lpr gtopo.ps
+ * This works -right now- and ain't bad at all.
+ *
+ * We save as a .jpg file, maybe we could have the p key do
+ * "print" and save a lossless format like png, or better yet
+ * direct to postscript, and even run convert ...
+ *
+ * Whether to force precise 7.5 minute quad scaling?
+ * This could be important if we were using these as base
+ * sheets for geologic mapping say, 1:24,000 is 1 inch = 2000 feet.
+ * We could apply a 4x factor and get 1 inch = 500 feet.
+ * However for best print copy, we want to avoid pixel interpolation
+ * and should just let the scale be whatever is needed for 1:1
+ * pixel mapping.
  */
 void
 snap ( void )
 {
 	GdkPixbuf *pixbuf;
 
-	printf ( "Snapshot\n" );
+	if ( info.verbose & V_WINDOW ) {
+	    printf ( "Snapshot" );
 
-	if ( info.series->series != S_STATE ) {
-	    struct maplet *mp;
-	    mp = load_maplet ( info.long_maplet, info.lat_maplet );
-	    printf ( " from file: %s\n", mp->tpq->path );
-	    printf ( " quad: %s (%s)\n", mp->tpq->quad, mp->tpq->state );
+	    if ( info.series->series != S_STATE ) {
+		struct maplet *mp;
+		mp = load_maplet ( info.long_maplet, info.lat_maplet );
+		printf ( " from file: %s", mp->tpq->path );
+		printf ( " quad: %s (%s)", mp->tpq->quad, mp->tpq->state );
+	    }
+	    printf ( "\n" );
 	}
 
 	pixbuf = gdk_pixbuf_get_from_drawable(NULL, info.series->pixels, NULL,
@@ -587,6 +611,14 @@ redraw_series ( void )
 
 #define KV_CTRL		65507
 
+/* We don't use these yet, but ... */
+#define KV_ESC		65307
+#define KV_TAB		65289
+#define KV_A		97
+#define KV_A_UC		65
+#define KV_S		115
+#define KV_S_UC		83
+
 /* Used to modify mouse actions */
 int ctrl_key_pressed = 0;
 
@@ -624,6 +656,8 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 	    up_series ();
 	else if ( event->keyval == KV_PAGE_DOWN )
 	    down_series ();
+	else if ( event->keyval == KV_S || event->keyval == KV_S_UC )
+	    snap ();
 	else if ( event->keyval == KV_LEFT )
 	    move_map ( -1, 0 );
 	else if ( event->keyval == KV_UP )
@@ -846,7 +880,7 @@ main ( int argc, char **argv )
 	GtkWidget *eb;
 	char *p;
 	char *file_name;
-	int view;
+	int x_view, y_view;
 	int start_series;
 
 #ifdef notdef
@@ -870,7 +904,8 @@ main ( int argc, char **argv )
 	info.series_info = series_info_buf;
 	info.show_maplets = 0;
 
-	view = INITIAL_VIEW;
+	x_view = INITIAL_VIEW_X;
+	y_view = INITIAL_VIEW_Y;
 
 	start_series = INITIAL_SERIES;
 
@@ -899,7 +934,8 @@ main ( int argc, char **argv )
 		if ( argc < 1 )
 		    usage ();
 		argc--;
-		view = atol ( *argv++ );
+		x_view = atol ( *argv++ );
+		y_view = atol ( *argv++ );
 	    }
 	    if ( strcmp ( p, "-f" ) == 0 ) {
 		/* show a single tpq file */
@@ -1019,18 +1055,19 @@ main ( int argc, char **argv )
 	 */
 #endif
 
-	gtk_drawing_area_size ( GTK_DRAWING_AREA(da), view, view );
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(da), x_view, y_view );
 
 	/*
+	#define MINIMUM_VIEW	100
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(da), MINIMUM_VIEW, MINIMUM_VIEW );
-	gtk_widget_set_usize ( GTK_WIDGET(da), view, view );
-	gdk_window_resize ( da->window, view, view );
+	gtk_widget_set_usize ( GTK_WIDGET(da), x_view, y_view );
+	gdk_window_resize ( da->window, x_view, y_view );
 	*/
 
 	gtk_widget_show_all ( mw );
 
-	vp_info.vx = view;
-	vp_info.vy = view;
+	vp_info.vx = x_view;
+	vp_info.vy = y_view;
 
 	gtk_main ();
 
