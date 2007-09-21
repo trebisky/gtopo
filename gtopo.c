@@ -30,6 +30,7 @@
 
 /* 640 x 800 works pretty well for printing onto
  * 8.5 x 11 inch paper.
+ * Actually 640 x 828 has the same aspect ratio.
  */
 #define INITIAL_VIEW_X	640
 #define INITIAL_VIEW_Y	800
