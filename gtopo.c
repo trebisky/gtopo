@@ -152,6 +152,7 @@
  */
 
 struct topo_info info;
+struct settings settings;
 
 struct series series_info_buf[N_SERIES];
 
@@ -188,7 +189,7 @@ gint
 destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 {
 	gtk_main_quit ();
-	if ( info.verbose & V_BASIC )
+	if ( settings.verbose & V_BASIC )
 	    show_statistics ();
 
 	return FALSE;
@@ -210,7 +211,7 @@ static int expose_count = 0;
 gint
 expose_handler ( GtkWidget *wp, GdkEventExpose *ep, gpointer data )
 {
-	if ( info.verbose & V_WINDOW && expose_count < 4 )
+	if ( settings.verbose & V_WINDOW && expose_count < 4 )
 	    printf ( "Expose event %d\n", expose_count++ );
 
     	pixmap_expose ( ep->area.x, ep->area.y, ep->area.width, ep->area.height );
@@ -247,7 +248,7 @@ state_handler ( struct maplet *mp )
 
 	tp = mp->tpq;
 
-	if ( info.verbose & V_BASIC ) {
+	if ( settings.verbose & V_BASIC ) {
 	    printf ( "State handler %s\n", mp->tpq->path );
 	    printf ( "Position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
 	    printf ( "Sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
@@ -341,7 +342,7 @@ pixmap_redraw ( void )
 	if ( mp ) {
 	    info.series->xdim = mx = mp->xdim;
 	    info.series->ydim = my = mp->ydim;
-	    if ( info.verbose & V_DRAW )
+	    if ( settings.verbose & V_DRAW )
 		printf ( "Center maplet x,ydim = %d, %d\n", mx, my );
 	}
 
@@ -352,10 +353,10 @@ pixmap_redraw ( void )
 	origx = vp_info.vxcent - offx;
 	origy = vp_info.vycent - offy;
 
-	if ( info.verbose & V_DRAW )
+	if ( settings.verbose & V_DRAW )
 	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 
-	if ( info.center_only ) {
+	if ( settings.center_only ) {
 	    nx1 = nx2 = 0;
 	    ny1 = ny2 = 0;
 	} else {
@@ -365,7 +366,7 @@ pixmap_redraw ( void )
 	    ny2 = + (origy + my - 1 ) / my;
 	}
 
-	if ( info.verbose & V_DRAW ) {
+	if ( settings.verbose & V_DRAW ) {
 	    printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
 		vxdim, vydim, mx, my, offx, offy );
 	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
@@ -376,12 +377,12 @@ pixmap_redraw ( void )
 
 		mp = load_maplet ( info.long_maplet + x, info.lat_maplet + y );
 		if ( ! mp ) {
-		    if ( info.verbose & V_DRAW2 )
+		    if ( settings.verbose & V_DRAW2 )
 			printf ( "redraw, no maplet at %d %d\n", x, y );
 		    continue;
 		}
 
-		if ( info.verbose & V_DRAW2 )
+		if ( settings.verbose & V_DRAW2 )
 		    printf ( "redraw OK for %d %d, draw at %d %d\n",
 			x, y, origx + mp->xdim*x, origy + mp->ydim*y );
 		draw_maplet ( mp,
@@ -390,7 +391,7 @@ pixmap_redraw ( void )
 	    }
 	}
 
-	if ( info.show_maplets ) {
+	if ( settings.show_maplets ) {
 	    for ( x = nx1+1; x <= nx2; x++ ) {
 		xx = origx - mx * x,
 		gdk_draw_line ( info.series->pixels, vp_info.da->style->black_gc,
@@ -422,7 +423,7 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	vp_info.vxcent = vp_info.vx / 2;
 	vp_info.vycent = vp_info.vy / 2;
 
-	if ( info.verbose & V_WINDOW )
+	if ( settings.verbose & V_WINDOW )
 	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
 
 	for ( i=0; i<N_SERIES; i++ ) {
@@ -469,7 +470,7 @@ snap ( void )
 {
 	GdkPixbuf *pixbuf;
 
-	if ( info.verbose & V_WINDOW ) {
+	if ( settings.verbose & V_WINDOW ) {
 	    printf ( "Snapshot" );
 
 	    if ( info.series->series != S_STATE ) {
@@ -549,7 +550,7 @@ move_xy ( int new_x, int new_y )
 	vxcent = vp_info.vx / 2;
 	vycent = vp_info.vy / 2;
 
-	if ( info.verbose & V_EVENT )
+	if ( settings.verbose & V_EVENT )
 	    printf ( "Button: orig position (lat/long) %.4f %.4f\n",
 		info.lat_deg, info.long_deg );
 
@@ -559,7 +560,7 @@ move_xy ( int new_x, int new_y )
 	dlat  = (new_y - (double)vycent) * y_pixel_scale;
 	dlong = (new_x - (double)vxcent) * x_pixel_scale;
 
-	if ( info.verbose & V_EVENT )
+	if ( settings.verbose & V_EVENT )
 	    printf ( "Button: delta position (lat/long) %.4f %.4f\n", dlat, dlong );
 
 	/* Make location of the mouse click be the current position */
@@ -626,7 +627,7 @@ int ctrl_key_pressed = 0;
 gint
 keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 {
-	if ( info.verbose & V_EVENT ) {
+	if ( settings.verbose & V_EVENT ) {
 	    printf ( "Keyboard event %d %s",
 		event->keyval, gdk_keyval_name(event->keyval) );
 
@@ -676,7 +677,7 @@ static int cursor_mode = 0;
 static void
 cursor_show ( int clean )
 {
-	if ( ! info.center_dot )
+	if ( ! settings.center_dot )
 	    return;
 
 	if ( clean )
@@ -729,7 +730,7 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 {
 	int button;
 
-	if ( info.verbose & V_EVENT )
+	if ( settings.verbose & V_EVENT )
 	    printf ( "Button event %d %.3f %.3f in (%d %d)\n",
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
@@ -765,7 +766,7 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	GdkModifierType state;
 
 	/*
-	if ( info.verbose & V_EVENT )
+	if ( settings.verbose & V_EVENT )
 	    printf ( "Motion event %8x %.3f %.3f in (%d %d)\n",
 		event->state, event->x, event->y, vp_info.vx, vp_info.vy );
 	*/
@@ -793,7 +794,7 @@ gint
 focus_handler ( GtkWidget *wp, GdkEventFocus *event, gpointer data )
 {
 	/* We get 1 when we go in, 0 when we go out */
-	if ( info.verbose & V_EVENT )
+	if ( settings.verbose & V_EVENT )
 	    printf ( "Focus event %d\n", event->in );
 }
 
@@ -818,7 +819,7 @@ synch_position ( void )
     	info.long_maplet = m_long;
     	info.lat_maplet = m_lat;
 
-	if ( info.verbose & V_BASIC ) {
+	if ( settings.verbose & V_BASIC ) {
 	    printf ( "Synch position: long/lat = %.3f %.3f\n", info.long_deg, info.lat_deg );
 	    printf ( "maplet indices of position: %d %d\n",
 		info.long_maplet, info.lat_maplet );
@@ -881,8 +882,6 @@ main ( int argc, char **argv )
 	GtkWidget *eb;
 	char *p;
 	char *file_name;
-	int x_view, y_view;
-	int start_series;
 
 #ifdef notdef
 	if ( ! temp_init() ) {
@@ -898,46 +897,20 @@ main ( int argc, char **argv )
 	argc--;
 	argv++;
 
-	info.verbose = INITIAL_VERBOSITY;
+	settings_init ();
 
-	info.center_only = 0;
-	info.center_dot = 1;
 	info.series_info = series_info_buf;
-	info.show_maplets = 0;
-
-	x_view = INITIAL_VIEW_X;
-	y_view = INITIAL_VIEW_Y;
-
-	start_series = INITIAL_SERIES;
 
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-v" ) == 0 )
-	    	info.verbose = 0xffff;
+	    	settings.verbose = 0xffff;
 	    if ( strcmp ( p, "-c" ) == 0 )
-	    	info.center_only = 1;
+	    	settings.center_only = 1;
 	    if ( strcmp ( p, "-d" ) == 0 )
-	    	info.center_dot = 0;
+	    	settings.center_dot = 0;
 	    if ( strcmp ( p, "-m" ) == 0 )
-	    	info.show_maplets = 1;
-	    if ( strcmp ( p, "-s" ) == 0 ) {
-		if ( argc < 1 )
-		    usage ();
-		argc--;
-		/* XXX - accept a number 1-5, pretty gross */
-		start_series = atol ( *argv++ ) - 1;
-	    }
-	    if ( strcmp ( p, "-g" ) == 0 ) {
-		/* won't the standard X geometry options work here?
-		 * (if I cooperate and do not
-		 * brute force resize and override ...
-		 */
-		if ( argc < 1 )
-		    usage ();
-		argc--;
-		x_view = atol ( *argv++ );
-		y_view = atol ( *argv++ );
-	    }
+	    	settings.show_maplets = 1;
 	    if ( strcmp ( p, "-f" ) == 0 ) {
 		/* show a single tpq file */
 		if ( argc < 1 )
@@ -983,7 +956,7 @@ main ( int argc, char **argv )
 	    info.long_deg = 0.0;
 	    info.lat_deg = 0.0;
 
-	    set_series ( start_series );
+	    set_series ( settings.starting_series );
 
 	    set_position ( INITIAL_LONG, INITIAL_LAT );
 	}
@@ -1056,19 +1029,19 @@ main ( int argc, char **argv )
 	 */
 #endif
 
-	gtk_drawing_area_size ( GTK_DRAWING_AREA(da), x_view, y_view );
+	gtk_drawing_area_size ( GTK_DRAWING_AREA(da), settings.x_view, settings.y_view );
 
 	/*
 	#define MINIMUM_VIEW	100
 	gtk_drawing_area_size ( GTK_DRAWING_AREA(da), MINIMUM_VIEW, MINIMUM_VIEW );
-	gtk_widget_set_usize ( GTK_WIDGET(da), x_view, y_view );
-	gdk_window_resize ( da->window, x_view, y_view );
+	gtk_widget_set_usize ( GTK_WIDGET(da), settings.x_view, settings.y_view );
+	gdk_window_resize ( da->window, settings.x_view, settings.y_view );
 	*/
 
 	gtk_widget_show_all ( mw );
 
-	vp_info.vx = x_view;
-	vp_info.vy = y_view;
+	vp_info.vx = settings.x_view;
+	vp_info.vy = settings.y_view;
 
 	gtk_main ();
 

@@ -41,6 +41,7 @@
 #include "protos.h"
 
 extern struct topo_info info;
+extern struct settings settings;
 
 /* There are 5 map series,
  * level 1 is the state as a whole on the screen
@@ -605,7 +606,7 @@ toggle_series ( void )
 	/* remember where we started */
 	series = info.series->series;
 
-	if ( info.verbose & V_BASIC )
+	if ( settings.verbose & V_BASIC )
 	    printf ( "toggle from series %d (%s)\n", series+1, wonk_series ( series ) );
 
 	new_series = series;
@@ -637,7 +638,7 @@ set_series ( enum s_type s )
 	info.series = &info.series_info[s];
 
 	synch_position ();
-	if ( info.verbose & V_BASIC ) {
+	if ( settings.verbose & V_BASIC ) {
 	    printf ( "Switch to series %d (%s)\n", s+1, wonk_series ( s ) );
 	    show_methods ( info.series );
 	}
@@ -686,7 +687,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 
 	/* 1 - try all lower case */
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( is_file(path_buf) )
@@ -697,7 +698,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	series_letter = toupper(series_letter);
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( is_file(path_buf) )
@@ -705,7 +706,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 
 	/* 3 - try upper case name, with lower case .tpq */
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( is_file(path_buf) )
@@ -716,7 +717,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	series_letter = tolower(series_letter);
 
 	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
 	if ( is_file(path_buf) )
@@ -770,7 +771,7 @@ method_file ( struct maplet *mp, struct method *xp,
 	mp->sheet_index_long = maplet_long - xp->tpq->sheet_long;
 	mp->sheet_index_lat = maplet_lat - xp->tpq->sheet_lat;
 
-	if ( info.verbose & V_ARCHIVE ) {
+	if ( settings.verbose & V_ARCHIVE ) {
 	    printf ( "MF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
 	    printf ( "MF point : %d %d\n", maplet_long, maplet_lat );
 	    printf ( "MF index: %d %d\n", mp->sheet_index_long, mp->sheet_index_lat );
@@ -806,7 +807,7 @@ method_section ( struct maplet *mp, struct method *xp,
 	lat_section = maplet_lat / (sp->lat_count_d * sp->lat_count);
 	long_section = maplet_long / (sp->long_count_d * sp->long_count);
 
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "lookup_quad, section: %d %d\n", lat_section, long_section );
 
 	lat_quad = maplet_lat / sp->lat_count - lat_section * sp->lat_count_d;
@@ -823,7 +824,7 @@ method_section ( struct maplet *mp, struct method *xp,
 	mp->sheet_index_long = maplet_long - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
 	mp->sheet_index_lat = maplet_lat - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
 
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "lat/long quad, lat/long maplet: %d %d  %d %d\n", lat_quad, long_quad, maplet_lat, maplet_long );
 
 	/* flip the count to origin from the NW corner */
@@ -962,7 +963,7 @@ add_disk ( char *archive, char *disk )
 	if ( ! (dd = opendir ( disk_path )) )
 	    return 0;
 
-	if ( info.verbose & V_BASIC )
+	if ( settings.verbose & V_BASIC )
 	    printf ( "Found disk: %s\n", disk_path );
 
 	/* Loop through this disk image.
@@ -1138,18 +1139,18 @@ add_section ( char *disk, char *section, struct section **head )
 	    ep->dir_head = (struct section_dir *) NULL;
 	    ep->dir_count = 0;
 
-	    if ( info.verbose & V_ARCHIVE )
+	    if ( settings.verbose & V_ARCHIVE )
 		printf ( "Added section:" );
 
 	    ep->next = *head;
 	    *head = ep;
 	    info.n_sections++;
 	} else {
-	    if ( info.verbose & V_ARCHIVE )
+	    if ( settings.verbose & V_ARCHIVE )
 		printf ( "Added section (border):" );
 	}
 
-	if ( info.verbose & V_ARCHIVE ) {
+	if ( settings.verbose & V_ARCHIVE ) {
 	    printf ( " %d  %s", latlong, dp->path );
 	    printf ( " %c %c %c\n",
 		    dp->tpq_code[S_500K],
@@ -1219,7 +1220,7 @@ add_dir_series ( int series, char *dirpath, char *name )
 	char tpq_path[100];
 
 	sprintf ( tpq_path, "%s/%s", dirpath, name );
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "add dir series:  %s\n", tpq_path );
 
 	if ( is_directory ( tpq_path ) )
@@ -1229,7 +1230,7 @@ add_dir_series ( int series, char *dirpath, char *name )
 	if ( info.have_usa )
 		return;
 
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Add file/state method: %d  %s\n", series, tpq_path );
 
 	(void) add_file_method ( &info.series_info[series], tpq_path );
@@ -1268,7 +1269,7 @@ add_dir ( char *archive, char *dir )
 	if ( dir_lookup ( dir ) )
 	    return 0;
 
-	if ( info.verbose & V_ARCHIVE )
+	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "add dir: %d %s\n", series, dir_path );
 
 	if ( ! (dd = opendir ( dir_path )) )
@@ -1414,7 +1415,7 @@ add_full_usa ( char *path, char *name )
 	if ( ! is_directory ( si_path ) )
 	    return;
 
-	if ( info.verbose & V_BASIC )
+	if ( settings.verbose & V_BASIC )
 	    printf ( "Found level 123 for full USA at %s\n", si_path );
 
 #ifdef notdef

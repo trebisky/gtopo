@@ -29,6 +29,7 @@
 #include "protos.h"
 
 extern struct topo_info info;
+extern struct settings settings;
 
 /* Using this is by FAR the way to go, and eliminates all the temp file
  * baloney
@@ -269,7 +270,7 @@ read_tpq_header ( struct tpq_info *tp, int fd )
 	if ( read( fd, &tpq_header, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
 	    return 0;
 
-	if ( info.verbose & V_TPQ ) {
+	if ( settings.verbose & V_TPQ ) {
 	    printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.quad_name );
 	    printf ( "TPQ file maplet counts long/lat: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
 	    printf ( "TPQ file long range: %.3f %3f\n", tpq_header.west_long, tpq_header.east_long );
@@ -391,7 +392,7 @@ read_tpq_header ( struct tpq_info *tp, int fd )
 	tp->maplet_long_deg = (tp->e_long - tp->w_long) / tp->long_count;
 	tp->maplet_lat_deg = (tp->n_lat - tp->s_lat) / tp->lat_count;
 
-	if ( info.verbose & V_TPQ ) {
+	if ( settings.verbose & V_TPQ ) {
 	    printf ( "TPQ file for %s quadrangle: %s\n", tp->state, tp->quad );
 	    printf ( "TPQ file maplet counts long/lat: %d %d\n", tp->long_count, tp->lat_count );
 	    printf ( "TPQ file long range: %.3f %3f\n", tp->w_long, tp->e_long );
@@ -455,7 +456,7 @@ tpq_new ( char *path )
         struct tpq_info *tp;
 	int fd;
 
-	if ( info.verbose & V_TPQ )
+	if ( settings.verbose & V_TPQ )
 	    printf ( "tpq_new: %s\n", path );
 
         tp = (struct tpq_info *) malloc ( sizeof(struct tpq_info) );
@@ -685,7 +686,7 @@ load_tpq_maplet ( struct maplet *mp )
 	remove ( tmpname );
 #endif
 
-	if ( ! mp->pixbuf && info.verbose & V_TPQ ) {
+	if ( ! mp->pixbuf && settings.verbose & V_TPQ ) {
 	    printf ("Cannot get pixbuf from %s (%d)\n", mp->tpq_path, mp->tpq_index );
 	    return 0;
 	}

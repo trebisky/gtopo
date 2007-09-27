@@ -56,6 +56,18 @@ enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE };
 */
 #define INITIAL_VERBOSITY	0
 
+struct settings {
+	int verbose;
+	int x_view;
+	int y_view;
+	enum s_type starting_series;
+
+	/* stuff from command line options */
+	int center_only;
+	int center_dot;
+	int show_maplets;
+};
+
 /* Structure to hold our current position */
 struct topo_info {
 	/* This is where we are in plain old degrees */
@@ -79,12 +91,6 @@ struct topo_info {
 	struct series *series;
 
 	int have_usa;
-
-	/* stuff from command line options */
-	int verbose;
-	int center_only;
-	int center_dot;
-	int show_maplets;
 
 	/* statistics to show when gtopo exits */
 	int n_sections;

@@ -33,6 +33,7 @@
 #include "protos.h"
 
 extern struct topo_info info;
+extern struct settings settings;
 
 /* I have had the maplet cache get up to 2500 entries without
  * any trouble, but someday may want to monitor the size and
@@ -109,11 +110,11 @@ load_maplet_scale ( struct maplet *mp )
 	pixel_width = mp->ydim * tp->maplet_long_deg / tp->maplet_lat_deg;
 	pixel_width *= cos ( tp->mid_lat * DEGTORAD );
 	pixel_norm = pixel_width;
-	if ( info.verbose & V_SCALE )
+	if ( settings.verbose & V_SCALE )
 	    printf ( "maplet scale: %d %d --> %d %d\n", mp->xdim, mp->ydim, pixel_norm, mp->ydim );
 
 	if ( mp->xdim < pixel_norm - 8 || mp->xdim > pixel_norm + 8 ) {
-	    if ( info.verbose & V_SCALE )
+	    if ( settings.verbose & V_SCALE )
 		printf ( "SCALING\n" );
 	    tmp = mp->pixbuf;
 	    mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, pixel_norm, mp->ydim, GDK_INTERP_BILINEAR );
@@ -133,12 +134,12 @@ load_maplet ( int long_maplet, int lat_maplet )
 
 	sp = info.series;
 
-	if ( info.verbose & V_MAPLET )
+	if ( settings.verbose & V_MAPLET )
 	    printf ( "Load maplet for position %d %d\n", long_maplet, lat_maplet );
 
 	mp = maplet_lookup ( lat_maplet, long_maplet );
 	if ( mp ) {
-	    if ( info.verbose & V_MAPLET )
+	    if ( settings.verbose & V_MAPLET )
 		printf ( "maplet cache hit: %d %d\n", long_maplet, lat_maplet );
 	    return mp;
 	}
@@ -159,7 +160,7 @@ load_maplet ( int long_maplet, int lat_maplet )
 	mp->world_index_long = long_maplet;
 	mp->world_index_lat = lat_maplet;
 
-	if ( info.verbose & V_MAPLET )
+	if ( settings.verbose & V_MAPLET )
 	    printf ( "Read maplet(%d) = %d %d -- %d\n", sp->cache_count,
 		    long_maplet, lat_maplet, index );
 
@@ -203,13 +204,13 @@ state_maplets ( mfptr handler )
 	    /* Use these as indices */
 	    long_maplet = - tp->w_long;
 	    lat_maplet = tp->s_lat;
-	    if ( info.verbose & V_MAPLET )
+	    if ( settings.verbose & V_MAPLET )
 		printf ( "state maplets long/lat: %d %d\n", long_maplet, lat_maplet );
 
 	    /* First try the cache */
 	    mp = maplet_lookup ( lat_maplet, long_maplet );
 	    if ( mp ) {
-		if ( info.verbose & V_MAPLET )
+		if ( settings.verbose & V_MAPLET )
 		    printf ( "state maplets cache hit\n" );
 		(*handler) (mp);
 	    }
@@ -221,7 +222,7 @@ state_maplets ( mfptr handler )
 	    mp->sheet_index_long = 0;
 	    mp->sheet_index_lat = 0;
 
-	    if ( info.verbose & V_MAPLET )
+	    if ( settings.verbose & V_MAPLET )
 		printf ( "State maplets read (%d) = %s\n", sp->cache_count, tp->path );
 
 	    mp->tpq_path = tp->path;
