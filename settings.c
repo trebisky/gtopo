@@ -147,6 +147,7 @@ load_settings ( char *path )
 
 	    if ( nw == 1 )
 	    	set_one ( wp[0] );
+
 	    if ( nw == 2 )
 	    	set_two ( wp[0], wp[1] );
 	}
