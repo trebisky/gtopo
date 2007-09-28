@@ -61,10 +61,11 @@ struct settings {
 	int x_view;
 	int y_view;
 	enum s_type starting_series;
+	double starting_long;
+	double starting_lat;
 
-	/* stuff from command line options */
-	int center_only;
-	int center_dot;
+	/* also set via command line options */
+	int center_marker;
 	int show_maplets;
 };
 
@@ -91,6 +92,9 @@ struct topo_info {
 	struct series *series;
 
 	int have_usa;
+
+	/* stuff from command line options */
+	int center_only;
 
 	/* statistics to show when gtopo exits */
 	int n_sections;

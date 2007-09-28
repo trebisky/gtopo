@@ -50,34 +50,6 @@
     S_24K;
 */
 
-#define INITIAL_SERIES	S_STATE
-
-/*
-#define INITIAL_ARCHIVE	"/u1/backroads"
-*/
-
-#ifdef notdef
-/* Mt. Hopkins, Arizona */
-#define INITIAL_LONG	-110.88
-#define INITIAL_LAT	31.69
-
-/* In California west of Taboose Pass */
-#define INITIAL_LONG	-dms2deg ( 118, 31, 0 )
-#define INITIAL_LAT	dms2deg ( 37, 1, 0 )
-
-/* Near Alturas, NE California */
-#define INITIAL_LONG	-120.5
-#define INITIAL_LAT	41.5
-
-/* Near Las Vegas, Nevada */
-#define INITIAL_LONG	-114.9894
-#define INITIAL_LAT	36.2338
-#endif
-
-/* Flagstaff, Arizona */
-#define INITIAL_LONG	-111.6722
-#define INITIAL_LAT	35.18
-
 /* gtopo.c - the main file for gtopo
  *
  * Tom Trebisky  MMT Observatory, Tucson, Arizona
@@ -356,7 +328,7 @@ pixmap_redraw ( void )
 	if ( settings.verbose & V_DRAW )
 	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
 
-	if ( settings.center_only ) {
+	if ( info.center_only ) {
 	    nx1 = nx2 = 0;
 	    ny1 = ny2 = 0;
 	} else {
@@ -677,7 +649,7 @@ static int cursor_mode = 0;
 static void
 cursor_show ( int clean )
 {
-	if ( ! settings.center_dot )
+	if ( ! settings.center_marker )
 	    return;
 
 	if ( clean )
@@ -900,15 +872,16 @@ main ( int argc, char **argv )
 	settings_init ();
 
 	info.series_info = series_info_buf;
+	info.center_only = 0;
 
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-v" ) == 0 )
 	    	settings.verbose = 0xffff;
 	    if ( strcmp ( p, "-c" ) == 0 )
-	    	settings.center_only = 1;
+	    	info.center_only = 1;
 	    if ( strcmp ( p, "-d" ) == 0 )
-	    	settings.center_dot = 0;
+	    	settings.center_marker = 0;
 	    if ( strcmp ( p, "-m" ) == 0 )
 	    	settings.show_maplets = 1;
 	    if ( strcmp ( p, "-f" ) == 0 ) {
@@ -957,8 +930,7 @@ main ( int argc, char **argv )
 	    info.lat_deg = 0.0;
 
 	    set_series ( settings.starting_series );
-
-	    set_position ( INITIAL_LONG, INITIAL_LAT );
+	    set_position ( settings.starting_long, settings.starting_lat );
 	}
 
 	/* --- set up the GTK stuff we need */

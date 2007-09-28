@@ -56,6 +56,32 @@ dms2deg ( int deg, int min, int sec )
 	return rv;
 }
 
+/* split a string in place.
+ * tosses nulls into string, trashing it.
+ */
+int
+split ( char *buf, char **bufp, int max )
+{
+    int i;
+    char *p;
+
+    p = buf;
+    for ( i=0; i<max; ) {
+        while ( *p && *p == ' ' )
+            p++;
+        if ( ! *p )
+            break;
+        bufp[i++] = p;
+        while ( *p && *p != ' ' )
+            p++;
+        if ( ! *p )
+            break;
+        *p++ = '\0';
+    }
+
+    return i;
+}
+
 char *
 strhide ( char *data )
 {
