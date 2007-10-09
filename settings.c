@@ -91,22 +91,22 @@ settings_default ( void )
 	settings.show_maplets = 0;
 }
 
+/* Accepts just plain degrees, or
+ * d:m or d:m:s for sexigesimal
+ */
 static double
 parse_dms ( char *line )
 {
     	char *p;
-	int how_many_colons;
 	int is_neg;
 	char *d, *m, *s;
+	int how_many_colons = 0;
 	int state = 0;
 	double rv;
 
-	how_many_colons = 0;
 	for ( p=line; *p; p++ )
 	    if ( *p == ':' )
 		how_many_colons++;
-
-	printf ( "dms: %d\n", how_many_colons );
 
 	if ( how_many_colons == 0 )
 	    return atof ( line );
@@ -127,7 +127,6 @@ parse_dms ( char *line )
 	}
 
 	rv = atof ( d );
-	printf ( "dms 1: %s %.5f\n", d, rv );
 
 	is_neg = rv < 0.0 ? 1 : 0;
 
@@ -135,8 +134,6 @@ parse_dms ( char *line )
 	    rv -= atof ( m ) / 60.0;
 	else
 	    rv += atof ( m ) / 60.0;
-
-	printf ( "dms 2: %s %.5f\n", m, rv );
 
 	if ( how_many_colons == 1 )
 	    return rv;
@@ -146,7 +143,6 @@ parse_dms ( char *line )
 	else
 	    rv += atof ( s ) / 3600.0;
 
-	printf ( "dms 3: %s %.5f\n", s, rv );
 	return rv;
 }
 
