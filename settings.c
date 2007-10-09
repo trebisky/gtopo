@@ -96,6 +96,7 @@ parse_dms ( char *line )
 {
     	char *p;
 	int how_many_colons;
+	int is_neg;
 	char *d, *m, *s;
 	int state = 0;
 	double rv;
@@ -124,11 +125,21 @@ parse_dms ( char *line )
 	    }
 	}
 
-	rv = atof ( d ) + atof ( m ) / 60.0;
+	rv = atof ( d );
+	is_neg = rv < 0.0 ? 1 : 0;
+
+	if ( is_neg )
+	    rv -= atof ( m ) / 60.0;
+	else
+	    rv += atof ( m ) / 60.0;
+
 	if ( how_many_colons = 1 )
 	    return rv;
 
-	return rv + atof ( s ) / 3600.0;
+	if ( is_neg )
+	    return rv - atof ( s ) / 3600.0;
+	else
+	    return rv + atof ( s ) / 3600.0;
 }
 
 /* We allow one word per line thingies .. maybe */
