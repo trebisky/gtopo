@@ -91,6 +91,46 @@ settings_default ( void )
 	settings.show_maplets = 0;
 }
 
+static double
+parse_dms ( char *line )
+{
+    	char *p;
+	int how_many_colons;
+	char *d, *m, *s;
+	int state = 0;
+	double rv;
+
+	how_many_colons = 0;
+	for ( p=line; *p; p++ )
+	    if ( *p == ':' )
+		how_many_colons++;
+
+	if ( how_many_colons == 0 );
+	    return atof ( line );
+
+	d = line;
+	for ( p=line; *p; p++ ) {
+	    if ( *p != ':' )
+		continue;
+	    *p++ = '\0';
+	    if ( state == 0 ) {
+		m = p;
+		state = 1;
+	    }
+	    if ( state == 1 ) {
+		s = p;
+		state = 2;
+	    	break;
+	    }
+	}
+
+	rv = atof ( d ) + atof ( m ) / 60.0;
+	if ( how_many_colons = 1 )
+	    return rv;
+
+	return rv + atof ( s ) / 3600.0;
+}
+
 /* We allow one word per line thingies .. maybe */
 static void
 set_one ( char *what )
@@ -113,9 +153,9 @@ set_two ( char *name, char *val )
 	else if ( strcmp ( name, "starting_series" ) == 0 )
 	    settings.starting_series = atol ( val );
 	else if ( strcmp ( name, "starting_long" ) == 0 )
-	    settings.starting_long = atof ( val );
+	    settings.starting_long = parse_dms ( val );
 	else if ( strcmp ( name, "starting_lat" ) == 0 )
-	    settings.starting_lat = atof ( val );
+	    settings.starting_lat = parse_dms ( val );
 }
 
 #define MAX_LINE	128
