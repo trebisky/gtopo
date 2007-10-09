@@ -33,36 +33,96 @@
 #include "gtopo.h"
 #include "protos.h"
 
-enum xml_type { XT_ROOT, XT_TAG };
+enum xml_type { XT_ROOT, XT_TAG, XT_ATTR };
 
 /* We represent an XML object as a tree of these nodes.
  */
 struct xml {
+	struct xml *next;
 	struct xml *children;
 	enum xml_type type;
-	char *tagname;
+	char *name;
+	char *value;
+	struct xml *attrib;
 };
+
+static char *xml_bogus = "bogus";
 
 void
 xml_init ( void )
 {
 }
 
-struct xml *
-xml_start ( char *tagname )
+static struct xml *
+new_tag ( char *name )
 {
 	struct xml *xp;
 
 	xp = gmalloc ( sizeof(struct xml) );
-	xp->type = XT_ROOT;
-	xp->tagname = strhide ( tagname );
+	xp->type = XT_TAG;
+	xp->name = strhide ( name );
+	xp->value = xml_bogus;
+	xp->attrib = NULL;
+	xp->children = NULL;
+	xp->next = NULL;
 
 	return xp;
 }
 
-void
-xml_attr ( struct xml *xp, char *attrname, char *attrvalue )
+/* Add a tag to a document */
+struct xml *
+xml_tag ( struct xml *cp, char *name )
 {
+	struct xml *xp;
+
+	xp = new_tag ( name );
+
+	xp->next = cp->children;
+	cp->children = xp;
+
+	return xp;
+}
+
+/* Add an attribute to a tag node */
+void
+xml_attr ( struct xml *cp, char *name, char *value )
+{
+	struct xml *xp;
+
+	xp = gmalloc ( sizeof(struct xml) );
+	xp->type = XT_ATTR;
+	xp->name = strhide ( name );
+	xp->value = strhide ( value );
+	xp->attrib = NULL;
+	xp->children = NULL;
+
+	xp->next = cp->attrib;
+	cp->attrib = xp;
+}
+
+/* Not usually directly called, if ever */
+void
+xml_stuff ( struct xml *xp, char *stuff )
+{
+	xp->value = strhide ( stuff );
+	
+}
+
+/* Use this for <name>stuff</name> */
+void
+xml_tag_stuff ( struct xml *cp, char *name, char *stuff )
+{
+	struct xml *xp;
+
+	xp = xml_tag ( cp, name );
+	xml_stuff ( xp, stuff );
+}
+
+/* Declare a tag that starts an XML document */
+struct xml *
+xml_start ( char *name )
+{
+	return new_tag ( name );
 }
 
 /* THE END */
