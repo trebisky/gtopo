@@ -138,7 +138,7 @@ build_index_OLD ( struct tpq_info *tp, int fd, long *info )
 	    num_jpeg++;
 	}
 
-        index = (struct tpq_index_e *) malloc ( num_jpeg * sizeof(struct tpq_index_e) );
+        index = (struct tpq_index_e *) gmalloc ( num_jpeg * sizeof(struct tpq_index_e) );
         if ( ! index )
             error ("build_index, out of mem\n");
 
@@ -194,7 +194,7 @@ build_index ( struct tpq_info *tp, int fd )
 	 */
 	num_index = (offset - TPQ_HEADER_SIZE)/4;
 
-	proto_index = (struct tpq_index_e *) malloc ( num_index * sizeof(struct tpq_index_e) );
+	proto_index = (struct tpq_index_e *) gmalloc ( num_index * sizeof(struct tpq_index_e) );
 	if ( ! proto_index )
 	    error ("Build index: too many thingies %d!\n", num_index );
 
@@ -235,7 +235,7 @@ build_index ( struct tpq_info *tp, int fd )
 	/* Now copy to a smaller index buffer, and free the big one
 	 * we have been working in
 	 */
-        index = (struct tpq_index_e *) malloc ( num_jpeg * sizeof(struct tpq_index_e) );
+        index = (struct tpq_index_e *) gmalloc ( num_jpeg * sizeof(struct tpq_index_e) );
         if ( ! index )
 	    error ("Build index: too many maplets %d!\n", num_jpeg );
 
@@ -459,7 +459,7 @@ tpq_new ( char *path )
 	if ( settings.verbose & V_TPQ )
 	    printf ( "tpq_new: %s\n", path );
 
-        tp = (struct tpq_info *) malloc ( sizeof(struct tpq_info) );
+        tp = (struct tpq_info *) gmalloc ( sizeof(struct tpq_info) );
         if ( ! tp )
             error ("tpq_new, out of mem\n");
 

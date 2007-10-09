@@ -40,6 +40,7 @@ void set_series ( enum s_type );
 
 /* from utils.c */
 void error ( char *, ... );
+void *gmalloc ( size_t );
 double dms2deg ( int, int, int );
 char * strhide ( char * );
 char * str_lower ( char * );

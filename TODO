@@ -1,6 +1,6 @@
 TODO file for Gtopo
 
-Tom Trebisky  9/18/2007
+Tom Trebisky  9/27/2007
 
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
@@ -23,7 +23,16 @@ but subsequent gtopo startups are fast thanks to the disk cache,
 but this may mostly benefit me as a developer, most people will
 just start it once and then use it for long periods.
 
+* It should be fairly straightforward to get gtopo to talk
+to Terraserver and get maps, as well as photos, stay tuned.
+
 -- fixed bugs, new features, activity log.
+
+9/27/2007 - add a settings file.
+It looks in the order:
+    /etc/gtopo/config
+    HOME/.gtopo/config
+Both are processed if found.
 
 9/18/2007 - putting version 0.9.7 up for download.
 Changed the static "box" for map center position to a tiny

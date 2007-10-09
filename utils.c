@@ -62,24 +62,37 @@ dms2deg ( int deg, int min, int sec )
 int
 split ( char *buf, char **bufp, int max )
 {
-    int i;
-    char *p;
+	int i;
+	char *p;
 
-    p = buf;
-    for ( i=0; i<max; ) {
-        while ( *p && *p == ' ' )
-            p++;
-        if ( ! *p )
-            break;
-        bufp[i++] = p;
-        while ( *p && *p != ' ' )
-            p++;
-        if ( ! *p )
-            break;
-        *p++ = '\0';
-    }
+	p = buf;
+	for ( i=0; i<max; ) {
+	    while ( *p && *p == ' ' )
+		p++;
+	    if ( ! *p )
+		break;
+	    bufp[i++] = p;
+	    while ( *p && *p != ' ' )
+		p++;
+	    if ( ! *p )
+		break;
+	    *p++ = '\0';
+	}
 
-    return i;
+	return i;
+}
+
+/* This just wraps malloc with an error check
+ */
+void *
+gmalloc ( size_t size )
+{
+	void *rv;
+
+	rv = malloc ( size );
+	if ( ! rv )
+	    error ("Out of memory: %d\n", size );
+	return rv;
 }
 
 char *
@@ -88,7 +101,7 @@ strhide ( char *data )
 	int n = strlen(data);
 	char *rv;
 
-	rv = malloc ( n + 1 );
+	rv = gmalloc ( n + 1 );
 	strcpy ( rv, data );
 	return rv;
 }
@@ -221,7 +234,7 @@ filebuf_init_size ( int fd, off_t offset, int size )
 {
 	struct filebuf *fp;
 
-	fp = malloc ( sizeof(struct filebuf) );
+	fp = gmalloc ( sizeof(struct filebuf) );
 	if ( ! fp  )
 	    return NULL;
 
@@ -374,7 +387,7 @@ filebuf_string ( void *cookie, int count )
 
 	fp = (struct filebuf *) cookie;
 
-	p = rv = malloc ( count + 1 );
+	p = rv = gmalloc ( count + 1 );
 
 	while ( count-- )
 	    *p++ = filebuf_next_byte ( fp );

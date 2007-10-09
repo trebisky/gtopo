@@ -52,7 +52,7 @@ maplet_new ( void )
 {
 	struct maplet *mp;
 
-	mp = (struct maplet *) malloc ( sizeof(struct maplet) );
+	mp = (struct maplet *) gmalloc ( sizeof(struct maplet) );
 	if ( ! mp )
 	    error ("maplet_new, out of mem\n");
 

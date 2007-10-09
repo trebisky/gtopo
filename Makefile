@@ -36,7 +36,7 @@ COPTS = -g
 CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
 
-OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o utils.o
+OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o xml.o utils.o
 
 all:	gtopo
 

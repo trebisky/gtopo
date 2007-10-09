@@ -164,7 +164,7 @@ add_file_method ( struct series *sp, char *path )
 	struct method *xp;
 	struct tpq_info *tp;
 
-	xp = (struct method *) malloc ( sizeof(struct method) );
+	xp = (struct method *) gmalloc ( sizeof(struct method) );
 	if ( ! xp )
 	    error ("file method - out of memory\n");
 
@@ -189,7 +189,7 @@ add_section_method ( struct series *sp, struct section *head )
 {
 	struct method *xp;
 
-	xp = (struct method *) malloc ( sizeof(struct method) );
+	xp = (struct method *) gmalloc ( sizeof(struct method) );
 	if ( ! xp )
 	    error ("section method - out of memory\n");
 
@@ -1111,7 +1111,7 @@ add_section ( char *disk, char *section, struct section **head )
 
 	sprintf ( section_path, "%s/%s", disk, section );
 
-	dp = (struct section_dir *) malloc ( sizeof(struct section_dir) );
+	dp = (struct section_dir *) gmalloc ( sizeof(struct section_dir) );
 	if ( ! dp )
 	    error ("Section new (dir) - out of memory\n");
 
@@ -1131,7 +1131,7 @@ add_section ( char *disk, char *section, struct section **head )
 
 	if ( ! ep ) {
 	    /* Does not yet exist on main list */
-	    ep = (struct section *) malloc ( sizeof(struct section) );
+	    ep = (struct section *) gmalloc ( sizeof(struct section) );
 	    if ( ! ep )
 		error ("Section new - out of memory\n");
 
@@ -1204,7 +1204,7 @@ dir_lookup ( char *name )
 	    }
 	}
 
-	dp = (struct dir_table *) malloc ( sizeof(struct dir_table) );
+	dp = (struct dir_table *) gmalloc ( sizeof(struct dir_table) );
 	if ( ! dp )
 	    error ("dir_lookup - out of memory\n");
 
