@@ -106,7 +106,9 @@ parse_dms ( char *line )
 	    if ( *p == ':' )
 		how_many_colons++;
 
-	if ( how_many_colons == 0 );
+	printf ( "dms: %d\n", how_many_colons );
+
+	if ( how_many_colons == 0 )
 	    return atof ( line );
 
 	d = line;
@@ -114,18 +116,19 @@ parse_dms ( char *line )
 	    if ( *p != ':' )
 		continue;
 	    *p++ = '\0';
+
 	    if ( state == 0 ) {
 		m = p;
 		state = 1;
-	    }
-	    if ( state == 1 ) {
+	    } else {
 		s = p;
-		state = 2;
 	    	break;
 	    }
 	}
 
 	rv = atof ( d );
+	printf ( "dms 1: %s %.5f\n", d, rv );
+
 	is_neg = rv < 0.0 ? 1 : 0;
 
 	if ( is_neg )
@@ -133,13 +136,18 @@ parse_dms ( char *line )
 	else
 	    rv += atof ( m ) / 60.0;
 
-	if ( how_many_colons = 1 )
+	printf ( "dms 2: %s %.5f\n", m, rv );
+
+	if ( how_many_colons == 1 )
 	    return rv;
 
 	if ( is_neg )
-	    return rv - atof ( s ) / 3600.0;
+	    rv -= atof ( s ) / 3600.0;
 	else
-	    return rv + atof ( s ) / 3600.0;
+	    rv += atof ( s ) / 3600.0;
+
+	printf ( "dms 3: %s %.5f\n", s, rv );
+	return rv;
 }
 
 /* We allow one word per line thingies .. maybe */
