@@ -884,6 +884,14 @@ main ( int argc, char **argv )
 	    	settings.center_marker = 0;
 	    if ( strcmp ( p, "-m" ) == 0 )
 	    	settings.show_maplets = 1;
+	    if ( strcmp ( p, "-h" ) == 0 ) {
+	    	http_test ();
+		return 0;
+	    }
+	    if ( strcmp ( p, "-x" ) == 0 ) {
+	    	xml_test ();
+		return 0;
+	    }
 	    if ( strcmp ( p, "-f" ) == 0 ) {
 		/* show a single tpq file */
 		if ( argc < 1 )
