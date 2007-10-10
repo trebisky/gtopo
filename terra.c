@@ -56,19 +56,21 @@ terra_test ( void )
 	xml_attr ( xp, "xmlns:xsd", "http://www.w3.org/1999/XMLSchema/" );
 
 	t = xml_tag ( xp, "SOAP-ENV:Body" );
-	t = xml_tag ( t, "ns1:ConvertLatPtToUtmPt" );
+	t = xml_tag ( t, "ns1:ConvertLonLatPtToUtmPt" );
 	xml_attr ( t, "xmlns:ns1", "http://terraserver-usa.com/terraserver/" );
 	xml_attr ( t, "SOAP-ENC:root", "1" );
 	t = xml_tag ( t, "ns1:point" );
 
 	x = xml_tag_stuff ( t, "ns1:Lon", "-93.0" );
-	xml_attr ( x, "type", "xsd:double" );
+	xml_attr ( x, "xsi:type", "xsd:double" );
 	x = xml_tag_stuff ( t, "ns1:Lat", "43.0" );
-	xml_attr ( x, "type", "xsd:double" );
+	xml_attr ( x, "xsi:type", "xsd:double" );
 
 	n = xml_collect ( terra_buf, MAX_TERRA_MSG, xp );
+	write ( 1, terra_buf, n );
 
 	http_soap ( server_name, server_port, server_target, action, terra_buf, n );
+	printf ( "\n" );
 }
 
 /* THE END */

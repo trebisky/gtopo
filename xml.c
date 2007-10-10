@@ -86,6 +86,7 @@ xml_tag_next ( struct xml *cp, char *name )
 
 	xp = new_tag ( name );
 
+	/* maintain order */
 	while ( cp->next )
 	    cp = cp->next;
 	cp->next = xp;
@@ -94,11 +95,11 @@ xml_tag_next ( struct xml *cp, char *name )
 }
 
 /* Add an attribute to a tag node */
-/* XXX - does not preserve order, does it matter ?? */
 void
 xml_attr ( struct xml *cp, char *name, char *value )
 {
 	struct xml *xp;
+	struct xml *yp;
 
 	xp = gmalloc ( sizeof(struct xml) );
 	xp->type = XT_ATTR;
@@ -106,9 +107,17 @@ xml_attr ( struct xml *cp, char *name, char *value )
 	xp->value = strhide ( value );
 	xp->attrib = NULL;
 	xp->children = NULL;
+	xp->next = NULL;
 
-	xp->next = cp->attrib;
-	cp->attrib = xp;
+	/* maintain order */
+	if ( cp->attrib ) {
+	    yp = cp->attrib;
+	    while ( yp->next )
+	    	yp = yp->next;
+	    yp->next = xp;
+	} else {
+	    cp->attrib = xp;
+	}
 }
 
 /* Not usually directly called, if ever */
