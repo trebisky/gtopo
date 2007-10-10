@@ -32,19 +32,7 @@
 
 #include "gtopo.h"
 #include "protos.h"
-
-enum xml_type { XT_TAG, XT_ATTR };
-
-/* We represent an XML object as a tree of these nodes.
- */
-struct xml {
-	struct xml *next;
-	struct xml *children;
-	enum xml_type type;
-	char *name;
-	char *value;
-	struct xml *attrib;
-};
+#include "xml.h"
 
 static char *xml_init = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
@@ -152,10 +140,6 @@ xml_start ( char *name )
 	return xp;
 }
 
-/* XXX - heaven help us if we overrun this */
-#define XML_BUF_SIZE	4096
-static char xml_buf[XML_BUF_SIZE];
-
 /* internal, for recursion */
 static char *
 xml_emit_list ( char *ap, struct xml *cp, int first )
@@ -186,14 +170,32 @@ xml_emit_list ( char *ap, struct xml *cp, int first )
 	return ap;
 }
 
-void
-xml_emit ( struct xml *cp )
+int
+xml_collect ( char *buf, int limit, struct xml *xp )
 {
 	char *ep;
+	int rv;
 
-	ep = xml_emit_list ( xml_buf, cp, 1 );
-	write ( 1, xml_buf, ep-xml_buf );
-	printf ( "%d written\n", ep-xml_buf );
+	ep = xml_emit_list ( buf, xp, 1 );
+	rv = ep - buf;
+
+	if ( rv > limit )
+	    error ("xml_collect: overrun %d --> %d", limit, rv );
+
+	return rv;
+}
+
+/* XXX - heaven help us if we overrun this */
+#define XML_BUF_SIZE	4096
+static char xml_buf[XML_BUF_SIZE];
+
+void
+xml_emit ( struct xml *xp )
+{
+	int n;
+
+	n = xml_collect ( xml_buf, XML_BUF_SIZE, xp );
+	write ( 1, xml_buf, n );
 }
 
 void
@@ -223,7 +225,5 @@ xml_test ( void )
 
 	xml_emit ( xp );
 }
-
-
 
 /* THE END */

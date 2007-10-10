@@ -888,6 +888,10 @@ main ( int argc, char **argv )
 	    	http_test ();
 		return 0;
 	    }
+	    if ( strcmp ( p, "-t" ) == 0 ) {
+	    	terra_test ();
+		return 0;
+	    }
 	    if ( strcmp ( p, "-x" ) == 0 ) {
 	    	xml_test ();
 		return 0;
