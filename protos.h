@@ -57,4 +57,7 @@ int filebuf_i2_off ( int, off_t );
 char * filebuf_string ( void *, int );
 double filebuf_double ( void * );
 
+/* from http.c */
+char * http_soap ( char *, int, char *, char *, char *, int, int * );
+
 /* THE END */

@@ -32,8 +32,8 @@
 #include "protos.h"
 #include "xml.h"
 
-#define MAX_TERRA_MSG	4096
-static char terra_buf[MAX_TERRA_MSG];
+#define MAX_TERRA_REQ	4096
+static char terra_request[MAX_TERRA_REQ];
 
 static char *server_name = "terraserver-usa.com";
 static char *server_target = "/terraservice.asmx";
@@ -47,6 +47,9 @@ terra_test ( void )
 	struct xml *x;
 	char *action = "http://terraserver-usa.com/terraserver/ConvertLonLatPtToUtmPt";
 	int n;
+	int nr;
+	char *reply;
+	struct xml *rp;
 
 	xp = xml_start ( "SOAP-ENV:Envelope" );
 	xml_attr ( xp, "SOAP-ENV:encodingStyle", "http://schemas.xmlsoap.org/soap/encoding/" );
@@ -66,11 +69,16 @@ terra_test ( void )
 	x = xml_tag_stuff ( t, "ns1:Lat", "43.0" );
 	xml_attr ( x, "xsi:type", "xsd:double" );
 
-	n = xml_collect ( terra_buf, MAX_TERRA_MSG, xp );
-	write ( 1, terra_buf, n );
+	n = xml_collect ( terra_request, MAX_TERRA_REQ, xp );
 
-	http_soap ( server_name, server_port, server_target, action, terra_buf, n );
-	printf ( "\n" );
+	write ( 1, terra_request, n );
+
+	reply = http_soap ( server_name, server_port, server_target, action, terra_request, n, &nr );
+
+	write ( 1, reply, nr );
+
+	rp = xml_parse_doc ( reply, nr );
+	free ( reply );
 }
 
 /* THE END */

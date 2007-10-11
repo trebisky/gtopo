@@ -1,9 +1,12 @@
 TODO file for Gtopo
 
-Tom Trebisky  9/27/2007
+Tom Trebisky  10/10/2007
 
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
+
+Current work is focused on allowing gtopo to get maplets
+via the public SOAP interface to Terraserver.
 
 -- Currently known and not yet fixed bugs:
 
@@ -27,6 +30,9 @@ just start it once and then use it for long periods.
 to Terraserver and get maps, as well as photos, stay tuned.
 
 -- fixed bugs, new features, activity log.
+
+10/7/2007 - allow d:m:s notation as well as fractional
+angles for lat and long read from the settings file.
 
 9/27/2007 - add a settings file.
 It looks in the order:

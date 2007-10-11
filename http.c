@@ -508,11 +508,12 @@ http_get ( char *server, int port, char *document )
 	    dumpit ( p, npay );
 }
 
-int
-http_soap ( char *server, int port, char *target, char *action, char *buf, int nbuf )
+char *
+http_soap ( char *server, int port, char *target, char *action,
+	char *req, int nreq, int *nreply )
 {
     	int sock;
-	char *p;
+	char *rv;
 	int npay;
 
 	sock = net_client ( server, port );
@@ -521,11 +522,11 @@ http_soap ( char *server, int port, char *target, char *action, char *buf, int n
 	net_printf_crlf ( sock, "Host: %s", server );
 	net_printf_crlf ( sock, "User-agent: gTopo" );
 	net_printf_crlf ( sock, "Content-type: text/xml; charset=\"UTF-8\"" );
-	net_printf_crlf ( sock, "Content-length: %d", nbuf );
+	net_printf_crlf ( sock, "Content-length: %d", nreq );
 	net_printf_crlf ( sock, "SOAPAction: \"%s\"", action );
 	net_printf_crlf ( sock, "" );
 
-	net_write ( sock, buf, nbuf );
+	net_write ( sock, req, nreq );
 
 	if ( ! net_buf_init ( sock ) ) {
 	    printf ( "Trouble!\n" );
@@ -536,12 +537,11 @@ http_soap ( char *server, int port, char *target, char *action, char *buf, int n
 
 	show_headers ();
 
-	npay = get_http_payload_size ();
-	p = get_http_payload ();
+	*nreply = get_http_payload_size ();
+	rv = get_http_payload ();
 	close ( sock );
 
-	if ( p )
-	    dumpit ( p, npay );
+	return rv;
 }
 
 /*

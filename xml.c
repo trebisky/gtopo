@@ -34,6 +34,10 @@
 #include "protos.h"
 #include "xml.h"
 
+/* --------------------------------------------------------------------- */
+/* stuff to build xml datastructure follows */
+/* --------------------------------------------------------------------- */
+
 static char *xml_init = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
 static struct xml *
@@ -206,6 +210,48 @@ xml_emit ( struct xml *xp )
 	n = xml_collect ( xml_buf, XML_BUF_SIZE, xp );
 	write ( 1, xml_buf, n );
 }
+
+/* --------------------------------------------------------------------- */
+/* stuff to parse xml follows */
+/* --------------------------------------------------------------------- */
+
+static char *
+skip_to ( char *p, char *ep, int what )
+{
+	for ( ; p < ep; p++ ) {
+	    if ( *p == what )
+	    	return p;
+	}
+	return NULL;
+}
+
+static char *
+skip_white ( char *p, char *ep )
+{
+	for ( ; p < ep; p++ ) {
+	    if ( *p != ' ' )
+	    	return p;
+	}
+	return NULL;
+}
+
+struct xml *
+xml_parse_doc ( char *buf, int nbuf )
+{
+	char *p;
+	char *end = &buf[nbuf];
+
+	p = skip_to ( buf, end, '<' );
+	if ( !p )
+	    error ("xml_parse_doc: bogus xml (1)" );
+
+	p = skip_to ( p+1, end, '>' );
+	p = skip_white ( p+1, end );
+	if ( !p )
+	    error ("xml_parse_doc: bogus xml (1)" );
+}
+
+/* --------------------------------------------------------------------- */
 
 void
 xml_test ( void )

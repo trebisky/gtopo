@@ -37,4 +37,6 @@ struct xml * xml_tag_stuff ( struct xml *, char *, char * );
 void xml_attr ( struct xml *, char *, char * );
 int xml_collect ( char *, int, struct xml * );
 
+struct xml * xml_parse_doc ( char *, int );
+
 /* THE END */
