@@ -43,6 +43,7 @@ void error ( char *, ... );
 void *gmalloc ( size_t );
 double dms2deg ( int, int, int );
 char * strhide ( char * );
+char * strnhide ( char *, int );
 char * str_lower ( char * );
 int strcmp_l ( char *, char * );
 int is_directory ( char *path );

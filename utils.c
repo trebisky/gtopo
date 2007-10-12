@@ -96,6 +96,18 @@ gmalloc ( size_t size )
 }
 
 char *
+strnhide ( char *data, int n )
+{
+	char *rv;
+
+	rv = gmalloc ( n + 1 );
+	memcpy ( rv, data, n );
+	rv[n] = '\0';
+	return rv;
+}
+
+
+char *
 strhide ( char *data )
 {
 	int n = strlen(data);

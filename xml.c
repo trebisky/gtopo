@@ -41,19 +41,32 @@
 static char *xml_init = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
 static struct xml *
-new_tag ( char *name )
+new_tag ( void )
 {
 	struct xml *xp;
 
 	xp = gmalloc ( sizeof(struct xml) );
 	xp->type = XT_TAG;
-	xp->name = strhide ( name );
 	xp->value = NULL;
 	xp->attrib = NULL;
 	xp->children = NULL;
 	xp->next = NULL;
 
 	return xp;
+}
+
+static void
+end_link ( struct xml **pp, struct xml *xp )
+{
+	struct xml *yp;
+
+	if ( *pp ) {
+	    yp = *pp;
+	    while ( yp->next )
+	    	yp = yp->next;
+	    yp->next = xp;
+	} else
+	    *pp = xp;
 }
 
 /* Add a tag to a document,
@@ -64,21 +77,31 @@ struct xml *
 xml_tag ( struct xml *cp, char *name )
 {
 	struct xml *xp;
-	struct xml *yp;
 
-	xp = new_tag ( name );
+	xp = new_tag ();
+	xp->name = strhide ( name );
 
-	if ( cp->children ) {
-	    yp = cp->children;
-	    while ( yp->next )
-	    	yp = yp->next;
-	    yp->next = xp;
-	} else
-	    cp->children = xp;
+	if ( cp )
+	    end_link ( &cp->children, xp );
 
 	return xp;
 }
 
+static struct xml *
+xml_tag_n ( struct xml *cp, char *name, int nname )
+{
+	struct xml *xp;
+
+	xp = new_tag ();
+	xp->name = strnhide ( name, nname );
+
+	if ( cp )
+	    end_link ( &cp->children, xp );
+
+	return xp;
+}
+
+#ifdef notdef
 /* Like the above, but add this as a "sibling"
  * to the first argument.
  * (will this ever be useful?)
@@ -88,7 +111,8 @@ xml_tag_next ( struct xml *cp, char *name )
 {
 	struct xml *xp;
 
-	xp = new_tag ( name );
+	xp = new_tag ();
+	xp->name = strhide ( name );
 
 	/* maintain order */
 	while ( cp->next )
@@ -97,6 +121,7 @@ xml_tag_next ( struct xml *cp, char *name )
 
 	return xp;
 }
+#endif
 
 /* Add an attribute to a tag node */
 void
@@ -114,14 +139,7 @@ xml_attr ( struct xml *cp, char *name, char *value )
 	xp->next = NULL;
 
 	/* maintain order */
-	if ( cp->attrib ) {
-	    yp = cp->attrib;
-	    while ( yp->next )
-	    	yp = yp->next;
-	    yp->next = xp;
-	} else {
-	    cp->attrib = xp;
-	}
+	end_link ( &cp->attrib, xp );
 }
 
 /* Not usually directly called, if ever */
@@ -129,6 +147,12 @@ void
 xml_stuff ( struct xml *xp, char *stuff )
 {
 	xp->value = strhide ( stuff );
+}
+
+static void
+xml_stuff_n ( struct xml *xp, char *stuff, int nstuff )
+{
+	xp->value = strnhide ( stuff, nstuff );
 }
 
 /* Use this for <name>stuff</name> */
@@ -146,11 +170,7 @@ xml_tag_stuff ( struct xml *cp, char *name, char *stuff )
 struct xml *
 xml_start ( char *name )
 {
-	struct xml *xp;
-
-	xp = new_tag ( name );
-
-	return xp;
+	return xml_tag ( NULL, name );
 }
 
 /* internal, for recursion */
@@ -235,20 +255,81 @@ skip_white ( char *p, char *ep )
 	return NULL;
 }
 
+static char *
+skip_tag ( char *p, char *ep )
+{
+	for ( ; p < ep; p++ ) {
+	    if ( *p == ' ' || *p == '>' )
+	    	return p;
+	}
+	return NULL;
+}
+
+/* recursive tag parser */
+static char *
+xml_parse_tag_list ( struct xml **rxp, struct xml *xp, char *buf, char *ebuf )
+{
+	struct xml *fp = NULL;
+	struct xml *np, *cp;
+	char *p, *ep, *lp;
+
+	p = buf;
+
+	while ( p < ebuf ) {
+
+	    if ( *p != '<' )
+	    	error ( "whoa dude; xml parse hosed: %s", p );
+	    if ( p[1] == '/' )
+	    	break;
+
+	    ep = skip_tag ( p, ebuf );
+	    np = xml_tag_n ( xp, p, ep-p );
+
+	    /* skip attributes (for now) */
+	    ep = skip_to ( ep, ebuf, '>' );
+	    ep++;
+
+	    if ( *ep != '<' ) {
+		lp = skip_to ( ep, ebuf, '<' );
+		xml_stuff_n ( np, ep, lp-ep );
+		ep = lp;
+	    }
+
+	    if ( ep[1] == '/' ) {
+		lp = skip_tag ( ep+1, ebuf );
+		/* could check for match against name in np */
+		p = lp + 1;
+		continue;
+	    }
+	    p = xml_parse_tag_list ( &cp, np, ep, ebuf );
+	}
+
+	*rxp = fp;
+	return p;
+}
+
 struct xml *
 xml_parse_doc ( char *buf, int nbuf )
 {
-	char *p;
+	char *p, *ep;
 	char *end = &buf[nbuf];
+	struct xml *rv;
 
 	p = skip_to ( buf, end, '<' );
 	if ( !p )
 	    error ("xml_parse_doc: bogus xml (1)" );
 
 	p = skip_to ( p+1, end, '>' );
-	p = skip_white ( p+1, end );
+	p = skip_to ( p+1, end, '<' );
 	if ( !p )
 	    error ("xml_parse_doc: bogus xml (1)" );
+
+	ep = xml_parse_tag_list ( &rv, NULL, p, end );
+	if ( ep == end )
+	    printf ( "Xml document parse OK\n" );
+	else
+	    printf ( "Xml document parse fails: %d - %d %s\n", end, ep, ep );
+	return rv;
 }
 
 /* --------------------------------------------------------------------- */
