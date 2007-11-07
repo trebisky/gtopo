@@ -39,6 +39,15 @@ static char *server_name = "terraserver-usa.com";
 static char *server_target = "/terraservice.asmx";
 static int server_port = 80;
 
+/* The test latitude and longitude is the same used by PyTerra in its test suite,
+ * since I have "wireshark" captures of its test suite in action.
+ * Long = -93.0
+ * Lat  =  43.0
+ * 7 km SW of Rockford, Iowa, United States (nearest place).
+ * UTM is Zone 15, X = 500000, Y = 4760814.7962907264
+ * (my capture for ConvertLonLatPtToUtmPt is ethpy.4)
+ */
+
 void
 terra_test ( void )
 {
@@ -71,11 +80,17 @@ terra_test ( void )
 
 	n = xml_collect ( terra_request, MAX_TERRA_REQ, xp );
 
+	printf ( "  REQUEST:\n" );
 	write ( 1, terra_request, n );
 
 	reply = http_soap ( server_name, server_port, server_target, action, terra_request, n, &nr );
 
+	printf ( "\n" );
+	printf ( "  REPLY:\n" );
 	write ( 1, reply, nr );
+
+	printf ( "\n" );
+	printf ( "  RESULT:\n" );
 
 	rp = xml_parse_doc ( reply, nr );
 	free ( reply );

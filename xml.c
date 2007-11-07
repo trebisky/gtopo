@@ -35,10 +35,20 @@
 #include "xml.h"
 
 /* --------------------------------------------------------------------- */
-/* stuff to build xml datastructure follows */
+/* code to build an xml tree follows */
 /* --------------------------------------------------------------------- */
 
 static char *xml_init = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+
+static void
+init_tag ( struct xml *xp )
+{
+	xp->type = XT_TAG;
+	xp->value = NULL;
+	xp->attrib = NULL;
+	xp->children = NULL;
+	xp->next = NULL;
+}
 
 static struct xml *
 new_tag ( void )
@@ -46,11 +56,7 @@ new_tag ( void )
 	struct xml *xp;
 
 	xp = gmalloc ( sizeof(struct xml) );
-	xp->type = XT_TAG;
-	xp->value = NULL;
-	xp->attrib = NULL;
-	xp->children = NULL;
-	xp->next = NULL;
+	init_tag ( xp );
 
 	return xp;
 }
@@ -70,33 +76,34 @@ end_link ( struct xml **pp, struct xml *xp )
 }
 
 /* Add a tag to a document,
- * this becomes a child of the first
- * argument.  We keep the children in order.
+ * this becomes a child of the first argument.
+ * (the first argument is the parent).
+ * We keep the children in order.
  */
 struct xml *
-xml_tag ( struct xml *cp, char *name )
+xml_tag ( struct xml *pp, char *name )
 {
 	struct xml *xp;
 
 	xp = new_tag ();
 	xp->name = strhide ( name );
 
-	if ( cp )
-	    end_link ( &cp->children, xp );
+	if ( pp )
+	    end_link ( &pp->children, xp );
 
 	return xp;
 }
 
 static struct xml *
-xml_tag_n ( struct xml *cp, char *name, int nname )
+xml_tag_n ( struct xml *pp, char *name, int nname )
 {
 	struct xml *xp;
 
 	xp = new_tag ();
 	xp->name = strnhide ( name, nname );
 
-	if ( cp )
-	    end_link ( &cp->children, xp );
+	if ( pp )
+	    end_link ( &pp->children, xp );
 
 	return xp;
 }
@@ -143,12 +150,14 @@ xml_attr ( struct xml *cp, char *name, char *value )
 }
 
 /* Not usually directly called, if ever */
+/* XXX - stuff is really CDATA */
 void
 xml_stuff ( struct xml *xp, char *stuff )
 {
 	xp->value = strhide ( stuff );
 }
 
+/* XXX - stuff is really CDATA */
 static void
 xml_stuff_n ( struct xml *xp, char *stuff, int nstuff )
 {
@@ -156,6 +165,7 @@ xml_stuff_n ( struct xml *xp, char *stuff, int nstuff )
 }
 
 /* Use this for <name>stuff</name> */
+/* XXX - stuff is really CDATA */
 struct xml *
 xml_tag_stuff ( struct xml *cp, char *name, char *stuff )
 {
@@ -232,7 +242,7 @@ xml_emit ( struct xml *xp )
 }
 
 /* --------------------------------------------------------------------- */
-/* stuff to parse xml follows */
+/* code to parse xml follows */
 /* --------------------------------------------------------------------- */
 
 static char *
@@ -265,46 +275,67 @@ skip_tag ( char *p, char *ep )
 	return NULL;
 }
 
-/* recursive tag parser */
+/* recursive tag parser
+ *
+ * returns - first character not parsed.
+ * arguments:
+ * 	xp - parent for whatever this generates.
+ * 	buf - first character of text to parse
+ * 	ebuf - first character beyond end of text
+ */
 static char *
-xml_parse_tag_list ( struct xml **rxp, struct xml *xp, char *buf, char *ebuf )
+xml_parse_tag_list ( struct xml *xp, char *buf, char *ebuf )
 {
-	struct xml *fp = NULL;
-	struct xml *np, *cp;
-	char *p, *ep, *lp;
+	struct xml *np;
+	char *p, *ep;
+	int in_tag = 0;
 
 	p = buf;
+	printf ( "Start parse:%s\n", p );
 
 	while ( p < ebuf ) {
 
 	    if ( *p != '<' )
-	    	error ( "whoa dude; xml parse hosed: %s", p );
-	    if ( p[1] == '/' )
-	    	break;
+	    	error ( "oops; xml parse hosed:%s", p );
 
-	    ep = skip_tag ( p, ebuf );
-	    np = xml_tag_n ( xp, p, ep-p );
-
-	    /* skip attributes (for now) */
-	    ep = skip_to ( ep, ebuf, '>' );
-	    ep++;
-
-	    if ( *ep != '<' ) {
-		lp = skip_to ( ep, ebuf, '<' );
-		xml_stuff_n ( np, ep, lp-ep );
-		ep = lp;
-	    }
-
-	    if ( ep[1] == '/' ) {
-		lp = skip_tag ( ep+1, ebuf );
+	    /* end tag */
+	    if ( p[1] == '/' ) {
+		if ( in_tag == 0 )
+		    break;
+		in_tag--;
+		ep = skip_tag ( p+2, ebuf );
 		/* could check for match against name in np */
-		p = lp + 1;
+		p = ep + 1;
 		continue;
 	    }
-	    p = xml_parse_tag_list ( &cp, np, ep, ebuf );
+
+	    if ( in_tag ) {
+		p = xml_parse_tag_list ( np, p, ebuf );
+		continue;
+	    }
+
+	    /* start tag */
+	    p++;
+	    in_tag++;
+	    ep = skip_tag ( p, ebuf );
+	    np = xml_tag_n ( xp, p, ep-p );
+	    printf ( "New tag: %s\n", np->name );
+
+	    /* skip attributes (for now) */
+	    p = 1 + skip_to ( ep, ebuf, '>' );
+	    printf ( "after attrib:%s\n", p );
+
+	    /* stuff (cdata) */
+	    /* XXX - can be any number of these */
+	    if ( *p != '<' ) {
+		ep = skip_to ( p, ebuf, '<' );
+		xml_stuff_n ( np, p, ep-p );
+		printf ( "Cdata: %s\n", np->value );
+		p = ep;
+	    }
 	}
 
-	*rxp = fp;
+	printf ( "End parse:%s\n", p );
 	return p;
 }
 
@@ -313,7 +344,7 @@ xml_parse_doc ( char *buf, int nbuf )
 {
 	char *p, *ep;
 	char *end = &buf[nbuf];
-	struct xml *rv;
+	struct xml base;
 
 	p = skip_to ( buf, end, '<' );
 	if ( !p )
@@ -324,16 +355,19 @@ xml_parse_doc ( char *buf, int nbuf )
 	if ( !p )
 	    error ("xml_parse_doc: bogus xml (1)" );
 
-	ep = xml_parse_tag_list ( &rv, NULL, p, end );
+	init_tag ( &base );
+	ep = xml_parse_tag_list ( &base, p, end );
 	if ( ep == end )
 	    printf ( "Xml document parse OK\n" );
 	else
 	    printf ( "Xml document parse fails: %d - %d %s\n", end, ep, ep );
-	return rv;
+
+	return base.children;
 }
 
 /* --------------------------------------------------------------------- */
 
+/* Assemble an XML tree, then spew out the XML that would respresent it */
 void
 xml_test ( void )
 {

@@ -18,7 +18,7 @@
  *  Foundation, Inc., 59 Temple Street #330, Boston, MA 02111-1307, USA.
  */
 
-enum xml_type { XT_TAG, XT_ATTR };
+enum xml_type { XT_TAG, XT_ATTR, XT_CDATA };
 
 /* We represent an XML object as a tree of these nodes.
  */
