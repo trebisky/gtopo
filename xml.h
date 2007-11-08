@@ -18,7 +18,7 @@
  *  Foundation, Inc., 59 Temple Street #330, Boston, MA 02111-1307, USA.
  */
 
-enum xml_type { XT_TAG, XT_ATTR, XT_CDATA };
+enum xml_type { XT_ROOT, XT_TAG, XT_ATTR, XT_CDATA };
 
 /* We represent an XML object as a tree of these nodes.
  */
@@ -36,6 +36,8 @@ struct xml * xml_tag ( struct xml *, char * );
 struct xml * xml_tag_stuff ( struct xml *, char *, char * );
 void xml_attr ( struct xml *, char *, char * );
 int xml_collect ( char *, int, struct xml * );
+struct xml * xml_find_tag ( struct xml *, char * );
+char * xml_find_tag_value ( struct xml *, char * );
 
 struct xml * xml_parse_doc ( char *, int );
 

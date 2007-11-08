@@ -448,7 +448,9 @@ get_http_payload ( void )
 
 	npay = get_http_payload_size ();
 
+	/*
 	printf ( "Payload size: %d\n", npay );
+	*/
 
 	p = rv = malloc ( npay );
 
@@ -535,7 +537,9 @@ http_soap ( char *server, int port, char *target, char *action,
 
 	(void) read_http_headers ();
 
+	/*
 	show_headers ();
+	*/
 
 	*nreply = get_http_payload_size ();
 	rv = get_http_payload ();

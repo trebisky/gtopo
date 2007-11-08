@@ -32,12 +32,101 @@
 #include "protos.h"
 #include "xml.h"
 
+int terra_verbose = 0;
+
 #define MAX_TERRA_REQ	4096
 static char terra_request[MAX_TERRA_REQ];
 
 static char *server_name = "terraserver-usa.com";
 static char *server_target = "/terraservice.asmx";
 static int server_port = 80;
+
+struct terra_loc {
+	double lon;
+	double lat;
+	int zone;
+	double x;
+	double y;
+};
+
+int
+terra_to_utm ( struct terra_loc *tlp )
+{
+	struct xml *xp;
+	struct xml *t;
+	struct xml *x;
+	char *action = "http://terraserver-usa.com/terraserver/ConvertLonLatPtToUtmPt";
+	int n;
+	int nr;
+	char *reply;
+	struct xml *rp;
+	struct xml *xx;
+	char *val;
+	char value[64];
+
+	xp = xml_start ( "SOAP-ENV:Envelope" );
+	xml_attr ( xp, "SOAP-ENV:encodingStyle", "http://schemas.xmlsoap.org/soap/encoding/" );
+	xml_attr ( xp, "xmlns:SOAP-ENC", "http://schemas.xmlsoap.org/soap/encoding/" );
+	xml_attr ( xp, "xmlns:xsi", "http://www.w3.org/1999/XMLSchema-instance" );
+	xml_attr ( xp, "xmlns:SOAP-ENV", "http://schemas.xmlsoap.org/soap/envelope/" );
+	xml_attr ( xp, "xmlns:xsd", "http://www.w3.org/1999/XMLSchema/" );
+
+	t = xml_tag ( xp, "SOAP-ENV:Body" );
+	t = xml_tag ( t, "ns1:ConvertLonLatPtToUtmPt" );
+	xml_attr ( t, "xmlns:ns1", "http://terraserver-usa.com/terraserver/" );
+	xml_attr ( t, "SOAP-ENC:root", "1" );
+	t = xml_tag ( t, "ns1:point" );
+
+	sprintf ( value, "%.6f", tlp->lon );
+	x = xml_tag_stuff ( t, "ns1:Lon", value );
+	xml_attr ( x, "xsi:type", "xsd:double" );
+
+	sprintf ( value, "%.6f", tlp->lat );
+	x = xml_tag_stuff ( t, "ns1:Lat", value );
+	xml_attr ( x, "xsi:type", "xsd:double" );
+
+	n = xml_collect ( terra_request, MAX_TERRA_REQ, xp );
+
+	if ( terra_verbose ) {
+	    printf ( "  REQUEST:\n" );
+	    write ( 1, terra_request, n );
+	}
+
+	reply = http_soap ( server_name, server_port, server_target, action, terra_request, n, &nr );
+
+	if ( terra_verbose ) {
+	    printf ( "\n" );
+	    printf ( "  REPLY:\n" );
+	    write ( 1, reply, nr );
+
+	    printf ( "\n" );
+	    printf ( "  RESULT:\n" );
+	}
+
+	rp = xml_parse_doc ( reply, nr );
+	free ( reply );
+
+	xx = xml_find_tag ( rp, "ConvertLonLatPtToUtmPtResult" );
+	if ( ! xx )
+	    return 0;
+
+	val = xml_find_tag_value ( xx, "Zone" );
+	if ( ! val )
+	    return 0;
+	sscanf ( val, "%d", &tlp->zone );
+
+	val = xml_find_tag_value ( xx, "X" );
+	if ( ! val )
+	    return 0;
+	sscanf ( val, "%lf", &tlp->x );
+
+	val = xml_find_tag_value ( xx, "Y" );
+	if ( ! val )
+	    return 0;
+	sscanf ( val, "%lf", &tlp->y );
+
+	return 1;
+}
 
 /* The test latitude and longitude is the same used by PyTerra in its test suite,
  * since I have "wireshark" captures of its test suite in action.
@@ -51,6 +140,26 @@ static int server_port = 80;
 void
 terra_test ( void )
 {
+	struct terra_loc loc;
+	int rv;
+
+	loc.lon = -93.0;
+	loc.lat = 43.0;
+
+	rv = terra_to_utm ( &loc );
+
+	if ( ! rv ) {
+	    printf ( "Fails!\n" );
+	    return;
+	}
+	printf ( "Zone: %d\n", loc.zone );
+	printf ( " X: %.5f\n", loc.x );
+	printf ( " Y: %.5f\n", loc.y );
+}
+
+void
+terra_test_B ( void )
+{
 	struct xml *xp;
 	struct xml *t;
 	struct xml *x;
@@ -59,6 +168,8 @@ terra_test ( void )
 	int nr;
 	char *reply;
 	struct xml *rp;
+	struct xml *xx;
+	char *val;
 
 	xp = xml_start ( "SOAP-ENV:Envelope" );
 	xml_attr ( xp, "SOAP-ENV:encodingStyle", "http://schemas.xmlsoap.org/soap/encoding/" );
@@ -80,20 +191,39 @@ terra_test ( void )
 
 	n = xml_collect ( terra_request, MAX_TERRA_REQ, xp );
 
-	printf ( "  REQUEST:\n" );
-	write ( 1, terra_request, n );
+	if ( terra_verbose ) {
+	    printf ( "  REQUEST:\n" );
+	    write ( 1, terra_request, n );
+	}
 
 	reply = http_soap ( server_name, server_port, server_target, action, terra_request, n, &nr );
 
-	printf ( "\n" );
-	printf ( "  REPLY:\n" );
-	write ( 1, reply, nr );
+	if ( terra_verbose ) {
+	    printf ( "\n" );
+	    printf ( "  REPLY:\n" );
+	    write ( 1, reply, nr );
 
-	printf ( "\n" );
-	printf ( "  RESULT:\n" );
+	    printf ( "\n" );
+	    printf ( "  RESULT:\n" );
+	}
 
 	rp = xml_parse_doc ( reply, nr );
 	free ( reply );
+
+	xx = xml_find_tag ( rp, "ConvertLonLatPtToUtmPtResult" );
+	if ( ! xx )
+	    printf ( "Could not find it\n" );
+
+	val = xml_find_tag_value ( xx, "Zone" );
+	if ( val )
+	    printf ( "Zone: %s\n", val );
+
+	val = xml_find_tag_value ( xx, "X" );
+	if ( val )
+	    printf ( "X: %s\n", val );
+	val = xml_find_tag_value ( xx, "Y" );
+	if ( val )
+	    printf ( "Y: %s\n", val );
 }
 
 /* THE END */

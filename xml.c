@@ -41,9 +41,9 @@
 static char *xml_init = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
 static void
-init_tag ( struct xml *xp )
+init_node ( struct xml *xp, int type )
 {
-	xp->type = XT_TAG;
+	xp->type = type;
 	xp->value = NULL;
 	xp->attrib = NULL;
 	xp->children = NULL;
@@ -51,12 +51,12 @@ init_tag ( struct xml *xp )
 }
 
 static struct xml *
-new_tag ( void )
+new_node ( int type )
 {
 	struct xml *xp;
 
 	xp = gmalloc ( sizeof(struct xml) );
-	init_tag ( xp );
+	init_node ( xp, type );
 
 	return xp;
 }
@@ -85,7 +85,7 @@ xml_tag ( struct xml *pp, char *name )
 {
 	struct xml *xp;
 
-	xp = new_tag ();
+	xp = new_node ( XT_TAG );
 	xp->name = strhide ( name );
 
 	if ( pp )
@@ -99,7 +99,7 @@ xml_tag_n ( struct xml *pp, char *name, int nname )
 {
 	struct xml *xp;
 
-	xp = new_tag ();
+	xp = new_node ( XT_TAG );
 	xp->name = strnhide ( name, nname );
 
 	if ( pp )
@@ -118,7 +118,7 @@ xml_tag_next ( struct xml *cp, char *name )
 {
 	struct xml *xp;
 
-	xp = new_tag ();
+	xp = new_node ( XT_TAG );
 	xp->name = strhide ( name );
 
 	/* maintain order */
@@ -149,8 +149,44 @@ xml_attr ( struct xml *cp, char *name, char *value )
 	end_link ( &cp->attrib, xp );
 }
 
+/* This does it right */
+static struct xml *
+xml_cdata_n ( struct xml *pp, char *name, int nname )
+{
+	struct xml *xp;
+
+	xp = new_node ( XT_CDATA );
+	xp->value = strnhide ( name, nname );
+
+	if ( pp )
+	    end_link ( &pp->children, xp );
+
+	return xp;
+}
+
+static struct xml *
+xml_cdata ( struct xml *pp, char *name )
+{
+	struct xml *xp;
+
+	xp = new_node ( XT_CDATA );
+	xp->value = strhide ( name );
+
+	if ( pp )
+	    end_link ( &pp->children, xp );
+
+	return xp;
+}
+
+/* STUFF - should be called CDATA.
+ * XXX - deprecated.
+ * (see above for the right way to do this).
+ * We can have multiple CDATA mixed with tags under
+ * a xml tag as children, the above routines
+ * handle this, these do not.
+ */
+
 /* Not usually directly called, if ever */
-/* XXX - stuff is really CDATA */
 void
 xml_stuff ( struct xml *xp, char *stuff )
 {
@@ -206,6 +242,9 @@ xml_emit_list ( char *ap, struct xml *cp, int first )
 		if ( xp->children )
 		    ap = xml_emit_list ( ap, xp->children, 0 );
 	    	ap += sprintf ( ap, "</%s>\n", xp->name );
+	    } else if ( xp->type == XT_CDATA ) {
+		if ( xp->value )
+		    ap += sprintf ( ap, "%s", xp->value );
 	    } else {
 	    	error ( "xml emit: %s", xp->name );
 	    }
@@ -239,6 +278,45 @@ xml_emit ( struct xml *xp )
 
 	n = xml_collect ( xml_buf, XML_BUF_SIZE, xp );
 	write ( 1, xml_buf, n );
+}
+
+struct xml *
+xml_find_tag ( struct xml *root, char *name )
+{
+	struct xml *xp, *cp;
+
+	for ( xp = root; xp; xp = xp->next ) {
+	    if ( xp->type != XT_TAG )
+	    	continue;
+
+	    if ( strcmp ( xp->name, name ) == 0 )
+	    	return xp;
+
+	    if ( xp->children ) {
+		cp = xml_find_tag ( xp->children, name );
+		if ( cp )
+		    return cp;
+	    }
+	}
+
+	return NULL;
+}
+
+char *
+xml_find_tag_value ( struct xml *root, char *name )
+{
+	struct xml *xp;
+	struct xml *cp;
+
+	xp = xml_find_tag ( root, name );
+	if ( xp && xp->value )
+	    return xp->value;
+
+	for ( cp = xp->children; cp; cp = cp->next )
+	    if ( cp->type == XT_CDATA )
+		    return cp->value;
+
+	return NULL;
 }
 
 /* --------------------------------------------------------------------- */
@@ -282,6 +360,12 @@ skip_tag ( char *p, char *ep )
  * 	xp - parent for whatever this generates.
  * 	buf - first character of text to parse
  * 	ebuf - first character beyond end of text
+ *
+ * This is quite simplistic, here are a couple of things
+ *  it does not handle:
+ *
+ *  1) tags of the form <xxx/>
+ *  2) mixed multiple cdata and tags.
  */
 static char *
 xml_parse_tag_list ( struct xml *xp, char *buf, char *ebuf )
@@ -291,7 +375,9 @@ xml_parse_tag_list ( struct xml *xp, char *buf, char *ebuf )
 	int in_tag = 0;
 
 	p = buf;
+	/*
 	printf ( "Start parse:%s\n", p );
+	*/
 
 	while ( p < ebuf ) {
 
@@ -319,23 +405,31 @@ xml_parse_tag_list ( struct xml *xp, char *buf, char *ebuf )
 	    in_tag++;
 	    ep = skip_tag ( p, ebuf );
 	    np = xml_tag_n ( xp, p, ep-p );
+	    /*
 	    printf ( "New tag: %s\n", np->name );
+	    */
 
 	    /* skip attributes (for now) */
 	    p = 1 + skip_to ( ep, ebuf, '>' );
+	    /*
 	    printf ( "after attrib:%s\n", p );
+	    */
 
 	    /* stuff (cdata) */
 	    /* XXX - can be any number of these */
 	    if ( *p != '<' ) {
 		ep = skip_to ( p, ebuf, '<' );
 		xml_stuff_n ( np, p, ep-p );
+		/*
 		printf ( "Cdata: %s\n", np->value );
+		*/
 		p = ep;
 	    }
 	}
 
+	/*
 	printf ( "End parse:%s\n", p );
+	*/
 	return p;
 }
 
@@ -355,11 +449,9 @@ xml_parse_doc ( char *buf, int nbuf )
 	if ( !p )
 	    error ("xml_parse_doc: bogus xml (1)" );
 
-	init_tag ( &base );
+	init_node ( &base, XT_ROOT );
 	ep = xml_parse_tag_list ( &base, p, end );
-	if ( ep == end )
-	    printf ( "Xml document parse OK\n" );
-	else
+	if ( ep != end )
 	    printf ( "Xml document parse fails: %d - %d %s\n", end, ep, ep );
 
 	return base.children;
