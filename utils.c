@@ -96,10 +96,11 @@ split_n ( char *buf, char **bufp, int max, char *end )
 	char *ep;
 
 	p = buf;
-	for ( i=0; i<max; ) {
+	i = 0;
+	for ( ;; ) {
 	    while ( *p && *p == ' ' )
 		p++;
-	    if ( ! *p ) {
+	    if ( i >= max || ! *p ) {
 		ep = p;
 		break;
 	    }
@@ -110,12 +111,8 @@ split_n ( char *buf, char **bufp, int max, char *end )
 		ep = p;
 		break;
 	    }
-	    ep = p;
 	    *p++ = '\0';
 	}
-
-	while ( *p && *p == ' ' )
-	    p++;
 
 	bufp[i] = ep;
 	if ( *ep )
