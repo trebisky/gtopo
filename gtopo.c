@@ -870,6 +870,7 @@ main ( int argc, char **argv )
 	argv++;
 
 	settings_init ();
+	places_init ();
 
 	info.series_info = series_info_buf;
 	info.center_only = 0;

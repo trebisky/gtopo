@@ -23,10 +23,8 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-/*
-#include <fcntl.h>
-*/
 #include <string.h>
+#include <pwd.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -78,6 +76,50 @@ split ( char *buf, char **bufp, int max )
 		break;
 	    *p++ = '\0';
 	}
+
+	return i;
+}
+
+/* split part of a string in place.
+ * tosses nulls into string, trashing it.
+ * The idea is to pull words off the front of
+ * the string, and return the remainder as the
+ * "last word", so a call with max=2 would pull
+ * off 2 words and return the remnant as a third
+ * word (so the bufp array needs max+1 entries).
+ */
+int
+split_n ( char *buf, char **bufp, int max, char *end )
+{
+	int i;
+	char *p;
+	char *ep;
+
+	p = buf;
+	for ( i=0; i<max; ) {
+	    while ( *p && *p == ' ' )
+		p++;
+	    if ( ! *p ) {
+		ep = p;
+		break;
+	    }
+	    bufp[i++] = p;
+	    while ( *p && *p != ' ' )
+		p++;
+	    if ( ! *p ) {
+		ep = p;
+		break;
+	    }
+	    ep = p;
+	    *p++ = '\0';
+	}
+
+	while ( *p && *p == ' ' )
+	    p++;
+
+	bufp[i] = ep;
+	if ( *ep )
+	    i++;
 
 	return i;
 }
@@ -184,6 +226,74 @@ is_big_endian ( void )
 	if ( *(short *) tester == 1 )
 	    return 1;
 	return 0;
+}
+
+/* Grog our home directory */
+char *
+find_home ( void )
+{
+	struct passwd *pw;
+
+	pw = getpwuid ( getuid() );
+	if ( pw )
+	    return pw->pw_dir;
+
+	return getenv ( "HOME" );
+}
+
+/* Accepts just plain degrees, or
+ * d:m or d:m:s for sexigesimal
+ */
+double
+parse_dms ( char *line )
+{
+    	char *p;
+	int is_neg;
+	char *d, *m, *s;
+	int how_many_colons = 0;
+	int state = 0;
+	double rv;
+
+	for ( p=line; *p; p++ )
+	    if ( *p == ':' )
+		how_many_colons++;
+
+	if ( how_many_colons == 0 )
+	    return atof ( line );
+
+	d = line;
+	for ( p=line; *p; p++ ) {
+	    if ( *p != ':' )
+		continue;
+	    *p++ = '\0';
+
+	    if ( state == 0 ) {
+		m = p;
+		state = 1;
+	    } else {
+		s = p;
+	    	break;
+	    }
+	}
+
+	rv = atof ( d );
+
+	is_neg = rv < 0.0 ? 1 : 0;
+
+	if ( is_neg )
+	    rv -= atof ( m ) / 60.0;
+	else
+	    rv += atof ( m ) / 60.0;
+
+	if ( how_many_colons == 1 )
+	    return rv;
+
+	if ( is_neg )
+	    rv -= atof ( s ) / 3600.0;
+	else
+	    rv += atof ( s ) / 3600.0;
+
+	return rv;
 }
 
 /* This whole filebuf business was added to gtopo in late August

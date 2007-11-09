@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-#include <pwd.h>
 
 #include "gtopo.h"
 #include "protos.h"
@@ -34,18 +33,6 @@ extern struct settings settings;
 /*
 #define INITIAL_ARCHIVE "/u1/backroads"
 */
-
-char *
-find_home ( void )
-{
-	struct passwd *pw;
-
-	pw = getpwuid ( getuid() );
-	if ( pw )
-	    return pw->pw_dir;
-
-	return getenv ( "HOME" );
-}
 
 /* You could hack this file and recompile, but
  * a more sensible thing to do is place a settings
@@ -89,61 +76,6 @@ settings_default ( void )
 
 	settings.center_marker = 1;
 	settings.show_maplets = 0;
-}
-
-/* Accepts just plain degrees, or
- * d:m or d:m:s for sexigesimal
- */
-static double
-parse_dms ( char *line )
-{
-    	char *p;
-	int is_neg;
-	char *d, *m, *s;
-	int how_many_colons = 0;
-	int state = 0;
-	double rv;
-
-	for ( p=line; *p; p++ )
-	    if ( *p == ':' )
-		how_many_colons++;
-
-	if ( how_many_colons == 0 )
-	    return atof ( line );
-
-	d = line;
-	for ( p=line; *p; p++ ) {
-	    if ( *p != ':' )
-		continue;
-	    *p++ = '\0';
-
-	    if ( state == 0 ) {
-		m = p;
-		state = 1;
-	    } else {
-		s = p;
-	    	break;
-	    }
-	}
-
-	rv = atof ( d );
-
-	is_neg = rv < 0.0 ? 1 : 0;
-
-	if ( is_neg )
-	    rv -= atof ( m ) / 60.0;
-	else
-	    rv += atof ( m ) / 60.0;
-
-	if ( how_many_colons == 1 )
-	    return rv;
-
-	if ( is_neg )
-	    rv -= atof ( s ) / 3600.0;
-	else
-	    rv += atof ( s ) / 3600.0;
-
-	return rv;
 }
 
 /* We allow one word per line thingies .. maybe */

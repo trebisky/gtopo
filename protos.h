@@ -48,6 +48,8 @@ char * str_lower ( char * );
 int strcmp_l ( char *, char * );
 int is_directory ( char *path );
 int is_file ( char * );
+char * find_home ( void );
+double parse_dms ( char * );
 
 void filebuf_free ( void * );
 void * filebuf_init ( int, off_t );
