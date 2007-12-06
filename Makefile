@@ -34,12 +34,12 @@ GTKLIBS = `pkg-config --libs gtk+-2.0`
 
 OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o terra.o xml.o http.o utils.o
 
-#COPTS = -g
-#TARGET = gtopo
+COPTS = -g
+TARGET = gtopo
 
 # -m32 lets you build a 32 bit version on a 64 bit system
-COPTS = -g -m32
-TARGET = gtopo-32
+#COPTS = -g -m32
+#TARGET = gtopo-32
 
 all:	$(TARGET)
 

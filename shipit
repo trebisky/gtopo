@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SHIPVER=0.9.8
+SHIPVER=`cat VERSION`
 SHIPDIR=gtopo-${SHIPVER}
 SHIPTAR=${SHIPDIR}.tar.gz
 

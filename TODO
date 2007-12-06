@@ -1,6 +1,6 @@
 TODO file for Gtopo
 
-Tom Trebisky  10/10/2007
+Tom Trebisky  12/6/2007
 
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
@@ -30,6 +30,13 @@ just start it once and then use it for long periods.
 to Terraserver and get maps, as well as photos, stay tuned.
 
 -- fixed bugs, new features, activity log.
+
+12/5/2007 - allow a grab and move feature on the left mouse
+button, which replaces the previous "recenter on mouse location".
+For now, this recenter is gone, but I intend to move it to
+the right mouse.  Scale changes are done via page up/down,
+I may put them on the mouse via ctrl or shift, but as long
+as you are using the keyboard, why not just use the page up/down
 
 10/7/2007 - allow d:m:s notation as well as fractional
 angles for lat and long read from the settings file.

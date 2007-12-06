@@ -780,26 +780,6 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	move_xy ( event->x, event->y );
 	*/
 
-	/* It seems silly to call gdk_window_get_pointer since we get all
-	 * the same info anyway in the event structure, BUT this is not
-	 * quite true, notice the check on is_hint, This lets GDK know we
-	 * are done processing this event and are ready for another one,
-	 * and indeed without this call, we maybe get one event per second.
-	 * Note that this function returns integer (x,y), whereas the event
-	 * structure returns floating point (x,y).
-	 */
-	if ( event->is_hint ) {
-	    gdk_window_get_pointer ( event->window, &x, &y, &state );
-
-	    event->x = x;
-	    event->y = y;
-	    /*
-	    if ( x != event->x || y != event->y )
-		printf ( "Motion event2 %u %8x %d %d W(%x)\n",
-		    event->time, event->state, x, y, event->window );
-	    */
-	}
-
 	if ( event->state & GDK_BUTTON1_MASK ) {
 	    dt = event->time - vp_info.mo_time;
 	    dx = event->x - vp_info.mo_x;
@@ -815,6 +795,29 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	vp_info.mo_x = event->x;
 	vp_info.mo_y = event->y;
 	vp_info.mo_time = event->time;
+
+	/* It seems silly to call gdk_window_get_pointer since we get all
+	 * the same info anyway in the event structure, BUT this is not
+	 * quite true, notice the check on is_hint, This lets GDK know we
+	 * are done processing this event and are ready for another one,
+	 * and indeed without this call, we maybe get one event per second.
+	 * Note that this function returns integer (x,y), whereas the event
+	 * structure returns floating point (x,y).
+	 */
+	if ( event->is_hint ) {
+	    gdk_window_get_pointer ( event->window, &x, &y, &state );
+
+	    /*
+	    event->x = x;
+	    event->y = y;
+	    */
+	    /*
+	    if ( x != event->x || y != event->y )
+		printf ( "Motion event2 %u %8x %d %d W(%x)\n",
+		    event->time, event->state, x, y, event->window );
+	    */
+	}
+
 
 	return TRUE;
 }
