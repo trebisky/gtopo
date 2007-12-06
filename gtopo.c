@@ -150,6 +150,9 @@ struct viewport {
 	int vy;
 	int vxcent;
 	int vycent;
+	double mo_x;
+	double mo_y;
+	int mo_time;
 	GtkWidget *da;
 } vp_info;
 
@@ -550,6 +553,36 @@ move_xy ( int new_x, int new_y )
 }
 
 void
+shift_xy ( double dx, double dy )
+{
+	double dlat, dlong;
+	double x_pixel_scale, y_pixel_scale;
+	int i;
+
+	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
+	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
+
+	dlat  = dy * y_pixel_scale;
+	dlong = dx * x_pixel_scale;
+
+	if ( settings.verbose & V_EVENT )
+	    printf ( "Motion: delta position (lat/long) %.4f %.4f\n", dlat, dlong );
+
+	/* Make location of the mouse click be the current position */
+	if ( ! try_position ( info.long_deg - dlong, info.lat_deg + dlat ) )
+	    return;
+
+	for ( i=0; i<N_SERIES; i++ )
+	    info.series_info[i].content = 0;
+
+	/* redraw on the new center */
+	pixmap_redraw ();
+
+	/* put the new pixmap on the screen */
+	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+}
+
+void
 move_map ( int dx, int dy )
 {
 	int xpos, ypos;
@@ -719,7 +752,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	    return TRUE;
 	}
 
-	move_xy ( event->x, event->y );
+	if ( settings.m1_action == M1_CENTER )
+	    move_xy ( event->x, event->y );
 
 	return TRUE;
 }
@@ -733,15 +767,14 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 gint
 motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 {
-	int button;
 	int x, y;
 	GdkModifierType state;
+	int dt;
+	double dx, dy;
 
-	/*
 	if ( settings.verbose & V_EVENT )
-	    printf ( "Motion event %8x %.3f %.3f in (%d %d)\n",
-		event->state, event->x, event->y, vp_info.vx, vp_info.vy );
-	*/
+	    printf ( "Motion event  %u %8x %.3f %.3f in (%d %d)\n",
+		event->time, event->state, event->x, event->y, vp_info.vx, vp_info.vy );
 
 	/*
 	move_xy ( event->x, event->y );
@@ -752,9 +785,36 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	 * quite true, notice the check on is_hint, This lets GDK know we
 	 * are done processing this event and are ready for another one,
 	 * and indeed without this call, we maybe get one event per second.
+	 * Note that this function returns integer (x,y), whereas the event
+	 * structure returns floating point (x,y).
 	 */
-	if ( event->is_hint )
+	if ( event->is_hint ) {
 	    gdk_window_get_pointer ( event->window, &x, &y, &state );
+
+	    event->x = x;
+	    event->y = y;
+	    /*
+	    if ( x != event->x || y != event->y )
+		printf ( "Motion event2 %u %8x %d %d W(%x)\n",
+		    event->time, event->state, x, y, event->window );
+	    */
+	}
+
+	if ( event->state & GDK_BUTTON1_MASK ) {
+	    dt = event->time - vp_info.mo_time;
+	    dx = event->x - vp_info.mo_x;
+	    dy = event->y - vp_info.mo_y;
+
+	    /*
+	    printf ( "dtxy = %d %.3f %.3f\n", dt, dx, dy );
+	    */
+	    if ( settings.m1_action == M1_GRAB && dt < 200 )
+		shift_xy ( dx, dy );
+	}
+
+	vp_info.mo_x = event->x;
+	vp_info.mo_y = event->y;
+	vp_info.mo_time = event->time;
 
 	return TRUE;
 }
@@ -877,8 +937,12 @@ main ( int argc, char **argv )
 
 	while ( argc-- ) {
 	    p = *argv++;
-	    if ( strcmp ( p, "-v" ) == 0 )
+	    if ( strcmp ( p, "-V" ) == 0 )
 	    	settings.verbose = 0xffff;
+	    if ( strcmp ( p, "-v" ) == 0 ) {
+	    	printf ( "gtopo version 1.9.x\n" );
+		return 0;
+	    }
 	    if ( strcmp ( p, "-c" ) == 0 )
 	    	info.center_only = 1;
 	    if ( strcmp ( p, "-d" ) == 0 )
@@ -1027,6 +1091,10 @@ main ( int argc, char **argv )
 
 	vp_info.vx = settings.x_view;
 	vp_info.vy = settings.y_view;
+
+	vp_info.mo_x = 0;
+	vp_info.mo_y = 0;
+	vp_info.mo_time = -10000;
 
 	gtk_main ();
 

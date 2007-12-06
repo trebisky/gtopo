@@ -76,6 +76,8 @@ settings_default ( void )
 
 	settings.center_marker = 1;
 	settings.show_maplets = 0;
+
+	settings.m1_action = M1_GRAB;
 }
 
 /* We allow one word per line thingies .. maybe */

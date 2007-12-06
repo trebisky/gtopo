@@ -34,7 +34,9 @@
 void
 set_place ( char *lon, char *lat, char *name )
 {
+	/*
 	printf ( "set place %s %s -- %s\n", lon, lat, name );
+	*/
 }
 
 static void
@@ -59,7 +61,7 @@ load_places ( char *path )
 	    	continue;
 
 	    nw = split_n ( line, wp, 2 );
-	    printf ( "split_n: %d %s\n", nw, wp[2] );
+	    /* printf ( "split_n: %d %s\n", nw, wp[2] ); */
 
 	    if ( nw == 2 )
 	    	set_place ( wp[0], wp[1], "--" );

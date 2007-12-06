@@ -80,13 +80,12 @@ split ( char *buf, char **bufp, int max )
 	return i;
 }
 
-/* split part of a string in place.
+/* Split part of a string in place.
  * tosses nulls into string, trashing it.
- * The idea is to pull words off the front of
- * the string, and return the remainder as the
- * "last word", so a call with max=2 would pull
- * off 2 words and return the remnant as a third
- * word (so the bufp array needs max+1 entries).
+ * You ask for two words and if there are more
+ * than two you get 3 things: the two you asked
+ * for, and a third which is "everything else".
+ * This means that the bufp array needs max+1 entries.
  */
 int
 split_n ( char *buf, char **bufp, int max, char *end )

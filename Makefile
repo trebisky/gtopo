@@ -29,26 +29,28 @@
 # The following will get you gtk-2.10.12
 # -g switch gets debugging information.
 
-# -m32 lets you build a 32 bit version on a 64 bit system
-#COPTS = -g -m32
-COPTS = -g
-
 CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
 GTKLIBS = `pkg-config --libs gtk+-2.0`
 
 OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o terra.o xml.o http.o utils.o
 
-all:	gtopo
+#COPTS = -g
+#TARGET = gtopo
+
+# -m32 lets you build a 32 bit version on a 64 bit system
+COPTS = -g -m32
+TARGET = gtopo-32
+
+all:	$(TARGET)
 
 clean:
-	rm -f gtopo $(OBJS)
+	rm -f $(TARGET) $(OBJS)
 
 hinstall:
-	scp gtopo hacksaw:/mmt/bin
-	scp gtopo-32 hacksaw:/mmt/bin
+	scp $(TARGET) hacksaw:/mmt/bin
 
 install:
-	cp gtopo /home/tom/bin
+	cp $(TARGET) /home/tom/bin
 
 .c.o:	
 	cc -c -g $< $(CFLAGS)
@@ -58,12 +60,22 @@ maplet.o:	maplet.c gtopo.h
 archive.o:	archive.c gtopo.h
 tpq_io.o:	tpq_io.c gtopo.h
 
+# only works with gnu make
+.PHONY: version.o
+
+# only works with gnu make
+#version.o:      VERSION
+#	rm -f version.c
+#	mkversion -imount_version -v$(shell cat $<) >version.c
+#	$(ACC) version.c
+#	rm version.c
+
 gtopo:	$(OBJS)
 	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
 
 # same as above, different name
 gtopo-32:	$(OBJS)
-	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
+	cc -o gtopo-32 $(OBJS) $(CFLAGS) $(GTKLIBS)
 
 # initial development with 2.10.8 and 2.10.12
 # my home machine (32 bit trona) has 2.8.15
