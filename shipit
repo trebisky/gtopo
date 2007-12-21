@@ -11,6 +11,7 @@ cp Makefile ${SHIPDIR}
 cp README ${SHIPDIR}
 cp COPYING ${SHIPDIR}
 cp INSTALL ${SHIPDIR}
+cp VERSION ${SHIPDIR}
 cp ChangeLog ${SHIPDIR}
 cp TODO ${SHIPDIR}
 tar czvf ${SHIPTAR} ${SHIPDIR}
