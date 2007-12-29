@@ -140,7 +140,7 @@ struct series series_info_buf[N_SERIES];
 #ifdef INITIAL_ARCHIVE
 char *topo_archives[] = { INITIAL_ARCHIVE, NULL };
 #else
-char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", NULL };
+char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", "/topo", NULL };
 #endif
 
 GdkColormap *syscm;
