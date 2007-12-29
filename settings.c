@@ -18,6 +18,21 @@
  *  Foundation, Inc., 59 Temple Street #330, Boston, MA 02111-1307, USA.
  */
 
+/* XXX - a todo note, (remove when done)
+ *  tjt  -- 12-28-2007
+ * gtopo should allow a split archive.
+ * this will be handy on my laptop which has a small disk and
+ * space on two partitions that could be used.
+ * This is simple to do, just search all directories on the
+ * archive path that exist and add them to the datastructure.
+ * ALSO, the archive path needs to be settable in the settings
+ * file.  I recommend:
+ *
+ * clear_archive - to remove all compiled in stuff
+ * add_archive - to add a directory
+ * (the clear is optional, but it seems clean to add it).
+ */
+
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>
 
