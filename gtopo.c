@@ -140,7 +140,7 @@ struct series series_info_buf[N_SERIES];
 #ifdef INITIAL_ARCHIVE
 char *topo_archives[] = { INITIAL_ARCHIVE, NULL };
 #else
-char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", "/topo", NULL };
+char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", "/home/topo", "/topo", NULL };
 #endif
 
 GdkColormap *syscm;
@@ -740,20 +740,24 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 		event->button, event->x, event->y, vp_info.vx, vp_info.vy );
 
 	if ( event->button == 3 ) {
-	    if ( ctrl_key_pressed )
-	    	up_series ();
-	    else
-	    	down_series ();
-	    return TRUE;
+	    if ( settings.m3_action == M3_CENTER )
+		move_xy ( event->x, event->y );
+	    if ( settings.m3_action == M3_ZOOM ) {
+		if ( ctrl_key_pressed )
+		    up_series ();
+		else
+		    down_series ();
+	    }
 	}
 
 	if ( event->button == 2 ) {
 	    show_pos ();
-	    return TRUE;
 	}
 
-	if ( settings.m1_action == M1_CENTER )
-	    move_xy ( event->x, event->y );
+	if ( event->button == 1 ) {
+	    if ( settings.m1_action == M1_CENTER )
+		move_xy ( event->x, event->y );
+	}
 
 	return TRUE;
 }
@@ -820,6 +824,17 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 
 
 	return TRUE;
+}
+
+gint
+scroll_handler ( GtkWidget *wp, GdkEventScroll *event, gpointer data )
+{
+	if ( event->direction == GDK_SCROLL_UP )
+	    up_series ();
+	else if ( event->direction == GDK_SCROLL_DOWN )
+	    down_series ();
+	else
+	    printf ( "Scroll event %d\n", event->direction );
 }
 
 /* Focus events are a funky business, but there is no way to
@@ -1046,6 +1061,14 @@ main ( int argc, char **argv )
 			G_CALLBACK(motion_handler), NULL );
 	gtk_widget_add_events ( GTK_WIDGET(da), GDK_POINTER_MOTION_MASK );
 	gtk_widget_add_events ( GTK_WIDGET(da), GDK_POINTER_MOTION_HINT_MASK );
+
+	/* See if we can get scroll events (like the mouse wheel) */
+	g_signal_connect ( da, "scroll_event",
+			G_CALLBACK(scroll_handler), NULL );
+	/* Apparently not needed */
+	/*
+	gtk_widget_add_events ( GTK_WIDGET(da), GDK_SCROLL_MASK );
+	*/
 
 	/* Now, try to work the magic to get keyboard events */
 	GTK_WIDGET_SET_FLAGS ( da, GTK_CAN_FOCUS );

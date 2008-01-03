@@ -57,6 +57,7 @@ enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE };
 #define INITIAL_VERBOSITY	0
 
 enum m1_type { M1_CENTER, M1_GRAB };
+enum m3_type { M3_CENTER, M3_ZOOM };
 
 struct settings {
 	int verbose;
@@ -70,6 +71,7 @@ struct settings {
 	int center_marker;
 	int show_maplets;
 	enum m1_type m1_action;
+	enum m3_type m3_action;
 };
 
 /* Structure to hold our current position */

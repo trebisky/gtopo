@@ -93,7 +93,37 @@ settings_default ( void )
 	settings.show_maplets = 0;
 
 	settings.m1_action = M1_GRAB;
+	settings.m3_action = M1_CENTER;
 }
+
+struct wtable {
+	char *word;
+	int index;
+};
+
+static void
+gronk_word ( int *val, char *arg, struct wtable *wp )
+{
+	for ( ; wp->word; wp++ ) {
+	    if ( strcmp ( arg, wp->word ) == 0 )
+	    	*val = wp->index;
+	}
+}
+
+struct wtable m1_words[] = { "center", M1_CENTER, "grab", M1_GRAB, NULL, 0 };
+struct wtable m3_words[] = { "center", M3_CENTER, "zoom", M3_ZOOM, NULL, 0 };
+
+struct wtable series_words[] = {
+    "state", S_STATE,
+    "atlas", S_ATLAS,
+    "500k", S_500K,
+    "500K", S_500K,
+    "100k", S_100K,
+    "100K", S_100K,
+    "24k", S_24K,
+    "24K", S_24K,
+    NULL, 0 
+};
 
 /* We allow one word per line thingies .. maybe */
 static void
@@ -114,12 +144,16 @@ set_two ( char *name, char *val )
 	    settings.center_marker = atol ( val );
 	else if ( strcmp ( name, "show_maplets" ) == 0 )
 	    settings.show_maplets = atol ( val );
-	else if ( strcmp ( name, "starting_series" ) == 0 )
-	    settings.starting_series = atol ( val );
 	else if ( strcmp ( name, "starting_long" ) == 0 )
 	    settings.starting_long = parse_dms ( val );
 	else if ( strcmp ( name, "starting_lat" ) == 0 )
 	    settings.starting_lat = parse_dms ( val );
+	else if ( strcmp ( name, "starting_series" ) == 0 )
+	    gronk_word ( (int *) &settings.starting_series, val, series_words );
+	else if ( strcmp ( name, "m1_action" ) == 0 )
+	    gronk_word ( (int *) &settings.m1_action, val, m1_words );
+	else if ( strcmp ( name, "m3_action" ) == 0 )
+	    gronk_word ( (int *) &settings.m3_action, val, m3_words );
 }
 
 #define MAX_LINE	128
