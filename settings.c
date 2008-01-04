@@ -149,7 +149,7 @@ set_two ( char *name, char *val )
 	else if ( strcmp ( name, "marker_size" ) == 0 )
 	    settings.marker_size = atol ( val );
 	else if ( strcmp ( name, "show_maplets" ) == 0 )
-	    settings.show_maplets = atol ( val );
+	    gronk_word ( (int *) &settings.show_maplets, val, onoff_words );
 	else if ( strcmp ( name, "starting_long" ) == 0 )
 	    settings.starting_long = parse_dms ( val );
 	else if ( strcmp ( name, "starting_lat" ) == 0 )
