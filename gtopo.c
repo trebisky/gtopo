@@ -682,8 +682,12 @@ static int cursor_mode = 0;
 static void
 cursor_show ( int clean )
 {
+	int size;
+
 	if ( ! settings.center_marker )
 	    return;
+
+	size = settings.marker_size;
 
 	if ( clean )
 	    cursor_mode = 1;
@@ -693,12 +697,12 @@ cursor_show ( int clean )
 	if ( cursor_mode ) {
 	    gdk_draw_line ( vp_info.da->window,
 		vp_info.da->style->white_gc,
-		vp_info.vxcent, vp_info.vycent-2,
-		vp_info.vxcent, vp_info.vycent+2 );
+		vp_info.vxcent, vp_info.vycent-size,
+		vp_info.vxcent, vp_info.vycent+size );
 	    gdk_draw_line ( vp_info.da->window,
 		vp_info.da->style->white_gc,
-		vp_info.vxcent-2, vp_info.vycent,
-		vp_info.vxcent+2, vp_info.vycent );
+		vp_info.vxcent-size, vp_info.vycent,
+		vp_info.vxcent+size, vp_info.vycent );
 	    gdk_draw_line ( vp_info.da->window,
 		vp_info.da->style->black_gc,
 		vp_info.vxcent, vp_info.vycent-1,
@@ -710,12 +714,12 @@ cursor_show ( int clean )
 	} else {
 	    gdk_draw_line ( vp_info.da->window,
 		vp_info.da->style->black_gc,
-		vp_info.vxcent, vp_info.vycent-2,
-		vp_info.vxcent, vp_info.vycent+2 );
+		vp_info.vxcent, vp_info.vycent-size,
+		vp_info.vxcent, vp_info.vycent+size );
 	    gdk_draw_line ( vp_info.da->window,
 		vp_info.da->style->black_gc,
-		vp_info.vxcent-2, vp_info.vycent,
-		vp_info.vxcent+2, vp_info.vycent );
+		vp_info.vxcent-size, vp_info.vycent,
+		vp_info.vxcent+size, vp_info.vycent );
 	}
 }
 

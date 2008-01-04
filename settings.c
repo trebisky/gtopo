@@ -89,7 +89,10 @@ settings_default ( void )
 	settings.starting_long = -111.6722;
 	settings.starting_lat = 35.18;
 
+	/* Marker size is "half" the marker from center to end */
 	settings.center_marker = 1;
+	settings.marker_size = 2;
+
 	settings.show_maplets = 0;
 
 	settings.m1_action = M1_GRAB;
@@ -112,6 +115,7 @@ gronk_word ( int *val, char *arg, struct wtable *wp )
 
 struct wtable m1_words[] = { "center", M1_CENTER, "grab", M1_GRAB, NULL, 0 };
 struct wtable m3_words[] = { "center", M3_CENTER, "zoom", M3_ZOOM, NULL, 0 };
+struct wtable onoff_words[] = { "off", 0, "on", 1, NULL, 0 };
 
 struct wtable series_words[] = {
     "state", S_STATE,
@@ -141,7 +145,9 @@ set_two ( char *name, char *val )
 	else if ( strcmp ( name, "y_view" ) == 0 )
 	    settings.y_view = atol ( val );
 	else if ( strcmp ( name, "center_marker" ) == 0 )
-	    settings.center_marker = atol ( val );
+	    gronk_word ( (int *) &settings.center_marker, val, onoff_words );
+	else if ( strcmp ( name, "marker_size" ) == 0 )
+	    settings.marker_size = atol ( val );
 	else if ( strcmp ( name, "show_maplets" ) == 0 )
 	    settings.show_maplets = atol ( val );
 	else if ( strcmp ( name, "starting_long" ) == 0 )
