@@ -25,11 +25,14 @@
 #include <netdb.h>
 #include <errno.h>
 
+static int http_verbose = 0;
+
 /* someday, this will be used by gtopo to do SOAP web services
  * stuff to get maplets from Terraserver.
  */
 
-#define MAX_NET_BUF	512
+#define MAX_NET_LINE	512
+#define NET_BUF_SIZE	4096
 
 static int net_debug = 0;
 
@@ -159,7 +162,7 @@ net_write ( int sfd, char *buf, int nbuf)
 void
 net_putline_crlf ( int sfd, char *buf )
 {
-    char catbuf[MAX_NET_BUF];
+    char catbuf[MAX_NET_LINE];
     int n = strlen(buf);
 
     strcpy ( catbuf, buf );
@@ -176,7 +179,7 @@ net_putline_crlf ( int sfd, char *buf )
 void
 net_putlinen ( int sfd, char *buf )
 {
-    char catbuf[MAX_NET_BUF];
+    char catbuf[MAX_NET_LINE];
     int n = strlen(buf);
 
     strcpy ( catbuf, buf );
@@ -205,7 +208,7 @@ void
 net_printf ( int sfd, char *fmt, ... )
 {
     va_list args;
-    char msgbuf[MAX_NET_BUF];
+    char msgbuf[MAX_NET_LINE];
 
     va_start ( args, fmt );
     (void) vsprintf ( msgbuf, fmt, args ); 
@@ -217,7 +220,7 @@ void
 net_printfn ( int sfd, char *fmt, ... )
 {
     va_list args;
-    char msgbuf[MAX_NET_BUF];
+    char msgbuf[MAX_NET_LINE];
     int n;
 
     va_start ( args, fmt );
@@ -235,7 +238,7 @@ void
 net_printf_crlf ( int sfd, char *fmt, ... )
 {
     va_list args;
-    char msgbuf[MAX_NET_BUF];
+    char msgbuf[MAX_NET_LINE];
     int n;
 
     va_start ( args, fmt );
@@ -255,8 +258,6 @@ dumpit ( char *buf, int n )
 {
     write ( 1, buf, n );
 }
-
-#define NET_BUF_SIZE	4096
 
 struct net_buf {
 	char buf[NET_BUF_SIZE];
@@ -339,7 +340,7 @@ struct http_head {
 	int count;
 };
 
-struct http_head header;
+struct http_head header = { NULL, 0 };
 
 /* parse in place, pop a null into middle of data */
 void
@@ -366,10 +367,13 @@ parse_header ( struct http_header *hh )
 int
 read_http_headers ( void )
 {
-	char buf[MAX_NET_BUF];
+	char buf[MAX_NET_LINE];
 	struct http_header *hh;
 	struct http_header *hn;
 	int n;
+
+	header.lines = NULL;
+	header.count = 0;
 
 	for ( ;; ) {
 	    n = read_http_header_line ( buf );
@@ -397,13 +401,27 @@ read_http_headers ( void )
 }
 
 void
+free_http_headers ( void )
+{
+	struct http_header *hh;
+	struct http_header *h_next;
+
+	for ( hh = header.lines; hh; hh = h_next ) {
+	    h_next = hh->next;
+	    free ( (void *) hh->data );
+	    free ( (void *) hh );
+	}
+
+	header.lines = NULL;
+	header.count = 0;
+}
+
+void
 show_headers ( void )
 {
 	struct http_header *hh;
 
-	/*
 	printf ( "Got %d header lines\n", header.count );
-	*/
 
 	for ( hh = header.lines; hh; hh = hh->next )
 	    if ( hh->parsed )
@@ -448,9 +466,8 @@ get_http_payload ( void )
 
 	npay = get_http_payload_size ();
 
-	/*
-	printf ( "Payload size: %d\n", npay );
-	*/
+	if ( http_verbose )
+	    printf ( "Payload size: %d\n", npay );
 
 	p = rv = malloc ( npay );
 
@@ -474,6 +491,12 @@ get_http_payload ( void )
 	return rv;
 }
 
+void
+free_http_soap ( void *pay )
+{
+	free ( pay );
+}
+
 int
 http_get ( char *server, int port, char *document )
 {
@@ -491,6 +514,7 @@ http_get ( char *server, int port, char *document )
 	net_printf_crlf ( sock, "User-agent: gTopo" );
 	net_printf_crlf ( sock, "" );
 
+	/* XXX - use a static (non-reentrant) net_buf */
 	if ( ! net_buf_init ( sock ) ) {
 	    printf ( "Trouble!\n" );
 	    close ( sock );
@@ -498,9 +522,8 @@ http_get ( char *server, int port, char *document )
 
 	(void) read_http_headers ();
 
-	/*
-	show_headers ();
-	*/
+	if ( http_verbose )
+	    show_headers ();
 
 	npay = get_http_payload_size ();
 	p = get_http_payload ();
@@ -537,12 +560,13 @@ http_soap ( char *server, int port, char *target, char *action,
 
 	(void) read_http_headers ();
 
-	/*
-	show_headers ();
-	*/
+	if ( http_verbose )
+	    show_headers ();
 
 	*nreply = get_http_payload_size ();
 	rv = get_http_payload ();
+
+	free_http_headers ();
 	close ( sock );
 
 	return rv;

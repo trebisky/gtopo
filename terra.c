@@ -104,7 +104,7 @@ terra_to_utm ( struct terra_loc *tlp )
 	}
 
 	rp = xml_parse_doc ( reply, nr );
-	free ( reply );
+	free_http_soap ( (void *) reply );
 
 	xx = xml_find_tag ( rp, "ConvertLonLatPtToUtmPtResult" );
 	if ( ! xx )
@@ -128,23 +128,30 @@ terra_to_utm ( struct terra_loc *tlp )
 	return 1;
 }
 
-/* The test latitude and longitude is the same used by PyTerra in its test suite,
- * since I have "wireshark" captures of its test suite in action.
- * Long = -93.0
- * Lat  =  43.0
- * 7 km SW of Rockford, Iowa, United States (nearest place).
- * UTM is Zone 15, X = 500000, Y = 4760814.7962907264
- * (my capture for ConvertLonLatPtToUtmPt is ethpy.4)
- */
+int
+to_utm ( struct terra_loc *tlp )
+{
+	int zone;
+	double lon_cm;
 
-void
-terra_test ( void )
+	tlp->zone = (tlp->lon + 186.0) / 6.0;
+	lon_cm = -183.0 + tlp->zone * 6.0;
+	printf ( "Central Meridian: %.2f\n", lon_cm );
+	return 1;
+}
+
+static void
+terra_ll_test1 ( double lon, double lat )
 {
 	struct terra_loc loc;
 	int rv;
 
-	loc.lon = -93.0;
-	loc.lat = 43.0;
+	loc.lon = lon;
+	loc.lat = lat;
+
+	printf ( "---------\n" );
+	printf ( "  Long: %.2f\n", loc.lon );
+	printf ( "  Lat:  %.2f\n", loc.lat );
 
 	rv = terra_to_utm ( &loc );
 
@@ -152,9 +159,30 @@ terra_test ( void )
 	    printf ( "Fails!\n" );
 	    return;
 	}
-	printf ( "Zone: %d\n", loc.zone );
-	printf ( " X: %.5f\n", loc.x );
-	printf ( " Y: %.5f\n", loc.y );
+
+
+	printf ( " Zone: %d\n", loc.zone );
+	printf ( "  X: %.5f\n", loc.x );
+	printf ( "  Y: %.5f\n", loc.y );
+
+	(void) to_utm ( &loc );
+	printf ( "TZone: %d\n", loc.zone );
+}
+
+void
+terra_test ( void )
+{
+	/* This is used by PyTerra in it's test suite:
+	 * 7 km SW of Rockford, Iowa, United States (nearest place).
+	 * UTM is Zone 15, X = 500000, Y = 4760814.7962907264
+	 * (my capture for ConvertLonLatPtToUtmPt is ethpy.4)
+	 */
+	terra_ll_test1 ( -93.0, 43.0 );
+	terra_ll_test1 ( -93.0, 43.0 );
+
+	/* This is the CN Tower in Toronto, Canada
+	 */
+	terra_ll_test1 ( -dms2deg(79, 23, 13.7), dms2deg(43,38,33.24) );
 }
 
 void
@@ -208,7 +236,7 @@ terra_test_B ( void )
 	}
 
 	rp = xml_parse_doc ( reply, nr );
-	free ( reply );
+	free_http_soap ( reply );
 
 	xx = xml_find_tag ( rp, "ConvertLonLatPtToUtmPtResult" );
 	if ( ! xx )

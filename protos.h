@@ -41,7 +41,7 @@ void set_series ( enum s_type );
 /* from utils.c */
 void error ( char *, ... );
 void *gmalloc ( size_t );
-double dms2deg ( int, int, int );
+double dms2deg ( int, int, double );
 char * strhide ( char * );
 char * strnhide ( char *, int );
 char * str_lower ( char * );
@@ -54,7 +54,7 @@ double parse_dms ( char * );
 void filebuf_free ( void * );
 void * filebuf_init ( int, off_t );
 long filebuf_i4 ( void * );
-long filebuf_i2 ( void * );
+int filebuf_i2 ( void * );
 void filebuf_skip ( void *, int );
 int filebuf_i2_off ( int, off_t );
 char * filebuf_string ( void *, int );
@@ -62,5 +62,6 @@ double filebuf_double ( void * );
 
 /* from http.c */
 char * http_soap ( char *, int, char *, char *, char *, int, int * );
+void free_http_soap ( void * );
 
 /* THE END */

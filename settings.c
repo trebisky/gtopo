@@ -73,8 +73,8 @@ settings_default ( void )
 	settings.starting_lat = 31.69;
 
 	/* In California west of Taboose Pass */
-	settings.starting_long = -dms2deg ( 118, 31, 0 );
-	settings.starting_lat = dms2deg ( 37, 1, 0 );
+	settings.starting_long = -dms2deg ( 118, 31, 0.0 );
+	settings.starting_lat = dms2deg ( 37, 1, 0.0 );
 
 	/* Near Alturas, NE California */
 	settings.starting_long = -120.5;

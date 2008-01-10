@@ -31,6 +31,12 @@
 
 #include <stdarg.h>
 
+#include <gtk/gtk.h>
+#include <glib/gstdio.h>
+
+#include "gtopo.h"
+#include "protos.h"
+
 void
 error ( char *msg, ... )
 {
@@ -44,13 +50,13 @@ error ( char *msg, ... )
 }
 
 double
-dms2deg ( int deg, int min, int sec )
+dms2deg ( int deg, int min, double sec )
 {
 	double rv;
 
 	rv = deg;
 	rv += ((double)min/60.0);
-	rv += ((double)sec/3600.0);
+	rv += sec/3600.0;
 	return rv;
 }
 

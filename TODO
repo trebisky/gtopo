@@ -8,6 +8,24 @@ them arises, but will give you an idea where gtopo is heading.
 Current work is focused on allowing gtopo to get maplets
 via the public SOAP interface to Terraserver.
 
+-- As of Fedora Core 8 and gtk 2.xxx, a thing called "bug buddy" has
+popped up, and I have not yet learned how to tame it.  If gtopo does
+something bad (such as segfault), which does happen now and then during
+development, "bug buddy" goes crazy and throws a fit.  The intention is
+that bug buddy will automatically file bug reports once the entire known
+universe is using gtopo.  For now it is just a pain in the arse when
+I am developing, so my solution was:
+	
+	yum erase bug-buddy
+
+This certainly gets the monkey off my back, but now when you launch gtopo,
+you get a message:
+
+    Gtk-Message: Failed to load module "gnomebreakpad":
+    libgnomebreakpad.so: cannot open shared object file: No such file or directory
+
+This is harmless, but annoying, stay tuned.
+
 -- Currently known and not yet fixed bugs:
 
 * Series 2 (and maybe 1) maps have a bug (sort of cosmetic)
