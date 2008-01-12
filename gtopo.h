@@ -27,6 +27,7 @@ enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
 
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
+#define RADTODEG	(180.0/PI)
 
 /* each map series may use a different algorithm
  * or method to find maplets.  Each series has a
