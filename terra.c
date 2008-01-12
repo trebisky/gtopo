@@ -129,6 +129,13 @@ terra_to_utm ( struct terra_loc *tlp )
 	return 1;
 }
 
+/* The following lat-long to utm and inverse functions
+ * are transcriptions of the formulas in 
+ * USGS Professional Paper 1395 (1987)
+ * pages 57-64
+ * "Map Projections, A Working Manual" by John P. Snyder
+ */
+
 static double grs80_a = 6378137.0;
 static double grs80_b = 6356752.3;
 static double grs80_ee = 0.0066943800;
@@ -266,9 +273,17 @@ to_ll ( struct terra_loc *tlp )
 	r1 = grs80_a * ( 1.0 - e2) / (temp1 * temp2 );
 	d = (tlp->x - 500000.0) / (n1 * k0);
 
+	printf ( "lon_cm_rad = %.5f (%.4f)\n", lon_cm_rad, lon_cm_rad * RADTODEG );
+	printf ( "foot_lat = %.5f (%.4f)\n", foot_lat, foot_lat * RADTODEG );
+	printf ( "c1 = %.5f\n", c1 );
+	printf ( "t1 = %.5f\n", t1 );
+	printf ( "n1 = %.5f\n", n1 );
+	printf ( "r1 = %.5f\n", r1 );
+	printf ( "d = %.5f\n", d );
+
 	l_1 = 5.0 + 3.0 * t1 + 10.0 * c1 - 4.0 * c1*c1 - 9.0 * eep;
 	l_2 = 61.0 + 90.0 * t1 + 298.0 * c1 + 45.0 * t1*t1 - 252.0 * eep - 3.0 * c1*c1;
-	tlp->lat = (foot_lat - n1*tan(foot_lat) * ( d*d/2.0 - l_1*d*d*d*d/24.0 + l_2*d*d*d*d*d*d / 720.0)) * RADTODEG;
+	tlp->lat = (foot_lat - n1*tan(foot_lat)/r1 * ( d*d/2.0 - l_1*d*d*d*d/24.0 + l_2*d*d*d*d*d*d / 720.0)) * RADTODEG;
 
 	l_1 = 1.0 + 2.0 * t1 + c1;
 	l_2 = 5.0 - 2.0 * c1 + 28.0 * t1 - 3.0 * c1*c1 + 8.0 * eep + 24.0 * t1*t1;
@@ -342,14 +357,15 @@ terra_test ( void )
 	terra_ll_test1 ( -93.0, 43.0 );
 	terra_ll_test2 ( -93.0, 43.0 );
 
+	printf ( "\n\n" );
+
 	/* This is the CN Tower in Toronto, Canada
 	 * UTM is 630,084 meters east, 4,833,438 meters north in zone 17T
 	 * Terraserver gives: X = 630084.30083,  Y = 4833438.58589
 	 *
 	 */
-	/*
 	terra_ll_test1 ( -dms2deg(79, 23, 13.7), dms2deg(43,38,33.24) );
-	*/
+	terra_ll_test2 ( -dms2deg(79, 23, 13.7), dms2deg(43,38,33.24) );
 }
 
 void
