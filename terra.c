@@ -29,11 +29,15 @@
 #include <string.h>
 #include <math.h>
 
+#include <fcntl.h>
+
 #include "gtopo.h"
 #include "protos.h"
 #include "xml.h"
 
-int terra_verbose = 0;
+int terra_verbose = 1;
+
+static int from_base64 (char *, char *);
 
 #define MAX_TERRA_REQ	4096
 static char terra_request[MAX_TERRA_REQ];
@@ -49,6 +53,104 @@ struct terra_loc {
 	double x;
 	double y;
 };
+
+/* The first image this ever received was a photo.
+ * It came back as a 200x200 pixel image and used 7032 bytes
+ * in the original packet.  Stripping \n\r brought this down to
+ * 6852 bytes, and the base64 conversion made it 5138 bytes to
+ * be saved to a local file.
+ */
+int
+terra_get_tile ( struct terra_loc *tlp )
+{
+	struct xml *xp;
+	struct xml *t;
+	struct xml *x;
+	char *action = "http://terraserver-usa.com/terraserver/GetTile";
+	int n;
+	int nr;
+	char *reply;
+	struct xml *rp;
+	struct xml *xx;
+	char *val;
+	char *buf;
+	char value[64];
+	int tfd;
+
+	xp = xml_start ( "SOAP-ENV:Envelope" );
+	xml_attr ( xp, "SOAP-ENV:encodingStyle", "http://schemas.xmlsoap.org/soap/encoding/" );
+	xml_attr ( xp, "xmlns:SOAP-ENC", "http://schemas.xmlsoap.org/soap/encoding/" );
+	xml_attr ( xp, "xmlns:xsi", "http://www.w3.org/1999/XMLSchema-instance" );
+	xml_attr ( xp, "xmlns:SOAP-ENV", "http://schemas.xmlsoap.org/soap/envelope/" );
+	xml_attr ( xp, "xmlns:xsd", "http://www.w3.org/1999/XMLSchema/" );
+
+	t = xml_tag ( xp, "SOAP-ENV:Body" );
+	t = xml_tag ( t, "ns1:GetTile" );
+	xml_attr ( t, "xmlns:ns1", "http://terraserver-usa.com/terraserver/" );
+	xml_attr ( t, "SOAP-ENC:root", "1" );
+	t = xml_tag ( t, "ns1:id" );
+
+	x = xml_tag_stuff ( t, "ns1:Scale", "Scale4m" );
+	xml_attr ( x, "xsi:type", "xsd:string" );
+
+	x = xml_tag_stuff ( t, "ns1:Scene", "15" );
+	xml_attr ( x, "xsi:type", "xsd:string" );
+
+	x = xml_tag_stuff ( t, "ns1:Theme", "Photo" );
+	xml_attr ( x, "xsi:type", "xsd:string" );
+
+	/* sprintf ( value, "%d", tlp->x ); */
+	sprintf ( value, "%d", 624 );
+	x = xml_tag_stuff ( t, "ns1:X", value );
+	xml_attr ( x, "xsi:type", "xsd:string" );
+
+	/* sprintf ( value, "%d", tlp->y ); */
+	sprintf ( value, "%d", 5951 );
+	x = xml_tag_stuff ( t, "ns1:Y", value );
+	xml_attr ( x, "xsi:type", "xsd:string" );
+
+	n = xml_collect ( terra_request, MAX_TERRA_REQ, xp );
+
+	if ( terra_verbose ) {
+	    printf ( "  REQUEST:\n" );
+	    write ( 1, terra_request, n );
+	}
+
+	reply = http_soap ( server_name, server_port, server_target, action, terra_request, n, &nr );
+
+	if ( terra_verbose ) {
+	    printf ( "\n" );
+	    printf ( "  REPLY:\n" );
+	    write ( 1, reply, nr );
+	}
+
+	rp = xml_parse_doc ( reply, nr );
+	free_http_soap ( (void *) reply );
+
+	val = xml_find_tag_value ( rp, "GetTileResult" );
+	if ( ! val )
+	    return 0;
+	printf ( "pre base64 size %d\n", strlen(val) );
+
+	buf = (char *) gmalloc ( strlen(val) );
+	n = from_base64 ( buf, val );
+	printf ( "from base64 yields %d\n", n );
+
+	tfd = open ( "terra.jpg", O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+	if ( tfd < 0 ) {
+	    printf ( "Open fails for terra tile image\n");
+	    return 0;
+	}
+
+	write ( tfd, buf, n );
+	free ( buf );
+	/*
+	write ( tfd, val, strlen(val) );
+	*/
+	close ( tfd );
+
+	return 1;
+}
 
 int
 terra_to_utm ( struct terra_loc *tlp )
@@ -292,6 +394,16 @@ to_ll ( struct terra_loc *tlp )
 	return 1;
 }
 
+static void
+terra_tile_test ( void )
+{
+	struct terra_loc loc;
+
+	loc.x = 624;
+	loc.y = 5951;
+    	terra_get_tile ( &loc );
+}
+
 /* Test using Terraserver */
 static void
 terra_ll_test1 ( double lon, double lat )
@@ -349,6 +461,7 @@ terra_ll_test2 ( double lon, double lat )
 void
 terra_test ( void )
 {
+#ifdef notdef
 	/* This is used by PyTerra in it's test suite:
 	 * 7 km SW of Rockford, Iowa, United States (nearest place).
 	 * UTM is Zone 15, X = 500000, Y = 4760814.7962907264
@@ -366,6 +479,8 @@ terra_test ( void )
 	 */
 	terra_ll_test1 ( -dms2deg(79, 23, 13.7), dms2deg(43,38,33.24) );
 	terra_ll_test2 ( -dms2deg(79, 23, 13.7), dms2deg(43,38,33.24) );
+#endif
+	terra_tile_test ();
 }
 
 void
@@ -435,6 +550,133 @@ terra_test_B ( void )
 	val = xml_find_tag_value ( xx, "Y" );
 	if ( val )
 	    printf ( "Y: %s\n", val );
+}
+
+/* This nice clean and simple base64 MIME converter was taken from
+ * the mutt source code (was and is under GPL),
+ * see http://www.mutt.org and track down base64.c
+ */
+
+#ifdef notdef
+char B64Chars[64] = {
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+  'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+  'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+  't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7',
+  '8', '9', '+', '/'
+};
+#endif
+
+int Index_64[128] = {
+    -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,	/*  0 - 15 */
+    -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, /* 16 - 31 */
+    -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,62, -1,-1,-1,63,	/* 32 - 47 ; + and / */
+    52,53,54,55, 56,57,58,59, 60,61,-1,-1, -1, 0,-1,-1,	/* 48 - 63 ; 0-9 and = */
+    -1, 0, 1, 2,  3, 4, 5, 6,  7, 8, 9,10, 11,12,13,14, /* 64 - 79 ; A- */
+    15,16,17,18, 19,20,21,22, 23,24,25,-1, -1,-1,-1,-1, /* 80 - 95 ; -Z */
+    -1,26,27,28, 29,30,31,32, 33,34,35,36, 37,38,39,40, /* 96 - 111 ; a- */
+    41,42,43,44, 45,46,47,48, 49,50,51,-1, -1,-1,-1,-1	/* 112- 127 ; -z */
+};
+
+#define base64val(x)	Index_64[(int)x]
+
+static void
+ream_white ( char *buf )
+{
+    	char *p, *q;
+	int c;
+
+	p = q = buf;
+	while ( c = *p++ ) {
+	    if ( c != '\r' && c != '\n' )
+		*q++ = c;
+	}
+	*q++ = '\0';
+}
+
+/* Convert '\0'-terminated base 64 string to raw bytes.
+ * Returns length of returned buffer, or -1 on error.
+ */
+static int
+from_base64 (char *out, char *in)
+{
+  int len = 0;
+  int d1, d2, d3, d4;
+  int v1, v2, v3, v4;
+
+  printf ( "Count before white reaming: %d\n", strlen(in) );
+  ream_white ( in );
+  printf ( "Count after white reaming: %d\n", strlen(in) );
+
+  do {
+    d1 = in[0];
+    if (d1 > 127 ) {
+      printf ( "Bad base64 character: %c %d %d\n", d1, d1, 0 );
+      return -1;
+    }
+
+    v1 = base64val (d1);
+    if ( v1 == -1 ) {
+      printf ( "Bad base64 character: %c %d %d\n", d1, d1, v1 );
+      return -1;
+    }
+
+    d2 = in[1];
+    if (d2 > 127 ) {
+      printf ( "Bad base64 character: %c %d %d\n", d2, d2, 0 );
+      return -1;
+    }
+
+    v2 = base64val (d2);
+    if ( v2 == -1 ) {
+      printf ( "Bad base64 character: %c %d %d\n", d2, d2, v2 );
+      return -1;
+    }
+
+    d3 = in[2];
+    if (d3 > 127 ) {
+      printf ( "Bad base64 character: %c %d %d\n", d3, d3, 0 );
+      return -1;
+    }
+
+    v3 = base64val (d3);
+    if ( v3 == -1 ) {
+      printf ( "Bad base64 character: %c %d %d\n", d3, d3, v3 );
+      return -1;
+    }
+
+    d4 = in[3];
+    if (d4 > 127 ) {
+      printf ( "Bad base64 character: %c %d %d\n", d4, d4, 0 );
+      return -1;
+    }
+
+    v4 = base64val (d4);
+    if ( v4 == -1 ) {
+      printf ( "Bad base64 character: %c %d %d\n", d4, d4, v4 );
+      return -1;
+    }
+
+    in += 4;
+
+    /* digits are already sanity-checked */
+
+    *out++ = (v1 << 2) | (v2 >> 4);
+    len++;
+
+    if ( d3 != '=' ) {
+      *out++ = ((v2 << 4) & 0xf0) | (v3 >> 2);
+      len++;
+
+      if (d4 != '=') {
+	*out++ = ((v3 << 6) & 0xc0) | v4;
+	len++;
+      }
+    }
+
+  } while (*in && d4 != '=' );
+
+  return len;
 }
 
 /* THE END */
