@@ -59,9 +59,15 @@ struct terra_loc {
  * in the original packet.  Stripping \n\r brought this down to
  * 6852 bytes, and the base64 conversion made it 5138 bytes to
  * be saved to a local file.
+ *
+ * Some less than obvious notes about the API arguments.
+ * "scene" is actually the UTM zone.
+ * X and Y are tile coordinates, divided down from UTM.
+ * So, if we are using an 8m scale, we divide the UTM coordinates
+ * by 8*200 and truncate any fractional part.
  */
 int
-terra_get_tile ( struct terra_loc *tlp )
+terra_get_tile ( struct terra_loc *tlp, char *scale, char *theme )
 {
 	struct xml *xp;
 	struct xml *t;
@@ -90,22 +96,26 @@ terra_get_tile ( struct terra_loc *tlp )
 	xml_attr ( t, "SOAP-ENC:root", "1" );
 	t = xml_tag ( t, "ns1:id" );
 
-	x = xml_tag_stuff ( t, "ns1:Scale", "Scale4m" );
+	/* Scale is meters per pixel as "Scale4m" */
+	x = xml_tag_stuff ( t, "ns1:Scale", scale );
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
-	x = xml_tag_stuff ( t, "ns1:Scene", "15" );
+	/* Scene is UTM zone */
+	sprintf ( value, "%d", tlp->zone );
+	x = xml_tag_stuff ( t, "ns1:Scene", value );
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
-	x = xml_tag_stuff ( t, "ns1:Theme", "Photo" );
+	/* Theme is "Photo", "Topo", or "Relief" */
+	x = xml_tag_stuff ( t, "ns1:Theme", theme );
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
-	/* sprintf ( value, "%d", tlp->x ); */
-	sprintf ( value, "%d", 624 );
+	/* X is Easting as a pixel count */
+	sprintf ( value, "%d", (int)tlp->x );
 	x = xml_tag_stuff ( t, "ns1:X", value );
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
-	/* sprintf ( value, "%d", tlp->y ); */
-	sprintf ( value, "%d", 5951 );
+	/* Y is Northing as a pixel count */
+	sprintf ( value, "%d", (int)tlp->y );
 	x = xml_tag_stuff ( t, "ns1:Y", value );
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
@@ -118,11 +128,13 @@ terra_get_tile ( struct terra_loc *tlp )
 
 	reply = http_soap ( server_name, server_port, server_target, action, terra_request, n, &nr );
 
+	/*
 	if ( terra_verbose ) {
 	    printf ( "\n" );
 	    printf ( "  REPLY:\n" );
 	    write ( 1, reply, nr );
 	}
+	*/
 
 	rp = xml_parse_doc ( reply, nr );
 	free_http_soap ( (void *) reply );
@@ -394,16 +406,6 @@ to_ll ( struct terra_loc *tlp )
 	return 1;
 }
 
-static void
-terra_tile_test ( void )
-{
-	struct terra_loc loc;
-
-	loc.x = 624;
-	loc.y = 5951;
-    	terra_get_tile ( &loc );
-}
-
 /* Test using Terraserver */
 static void
 terra_ll_test1 ( double lon, double lat )
@@ -461,7 +463,46 @@ terra_ll_test2 ( double lon, double lat )
 void
 terra_test ( void )
 {
-#ifdef notdef
+    	double scale = 32.0;
+	char *scale_name = "Scale32m";
+	/*
+    	double scale = 8.0;
+	char *scale_name = "Scale8m";
+    	double scale = 2.0;
+	char *scale_name = "Scale2m";
+	*/
+
+	struct terra_loc loc;
+	int pix;
+
+	/* South Geronimo Mine, Trigo Mountains */
+	loc.lon = -dms2deg ( 114, 36, 48.0 );
+	loc.lat =  dms2deg ( 33, 6, 59.0 );
+	(void) to_utm ( &loc );
+	printf ( "X (Easting) = %.2f\n", loc.x );
+	printf ( "Y (Northing) = %.2f\n", loc.y );
+
+	pix = loc.x / (200 * scale );
+	loc.x = pix;
+	pix = loc.y / (200 * scale );
+	loc.y = pix;
+
+    	terra_get_tile ( &loc, scale_name, "Topo" );
+}
+
+static void
+terra_tile_test ( void )
+{
+	struct terra_loc loc;
+
+	loc.x = 624;
+	loc.y = 5951;
+    	terra_get_tile ( &loc, "Scale4m", "Photo" );
+}
+
+void
+terra_test_C ( void )
+{
 	/* This is used by PyTerra in it's test suite:
 	 * 7 km SW of Rockford, Iowa, United States (nearest place).
 	 * UTM is Zone 15, X = 500000, Y = 4760814.7962907264
@@ -479,8 +520,6 @@ terra_test ( void )
 	 */
 	terra_ll_test1 ( -dms2deg(79, 23, 13.7), dms2deg(43,38,33.24) );
 	terra_ll_test2 ( -dms2deg(79, 23, 13.7), dms2deg(43,38,33.24) );
-#endif
-	terra_tile_test ();
 }
 
 void
