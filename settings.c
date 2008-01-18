@@ -126,6 +126,9 @@ struct wtable series_words[] = {
     "100K", S_100K,
     "24k", S_24K,
     "24K", S_24K,
+    "2m", S_TOPO_2M,
+    "8m", S_TOPO_8M,
+    "32m", S_TOPO_32M,
     NULL, 0 
 };
 

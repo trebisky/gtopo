@@ -21,9 +21,9 @@
 /* gtopo.h
  */
 
-enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K, S_TOPO_32M, S_TOPO_8M, S_TOPO_2M };
 
-#define N_SERIES	5
+#define N_SERIES	8
 
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
@@ -33,7 +33,7 @@ enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
  * or method to find maplets.  Each series has a
  * list of methods to try until one works.
  */
-enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE };
+enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE, M_TERRA };
 
 /* We have a series of bits in the "verbose" variable to
  * trigger debug from different subsystems.
@@ -82,11 +82,16 @@ struct topo_info {
 	double lat_deg;
 	double long_deg;
 
-	/* This is the maplet containing the above,
-	 * this changes every time we change series.
+	/* Here is our position in UTM */
+	int utm_zone;
+	double utm_x;
+	double utm_y;
+
+	/* This specifies the maplet containing the above,
+	 * it changes every time we change series.
 	 */
-	long	lat_maplet;
-	long	long_maplet;
+	long	maplet_x;
+	long	maplet_y;
 
 	/* fractional offset in the maplet */
 	double 	fx;
@@ -142,6 +147,14 @@ struct series {
 	int xdim;
 	int ydim;
 
+	/* boolean, true if terraserver series
+	 * (in which case the rest of this structure can
+	 * be ignored)
+	 */
+	int terra;
+	double scale;	/* terra: meters per pixel */
+	char *scale_name;
+
 	/* How many maplets per TPQ file */
 	int lat_count;
 	int long_count;
@@ -171,12 +184,12 @@ struct maplet {
 	struct maplet *next;
 
 	/* Unique indices used to do cache lookups */
-	int world_index_lat;
-	int world_index_long;
+	int world_x;
+	int world_y;
 
 	/* indices within the TPQ file */
-	int sheet_index_lat;
-	int sheet_index_long;
+	int sheet_x;
+	int sheet_y;
 
 	/* Use for possible cache entry aging */
 	int time;

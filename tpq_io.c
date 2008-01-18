@@ -615,10 +615,10 @@ load_tpq_maplet ( struct maplet *mp )
 	if ( mp->tpq_index < 0 ) {
 	    x_index = tp->long_count / 2;
 	    y_index = tp->lat_count / 2;
-	    mp->sheet_index_long = tp->long_count - x_index - 1;
-	    mp->sheet_index_lat = tp->lat_count - y_index - 1;
-	    mp->world_index_long = tp->sheet_long + mp->sheet_index_long;
-	    mp->world_index_lat = tp->sheet_lat + mp->sheet_index_lat;
+	    mp->sheet_x = tp->long_count - x_index - 1;
+	    mp->sheet_y = tp->lat_count - y_index - 1;
+	    mp->world_x = tp->sheet_long + mp->sheet_x;
+	    mp->world_y = tp->sheet_lat + mp->sheet_y;
 	    mp->tpq_index = y_index * tp->long_count + x_index;
 	}
 

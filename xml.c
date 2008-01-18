@@ -252,6 +252,43 @@ xml_emit_list ( char *ap, struct xml *cp, int first )
 	return ap;
 }
 
+/* free up memory associated with an XML tree */
+void
+xml_destroy ( struct xml *cp )
+{
+	struct xml *xp, *tp;
+	struct xml *next;
+	struct xml *a_next;
+
+	for ( xp = cp; xp; xp = next ) {
+	    next = xp->next;
+
+	    if ( xp->type == XT_TAG ) {
+		free ( xp->name );
+
+		for ( tp = xp->attrib; tp; tp = a_next ) {
+		    a_next = tp->next;
+		    free ( tp->name );
+		    free ( tp->value );
+		    free ( (char *) tp );
+		}
+
+		/* bogus, but we used to do this */
+		if ( xp->value )
+		    free ( xp->value );
+
+		/* recursion */
+		if ( xp->children )
+		    xml_destroy ( xp->children );
+	    } else if ( xp->type == XT_CDATA ) {
+		free ( xp->value );
+	    } else {
+	    	error ( "xml destroy: %s", xp->name );
+	    }
+	    free ( (char *) xp );
+	}
+}
+
 int
 xml_collect ( char *buf, int limit, struct xml *xp )
 {

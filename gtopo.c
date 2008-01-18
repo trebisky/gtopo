@@ -306,7 +306,7 @@ pixmap_redraw ( void )
 	/* load the maplet containing the current position so
 	 * we can get the maplet pixel size up front.
 	 */
-	mp = load_maplet ( info.long_maplet, info.lat_maplet );
+	mp = load_maplet ( info.maplet_x, info.maplet_y );
 
 	/* The above can fail if we have used the mouse to wander off
 	 * the edge of the map coverage.  We use the series information
@@ -350,7 +350,7 @@ pixmap_redraw ( void )
 	for ( y = ny1; y <= ny2; y++ ) {
 	    for ( x = nx1; x <= nx2; x++ ) {
 
-		mp = load_maplet ( info.long_maplet + x, info.lat_maplet + y );
+		mp = load_maplet ( info.maplet_x + x, info.maplet_y + y );
 		if ( ! mp ) {
 		    if ( settings.verbose & V_DRAW2 )
 			printf ( "redraw, no maplet at %d %d\n", x, y );
@@ -450,7 +450,7 @@ snap ( void )
 
 	    if ( info.series->series != S_STATE ) {
 		struct maplet *mp;
-		mp = load_maplet ( info.long_maplet, info.lat_maplet );
+		mp = load_maplet ( info.maplet_x, info.maplet_y );
 		printf ( " from file: %s", mp->tpq->path );
 		printf ( " quad: %s (%s)", mp->tpq->quad, mp->tpq->state );
 	    }
@@ -855,34 +855,41 @@ focus_handler ( GtkWidget *wp, GdkEventFocus *event, gpointer data )
 void
 synch_position ( void )
 {
-    	double m_lat, m_long;
+    	double x, y;
 
-	/*
-	int maplets;
-	maplets = tp->e_long / tp->maplet_long_deg;
-	tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
-	maplets = tp->s_lat / tp->maplet_lat_deg;
-	tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
-	*/
+	if ( info.series->terra ) {
+	    ll_to_utm ( info.long_deg, info.lat_deg, &info.utm_zone, &info.utm_x, &info.utm_y );
+	    x = info.utm_x / ( 200.0 * info.series->scale );
+	    y = info.utm_y / ( 200.0 * info.series->scale );
 
-    	m_lat = (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
-    	m_long = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
+	} else {
+	    /*
+	    int maplets;
+	    maplets = tp->e_long / tp->maplet_long_deg;
+	    tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
+	    maplets = tp->s_lat / tp->maplet_lat_deg;
+	    tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
+	    */
+
+	    x = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
+	    y =   (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
+	}
 
 	/* indices of the maplet we are in
 	 */
-    	info.long_maplet = m_long;
-    	info.lat_maplet = m_lat;
+    	info.maplet_x = x;
+    	info.maplet_y = y;
 
 	if ( settings.verbose & V_BASIC ) {
 	    printf ( "Synch position: long/lat = %.3f %.3f\n", info.long_deg, info.lat_deg );
 	    printf ( "maplet indices of position: %d %d\n",
-		info.long_maplet, info.lat_maplet );
+		info.maplet_x, info.maplet_y );
 	}
 
 	/* fractional offset of our position in that maplet
 	 */
-	info.fy = 1.0 - (m_lat - info.lat_maplet);
-	info.fx = 1.0 - (m_long - info.long_maplet);
+	info.fx = 1.0 - (x - info.maplet_x);
+	info.fy = 1.0 - (y - info.maplet_y);
 }
 
 /* Used by mouse routine to check that a possible new
@@ -900,7 +907,7 @@ try_position ( double new_long, double new_lat )
 	info.lat_deg = new_lat;
 	synch_position ();
 
-	if ( load_maplet ( info.long_maplet, info.lat_maplet ) )
+	if ( load_maplet ( info.maplet_x, info.maplet_y ) )
 	    return 1;
 
 	info.long_deg = orig_long;
@@ -1022,13 +1029,7 @@ main ( int argc, char **argv )
 
 	if ( ! file_opt ) {
 
-	    /* not strictly needed, but set_series will access
-	     * these values.
-	     */
-	    info.long_deg = 0.0;
-	    info.lat_deg = 0.0;
-
-	    set_series ( settings.starting_series );
+	    initial_series ( settings.starting_series );
 	    set_position ( settings.starting_long, settings.starting_lat );
 	}
 

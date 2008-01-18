@@ -345,6 +345,7 @@ series_init ( void )
 	    /* Correct south of Tucson */
 	    sp->xdim = 435;
 	    sp->ydim = 256;
+	    sp->terra = 0;
 
 	    sp->lat_count = 10;
 	    sp->long_count = 5;
@@ -364,6 +365,7 @@ series_init ( void )
 	    /* Correct near Tucson */
 	    sp->xdim = 333;
 	    sp->ydim = 393;
+	    sp->terra = 0;
 
 	    sp->lat_count = 8;
 	    sp->long_count = 16;
@@ -384,6 +386,7 @@ series_init ( void )
 	    /* Correct in Southern Nevada */
 	    sp->xdim = 380;
 	    sp->ydim = 480;
+	    sp->terra = 0;
 
 	    /* The following is only correct for Nevada
 	     * for nevada these are g-files
@@ -407,6 +410,7 @@ series_init ( void )
 
 	    sp->xdim = 290;
 	    sp->ydim = 364;
+	    sp->terra = 0;
 
 	    sp->lat_count = 1;
 	    sp->long_count = 1;
@@ -426,6 +430,8 @@ series_init ( void )
 	    sp->long_count_d = 1;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+
+	    sp->terra = 0;
 
 #ifdef notdef
 	    /* XXX - true for california */
@@ -457,6 +463,36 @@ series_init ( void )
 
 	    sp->xdim = 309;
 	    sp->ydim = 256;
+
+	/* Terraserver 2m (like 1:24k) */
+	sp = &info.series_info[S_TOPO_2M];
+	    series_init_one ( sp, S_TOPO_2M );
+
+	    sp->xdim = 200;
+	    sp->ydim = 200;
+	    sp->terra = 1;
+	    sp->scale = 2.0;
+	    sp->scale_name = "Scale2m";
+
+	/* Terraserver 8m (like 1:100) */
+	sp = &info.series_info[S_TOPO_8M];
+	    series_init_one ( sp, S_TOPO_8M );
+
+	    sp->xdim = 200;
+	    sp->ydim = 200;
+	    sp->terra = 1;
+	    sp->scale = 8.0;
+	    sp->scale_name = "Scale8m";
+
+	/* Terraserver 32m */
+	sp = &info.series_info[S_TOPO_32M];
+	    series_init_one ( sp, S_TOPO_32M );
+
+	    sp->xdim = 200;
+	    sp->ydim = 200;
+	    sp->terra = 1;
+	    sp->scale = 32.0;
+	    sp->scale_name = "Scale32m";
 }
 
 /* This is the usual initialization when we want to setup to
@@ -554,7 +590,7 @@ try_series ( int new_series )
 	 * into the cache, and we will soon be fetching it
 	 * to display anyway.
 	 */
-	if ( load_maplet ( info.long_maplet, info.lat_maplet ) )
+	if ( load_maplet ( info.maplet_x, info.maplet_y ) )
 	    return 1;
 	return 0;
 }
@@ -595,39 +631,15 @@ down_series ( void )
 	synch_position ();
 }
 
-#ifdef notdef
-/* no longer used, up/down series make more sense */
+/* Like set_series, but doesn't try to synch position */
 void
-toggle_series ( void )
+initial_series ( enum s_type s )
 {
-	int series;
-	int new_series;
+    	if ( s < 0 || s >= N_SERIES )
+	    error ( "initial_series, impossible value: %d\n", s );
 
-	/* remember where we started */
-	series = info.series->series;
-
-	if ( settings.verbose & V_BASIC )
-	    printf ( "toggle from series %d (%s)\n", series+1, wonk_series ( series ) );
-
-	new_series = series;
-	do {
-	    if ( new_series == S_24K )
-	    	new_series = S_STATE;
-	    else
-		++new_series;
-
-	    if ( try_series ( new_series ) )
-	    	return;
-
-	} while ( new_series != series );
-
-	/* fall out the end when no other series has
-	 * methods (always happens in -f mode )
-	 */
-	info.series = &info.series_info[series];
-	synch_position ();
+	info.series = &info.series_info[s];
 }
-#endif
 
 void
 set_series ( enum s_type s )
@@ -762,31 +774,31 @@ section_find_map ( struct section *head, int lat_section, int long_section, int 
  */
 static int
 method_file ( struct maplet *mp, struct method *xp,
-		int maplet_long, int maplet_lat )
+		int maplet_x, int maplet_y )
 {
 	int x_index, y_index;
 
 	/* Now figure which maplet within the sheet we need.
 	 */
-	mp->sheet_index_long = maplet_long - xp->tpq->sheet_long;
-	mp->sheet_index_lat = maplet_lat - xp->tpq->sheet_lat;
+	mp->sheet_x = maplet_x - xp->tpq->sheet_long;
+	mp->sheet_y = maplet_y - xp->tpq->sheet_lat;
 
 	if ( settings.verbose & V_ARCHIVE ) {
 	    printf ( "MF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
-	    printf ( "MF point : %d %d\n", maplet_long, maplet_lat );
-	    printf ( "MF index: %d %d\n", mp->sheet_index_long, mp->sheet_index_lat );
+	    printf ( "MF maplet indices (x/y) : %d %d\n", maplet_x, maplet_y );
+	    printf ( "MF sheet indices (x/y): %d %d\n", mp->sheet_x, mp->sheet_y );
 	}
 
-	if ( mp->sheet_index_long < 0 || mp->sheet_index_long >= xp->tpq->long_count )
+	if ( mp->sheet_x < 0 || mp->sheet_x >= xp->tpq->long_count )
 	    return 0;
-	if ( mp->sheet_index_lat < 0 || mp->sheet_index_lat >= xp->tpq->lat_count )
+	if ( mp->sheet_y < 0 || mp->sheet_y >= xp->tpq->lat_count )
 	    return 0;
 
 	mp->tpq_path = xp->tpq->path;
 
 	/* flip the count to origin from the NW corner */
-	x_index = xp->tpq->long_count - mp->sheet_index_long - 1;
-	y_index = xp->tpq->lat_count - mp->sheet_index_lat - 1;
+	x_index = xp->tpq->long_count - mp->sheet_x - 1;
+	y_index = xp->tpq->lat_count - mp->sheet_y - 1;
 
 	mp->tpq_index = y_index * xp->tpq->long_count + x_index;
 
@@ -795,7 +807,7 @@ method_file ( struct maplet *mp, struct method *xp,
 
 static int
 method_section ( struct maplet *mp, struct method *xp,
-		    int maplet_long, int maplet_lat )
+		    int maplet_x, int maplet_y )
 {
 	struct series *sp;
 	int lat_section, long_section;
@@ -804,14 +816,14 @@ method_section ( struct maplet *mp, struct method *xp,
 
 	sp = info.series;
 
-	lat_section = maplet_lat / (sp->lat_count_d * sp->lat_count);
-	long_section = maplet_long / (sp->long_count_d * sp->long_count);
+	lat_section = maplet_y / (sp->lat_count_d * sp->lat_count);
+	long_section = maplet_x / (sp->long_count_d * sp->long_count);
 
 	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "lookup_quad, section: %d %d\n", lat_section, long_section );
 
-	lat_quad = maplet_lat / sp->lat_count - lat_section * sp->lat_count_d;
-	long_quad = maplet_long / sp->long_count - long_section * sp->long_count_d;
+	lat_quad = maplet_y / sp->lat_count - lat_section * sp->lat_count_d;
+	long_quad = maplet_x / sp->long_count - long_section * sp->long_count_d;
 
 	/* See if the map sheet is available.
 	 */
@@ -821,15 +833,15 @@ method_section ( struct maplet *mp, struct method *xp,
 
 	/* Now figure which maplet within the sheet we need.
 	 */
-	mp->sheet_index_long = maplet_long - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
-	mp->sheet_index_lat = maplet_lat - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
+	mp->sheet_x = maplet_x - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
+	mp->sheet_y = maplet_y - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
 
 	if ( settings.verbose & V_ARCHIVE )
-	    printf ( "lat/long quad, lat/long maplet: %d %d  %d %d\n", lat_quad, long_quad, maplet_lat, maplet_long );
+	    printf ( "long/lag quad, x/y maplet: %d %d  %d %d\n", long_quad, lat_quad, maplet_x, maplet_y );
 
 	/* flip the count to origin from the NW corner */
-	x_index = sp->long_count - mp->sheet_index_long - 1;
-	y_index = sp->lat_count - mp->sheet_index_lat - 1;
+	x_index = sp->long_count - mp->sheet_x - 1;
+	y_index = sp->lat_count - mp->sheet_y - 1;
 
 	mp->tpq_index = y_index * sp->long_count + x_index;
 
@@ -841,11 +853,11 @@ method_section ( struct maplet *mp, struct method *xp,
  * It returns with the following set:
  *	tpq_path
  *	tpq_index
- *	sheet_index_long
- *	sheet_index_lat
+ *	sheet_x
+ *	sheet_y
  */
 int
-lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
+lookup_series ( struct maplet *mp, int maplet_x, int maplet_y )
 {
 	struct series *sp;
 	struct method *xp;
@@ -857,9 +869,9 @@ lookup_series ( struct maplet *mp, int maplet_long, int maplet_lat )
 	/* We skip STATE_METHOD in this loop */
 	for ( xp = sp->methods; xp; xp = xp->next ) {
 	    if ( xp->type == M_SECTION )
-	    	done = method_section ( mp, xp, maplet_long, maplet_lat );
+	    	done = method_section ( mp, xp, maplet_x, maplet_y );
 	    if ( xp->type == M_FILE )
-	    	done = method_file ( mp, xp, maplet_long, maplet_lat );
+	    	done = method_file ( mp, xp, maplet_x, maplet_y );
 	    if ( done )
 	    	return 1;
 	}

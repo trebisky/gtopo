@@ -35,7 +35,9 @@
 #include "protos.h"
 #include "xml.h"
 
-int terra_verbose = 1;
+extern struct topo_info info;
+
+int terra_verbose = 0;
 
 static int from_base64 (char *, char *);
 
@@ -45,14 +47,6 @@ static char terra_request[MAX_TERRA_REQ];
 static char *server_name = "terraserver-usa.com";
 static char *server_target = "/terraservice.asmx";
 static int server_port = 80;
-
-struct terra_loc {
-	double lon;
-	double lat;
-	int zone;
-	double x;
-	double y;
-};
 
 /* The first image this ever received was a photo.
  * It came back as a 200x200 pixel image and used 7032 bytes
@@ -66,8 +60,8 @@ struct terra_loc {
  * So, if we are using an 8m scale, we divide the UTM coordinates
  * by 8*200 and truncate any fractional part.
  */
-int
-terra_get_tile ( struct terra_loc *tlp, char *scale, char *theme )
+char *
+terra_get_tile ( int zone, int tx, int ty, char *scale, char *theme, int *count )
 {
 	struct xml *xp;
 	struct xml *t;
@@ -81,7 +75,6 @@ terra_get_tile ( struct terra_loc *tlp, char *scale, char *theme )
 	char *val;
 	char *buf;
 	char value[64];
-	int tfd;
 
 	xp = xml_start ( "SOAP-ENV:Envelope" );
 	xml_attr ( xp, "SOAP-ENV:encodingStyle", "http://schemas.xmlsoap.org/soap/encoding/" );
@@ -101,7 +94,7 @@ terra_get_tile ( struct terra_loc *tlp, char *scale, char *theme )
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
 	/* Scene is UTM zone */
-	sprintf ( value, "%d", tlp->zone );
+	sprintf ( value, "%d", zone );
 	x = xml_tag_stuff ( t, "ns1:Scene", value );
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
@@ -110,16 +103,17 @@ terra_get_tile ( struct terra_loc *tlp, char *scale, char *theme )
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
 	/* X is Easting as a pixel count */
-	sprintf ( value, "%d", (int)tlp->x );
+	sprintf ( value, "%d", tx );
 	x = xml_tag_stuff ( t, "ns1:X", value );
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
 	/* Y is Northing as a pixel count */
-	sprintf ( value, "%d", (int)tlp->y );
+	sprintf ( value, "%d", ty );
 	x = xml_tag_stuff ( t, "ns1:Y", value );
 	xml_attr ( x, "xsi:type", "xsd:string" );
 
 	n = xml_collect ( terra_request, MAX_TERRA_REQ, xp );
+	xml_destroy ( xp );
 
 	if ( terra_verbose ) {
 	    printf ( "  REQUEST:\n" );
@@ -141,12 +135,65 @@ terra_get_tile ( struct terra_loc *tlp, char *scale, char *theme )
 
 	val = xml_find_tag_value ( rp, "GetTileResult" );
 	if ( ! val )
-	    return 0;
-	printf ( "pre base64 size %d\n", strlen(val) );
+	    return NULL;
 
 	buf = (char *) gmalloc ( strlen(val) );
-	n = from_base64 ( buf, val );
-	printf ( "from base64 yields %d\n", n );
+	*count = from_base64 ( buf, val );
+	xml_destroy ( rp );
+
+	return buf;
+}
+
+int
+load_terra_maplet ( struct maplet *mp )
+{
+	GdkPixbufLoader *loader;
+	int count;
+	char *buf;
+
+	buf = terra_get_tile ( info.utm_zone, mp->world_x, mp->world_y, info.series->scale_name, "Topo", &count );
+	if ( ! buf )
+	    return 0;
+
+	printf ( "Terra get tile %d %d fetches %d\n", mp->world_x, mp->world_y, count );
+
+	loader = gdk_pixbuf_loader_new_with_type ( "jpeg", NULL );
+
+	gdk_pixbuf_loader_write ( loader, buf, count, NULL );
+
+	/* The following two calls work in either order */
+	gdk_pixbuf_loader_close ( loader, NULL );
+	mp->pixbuf = gdk_pixbuf_loader_get_pixbuf ( loader );
+
+	mp->xdim = info.series->xdim;
+	mp->ydim = info.series->ydim;
+
+	/* be a good citizen and avoid a memory leak,
+	 */
+	g_object_ref ( mp->pixbuf );
+	g_object_unref ( loader );
+	return 1;
+}
+
+struct terra_loc {
+	double lon;
+	double lat;
+	int zone;
+	double x;
+	double y;
+};
+
+/* Bogus old API from testing */
+int
+terra_save_tile ( struct terra_loc *tlp, char *scale, char *theme )
+{
+	char *buf;
+	int count;
+	int tfd;
+
+	buf = terra_get_tile ( tlp->zone, (int) tlp->x, (int) tlp->y, scale, theme, &count );
+	if ( ! buf )
+	    return 0;
 
 	tfd = open ( "terra.jpg", O_WRONLY|O_CREAT|O_TRUNC, 0644 );
 	if ( tfd < 0 ) {
@@ -154,12 +201,10 @@ terra_get_tile ( struct terra_loc *tlp, char *scale, char *theme )
 	    return 0;
 	}
 
-	write ( tfd, buf, n );
-	free ( buf );
-	/*
-	write ( tfd, val, strlen(val) );
-	*/
+	write ( tfd, buf, count );
 	close ( tfd );
+
+	free ( buf );
 
 	return 1;
 }
@@ -301,7 +346,9 @@ to_utm ( struct terra_loc *tlp )
 	lon_cm = -183.0 + tlp->zone * 6.0;
 	lon_cm_rad = lon_cm * DEGTORAD;
 
+	/*
 	printf ( "Central Meridian: %.2f\n", lon_cm );
+	*/
 
 	lat_rad = tlp->lat * DEGTORAD;
 	lon_rad = tlp->lon * DEGTORAD;
@@ -321,17 +368,33 @@ to_utm ( struct terra_loc *tlp )
 	*/
 	m0 = 0.0;
 
+	/*
 	printf ( "n = %.5f\n", n );
 	printf ( "t = %.5f\n", t );
 	printf ( "c = %.5f\n", c );
 	printf ( "a = %.5f\n", a );
 	printf ( "m = %.5f\n", m );
+	*/
 
 	tlp->x = 500000.0 + k0 * n * ( a + (1.0-t*c)*a*a*a/6.0 + (5.0-18.0*t+t*t+72.0*c-58.0*eep)*a*a*a*a*a/120.0);
 	y1 = (5.0-t+9.0*c+4.0*c*c)*a*a*a*a/24.0;
 	y2 = (61.0-58.0*t+t*t+600.0*c-330.0*eep)*a*a*a*a*a*a/720.0;
 	tlp->y = k0 * (m - m0 + n * tan_lat * (a*a/2.0 + y1 * y2) );
+
 	return 1;
+}
+
+void
+ll_to_utm ( double lon, double lat, int *zone, double *x, double *y )
+{
+	struct terra_loc loc;
+
+	loc.lon = lon;
+	loc.lat = lat;
+	to_utm ( &loc );
+	*zone = loc.zone;
+	*x = loc.x;
+	*y = loc.y;
 }
 
 int
@@ -387,6 +450,7 @@ to_ll ( struct terra_loc *tlp )
 	r1 = grs80_a * ( 1.0 - e2) / (temp1 * temp2 );
 	d = (tlp->x - 500000.0) / (n1 * k0);
 
+	/*
 	printf ( "lon_cm_rad = %.5f (%.4f)\n", lon_cm_rad, lon_cm_rad * RADTODEG );
 	printf ( "foot_lat = %.5f (%.4f)\n", foot_lat, foot_lat * RADTODEG );
 	printf ( "c1 = %.5f\n", c1 );
@@ -394,6 +458,7 @@ to_ll ( struct terra_loc *tlp )
 	printf ( "n1 = %.5f\n", n1 );
 	printf ( "r1 = %.5f\n", r1 );
 	printf ( "d = %.5f\n", d );
+	*/
 
 	l_1 = 5.0 + 3.0 * t1 + 10.0 * c1 - 4.0 * c1*c1 - 9.0 * eep;
 	l_2 = 61.0 + 90.0 * t1 + 298.0 * c1 + 45.0 * t1*t1 - 252.0 * eep - 3.0 * c1*c1;
@@ -479,15 +544,17 @@ terra_test ( void )
 	loc.lon = -dms2deg ( 114, 36, 48.0 );
 	loc.lat =  dms2deg ( 33, 6, 59.0 );
 	(void) to_utm ( &loc );
+	/*
 	printf ( "X (Easting) = %.2f\n", loc.x );
 	printf ( "Y (Northing) = %.2f\n", loc.y );
+	*/
 
 	pix = loc.x / (200 * scale );
 	loc.x = pix;
 	pix = loc.y / (200 * scale );
 	loc.y = pix;
 
-    	terra_get_tile ( &loc, scale_name, "Topo" );
+    	terra_save_tile ( &loc, scale_name, "Topo" );
 }
 
 static void
@@ -497,7 +564,7 @@ terra_tile_test ( void )
 
 	loc.x = 624;
 	loc.y = 5951;
-    	terra_get_tile ( &loc, "Scale4m", "Photo" );
+    	terra_save_tile ( &loc, "Scale4m", "Photo" );
 }
 
 void
@@ -643,9 +710,11 @@ from_base64 (char *out, char *in)
   int d1, d2, d3, d4;
   int v1, v2, v3, v4;
 
+  /*
   printf ( "Count before white reaming: %d\n", strlen(in) );
-  ream_white ( in );
   printf ( "Count after white reaming: %d\n", strlen(in) );
+  */
+  ream_white ( in );
 
   do {
     d1 = in[0];

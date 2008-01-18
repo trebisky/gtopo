@@ -59,14 +59,14 @@ maplet_new ( void )
 	return mp;
 }
 
-struct maplet *
-maplet_lookup ( int index_lat, int index_long )
+static struct maplet *
+maplet_lookup ( int maplet_x, int maplet_y )
 {
 	struct maplet *cp;
 
 	for ( cp = info.series->cache; cp; cp = cp->next ) {
-	    if ( cp->world_index_lat == index_lat &&
-	    	cp->world_index_long == index_long ) {
+	    if ( cp->world_y == maplet_y &&
+	    	cp->world_x == maplet_x ) {
 		    return cp;
 	    }
 	}
@@ -127,44 +127,51 @@ load_maplet_scale ( struct maplet *mp )
 }
 
 struct maplet *
-load_maplet ( int long_maplet, int lat_maplet )
+load_maplet ( int maplet_x, int maplet_y )
 {
     	struct series *sp;
     	struct maplet *mp;
+	int rv;
 
 	sp = info.series;
 
 	if ( settings.verbose & V_MAPLET )
-	    printf ( "Load maplet for position %d %d\n", long_maplet, lat_maplet );
+	    printf ( "Load maplet for position %d %d\n", maplet_x, maplet_y );
 
-	mp = maplet_lookup ( lat_maplet, long_maplet );
+	mp = maplet_lookup ( maplet_x, maplet_y );
 	if ( mp ) {
 	    if ( settings.verbose & V_MAPLET )
-		printf ( "maplet cache hit: %d %d\n", long_maplet, lat_maplet );
+		printf ( "maplet cache hit: %d %d\n", maplet_x, maplet_y );
 	    return mp;
 	}
 
-	/* Looks like we will be setting up a new entry.
+	/* Set up a new entry.
 	 */
 	mp = maplet_new ();
 
-	/* Try to find it in the archive
-	 * This will set tpq_path as well as
-	 * tpq_index in the maplet structure.
-	 */
-	if ( ! lookup_series ( mp, long_maplet, lat_maplet ) ) {
-	    free ( (char *) mp );
-	    return NULL;
-	}
-
-	mp->world_index_long = long_maplet;
-	mp->world_index_lat = lat_maplet;
+	mp->world_x = maplet_x;
+	mp->world_y = maplet_y;
 
 	if ( settings.verbose & V_MAPLET )
-	    printf ( "Read maplet(%d) = %d %d -- %d\n", sp->cache_count,
-		    long_maplet, lat_maplet, index );
+	    printf ( "Read maplet(%d) = %d %d\n", sp->cache_count,
+		    maplet_x, maplet_y );
 
-	if ( ! load_maplet_scale ( mp ) ) {
+
+	if ( sp->terra ) {
+	    rv = load_terra_maplet ( mp );
+	} else {
+	    /* Try to find it in the archive
+	     * This will set tpq_path as well as
+	     * tpq_index in the maplet structure.
+	     */
+	    if ( ! lookup_series ( mp, maplet_x, maplet_y ) ) {
+		free ( (char *) mp );
+		return NULL;
+	    }
+	    rv = load_maplet_scale ( mp );
+	}
+
+	if ( ! rv ) {
 	    free ( (char *) mp );
 	    return NULL;
 	}
@@ -189,7 +196,7 @@ state_maplets ( mfptr handler )
 	struct series *sp;
 	struct method *xp;
 	struct tpq_info *tp;
-	int long_maplet, lat_maplet;
+	int maplet_x, maplet_y;
 
 	sp = info.series;
 
@@ -202,13 +209,13 @@ state_maplets ( mfptr handler )
 	    tp = xp->tpq;
 
 	    /* Use these as indices */
-	    long_maplet = - tp->w_long;
-	    lat_maplet = tp->s_lat;
+	    maplet_x = - tp->w_long;
+	    maplet_y = tp->s_lat;
 	    if ( settings.verbose & V_MAPLET )
-		printf ( "state maplets long/lat: %d %d\n", long_maplet, lat_maplet );
+		printf ( "state maplets long/lat: %d %d\n", maplet_x, maplet_y );
 
 	    /* First try the cache */
-	    mp = maplet_lookup ( lat_maplet, long_maplet );
+	    mp = maplet_lookup ( maplet_x, maplet_y );
 	    if ( mp ) {
 		if ( settings.verbose & V_MAPLET )
 		    printf ( "state maplets cache hit\n" );
@@ -217,10 +224,10 @@ state_maplets ( mfptr handler )
 
 	    mp = maplet_new ();
 
-	    mp->world_index_long = long_maplet;
-	    mp->world_index_lat = lat_maplet;
-	    mp->sheet_index_long = 0;
-	    mp->sheet_index_lat = 0;
+	    mp->world_x = maplet_x;
+	    mp->world_y = maplet_y;
+	    mp->sheet_x = 0;
+	    mp->sheet_y = 0;
 
 	    if ( settings.verbose & V_MAPLET )
 		printf ( "State maplets read (%d) = %s\n", sp->cache_count, tp->path );
