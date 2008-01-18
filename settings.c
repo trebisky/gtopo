@@ -57,6 +57,7 @@ static void
 settings_default ( void )
 {
 	settings.verbose = 0;
+	settings.verbose = 0x40;
 
 	/* 640 x 800 works pretty well for printing onto
 	 * 8.5 x 11 inch paper.

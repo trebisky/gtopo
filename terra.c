@@ -157,7 +157,7 @@ load_terra_maplet ( struct maplet *mp )
 
 	printf ( "Terra get tile %d %d fetches %d\n", mp->world_x, mp->world_y, count );
 
-	loader = gdk_pixbuf_loader_new_with_type ( "jpeg", NULL );
+	loader = gdk_pixbuf_loader_new_with_type ( "gif", NULL );
 
 	gdk_pixbuf_loader_write ( loader, buf, count, NULL );
 
@@ -195,7 +195,7 @@ terra_save_tile ( struct terra_loc *tlp, char *scale, char *theme )
 	if ( ! buf )
 	    return 0;
 
-	tfd = open ( "terra.jpg", O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+	tfd = open ( "terra.gif", O_WRONLY|O_CREAT|O_TRUNC, 0644 );
 	if ( tfd < 0 ) {
 	    printf ( "Open fails for terra tile image\n");
 	    return 0;
@@ -384,19 +384,6 @@ to_utm ( struct terra_loc *tlp )
 	return 1;
 }
 
-void
-ll_to_utm ( double lon, double lat, int *zone, double *x, double *y )
-{
-	struct terra_loc loc;
-
-	loc.lon = lon;
-	loc.lat = lat;
-	to_utm ( &loc );
-	*zone = loc.zone;
-	*x = loc.x;
-	*y = loc.y;
-}
-
 int
 to_ll ( struct terra_loc *tlp )
 {
@@ -469,6 +456,32 @@ to_ll ( struct terra_loc *tlp )
 	tlp->lon = (lon_cm_rad + (d - l_1 * d*d*d/6.0 + l_2 * d*d*d*d*d/120.0) / cos_foot) * RADTODEG;
 
 	return 1;
+}
+
+void
+ll_to_utm ( double lon, double lat, int *zone, double *x, double *y )
+{
+	struct terra_loc loc;
+
+	loc.lon = lon;
+	loc.lat = lat;
+	to_utm ( &loc );
+	*zone = loc.zone;
+	*x = loc.x;
+	*y = loc.y;
+}
+
+void
+utm_to_ll ( int zone, double x, double y, double *lon, double *lat )
+{
+	struct terra_loc loc;
+
+	loc.zone = zone;
+	loc.x = x;
+	loc.y = y;
+	to_ll ( &loc );
+	*lon = loc.lon;
+	*lat = loc.lat;
 }
 
 /* Test using Terraserver */

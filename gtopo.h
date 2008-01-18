@@ -147,12 +147,17 @@ struct series {
 	int xdim;
 	int ydim;
 
+	/* For NGS this is degree per pixel,
+	 * For Terra this is meters per pixel.
+	 */
+	double x_pixel_scale;
+	double y_pixel_scale;
+
 	/* boolean, true if terraserver series
 	 * (in which case the rest of this structure can
 	 * be ignored)
 	 */
 	int terra;
-	double scale;	/* terra: meters per pixel */
 	char *scale_name;
 
 	/* How many maplets per TPQ file */

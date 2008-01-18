@@ -159,6 +159,7 @@ struct viewport {
 /* Prototypes ..........
  */
 static void cursor_show ( int );
+static int try_position ( double, double );
 
 gint
 destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
@@ -263,7 +264,14 @@ state_handler ( struct maplet *mp )
 	draw_maplet ( mp, origx, origy );
 }
 
-/* This is the guts of what goes on during a reconfigure */
+/* This is the guts of what goes on during a reconfigure.
+ * Watch out for a multitude of sign conventions, here is a
+ * quick orientation:
+ * 	long,lat    - long increases to the east (right), lat increases to north (up)
+ * 	maplet x,y  - x increases to west (left), y increases to north (up)
+ * 	pixmap x,y  - x increases to the right (east), y increases down (south)
+ * 	utm x,y     - x increases to east, y increases to north.
+ */
 void
 pixmap_redraw ( void )
 {
@@ -347,10 +355,19 @@ pixmap_redraw ( void )
 	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
 	}
 
+	/* This loop works in maplet indices, with
+	 * x increasing to the west (left), and y increasing to the north (up).
+	 * which is exactly opposite of the GTK pixel coordinates, which have
+	 * the origin at the upper left of the screen.
+	 */
 	for ( y = ny1; y <= ny2; y++ ) {
 	    for ( x = nx1; x <= nx2; x++ ) {
 
-		mp = load_maplet ( info.maplet_x + x, info.maplet_y + y );
+		if ( info.series->terra )
+		    mp = load_maplet ( info.maplet_x - x, info.maplet_y + y );
+		else
+		    mp = load_maplet ( info.maplet_x + x, info.maplet_y + y );
+
 		if ( ! mp ) {
 		    if ( settings.verbose & V_DRAW2 )
 			printf ( "redraw, no maplet at %d %d\n", x, y );
@@ -517,8 +534,7 @@ void
 move_xy ( int new_x, int new_y )
 {
 	int vxcent, vycent;
-	double dlat, dlong;
-	double x_pixel_scale, y_pixel_scale;
+	double dx, dy;
 	int i;
 
 	/* viewport center */
@@ -529,17 +545,20 @@ move_xy ( int new_x, int new_y )
 	    printf ( "Button: orig position (lat/long) %.4f %.4f\n",
 		info.lat_deg, info.long_deg );
 
+	/*
+	double x_pixel_scale, y_pixel_scale;
 	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
 	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
+	*/
 
-	dlat  = (new_y - (double)vycent) * y_pixel_scale;
-	dlong = (new_x - (double)vxcent) * x_pixel_scale;
+	dx = (new_x - (double)vxcent) * info.series->x_pixel_scale;
+	dy = (new_y - (double)vycent) * info.series->y_pixel_scale;
 
 	if ( settings.verbose & V_EVENT )
-	    printf ( "Button: delta position (lat/long) %.4f %.4f\n", dlat, dlong );
+	    printf ( "Button: delta position (x/y) %.4f %.4f\n", dx, dy );
 
 	/* Make location of the mouse click be the current position */
-	if ( ! try_position ( info.long_deg + dlong, info.lat_deg - dlat ) )
+	if ( ! try_position ( dx, -dy ) )
 	    return;
 
 	for ( i=0; i<N_SERIES; i++ )
@@ -553,23 +572,25 @@ move_xy ( int new_x, int new_y )
 }
 
 void
-shift_xy ( double dx, double dy )
+shift_xy ( double shift_x, double shift_y )
 {
-	double dlat, dlong;
-	double x_pixel_scale, y_pixel_scale;
+	double dx, dy;
 	int i;
 
+	/*
+	double x_pixel_scale, y_pixel_scale;
 	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
 	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
+	*/
 
-	dlat  = dy * y_pixel_scale;
-	dlong = dx * x_pixel_scale;
+	dx = shift_x * info.series->x_pixel_scale;
+	dy = shift_y * info.series->y_pixel_scale;
 
 	if ( settings.verbose & V_EVENT )
-	    printf ( "Motion: delta position (lat/long) %.4f %.4f\n", dlat, dlong );
+	    printf ( "Motion: delta position (x/y) %.4f %.4f\n", dx, dy );
 
 	/* Make location of the mouse click be the current position */
-	if ( ! try_position ( info.long_deg - dlong, info.lat_deg + dlat ) )
+	if ( ! try_position ( -dx, dy ) )
 	    return;
 
 	for ( i=0; i<N_SERIES; i++ )
@@ -859,8 +880,8 @@ synch_position ( void )
 
 	if ( info.series->terra ) {
 	    ll_to_utm ( info.long_deg, info.lat_deg, &info.utm_zone, &info.utm_x, &info.utm_y );
-	    x = info.utm_x / ( 200.0 * info.series->scale );
-	    y = info.utm_y / ( 200.0 * info.series->scale );
+	    x = info.utm_x / ( 200.0 * info.series->x_pixel_scale );
+	    y = info.utm_y / ( 200.0 * info.series->y_pixel_scale );
 
 	} else {
 	    /*
@@ -892,27 +913,70 @@ synch_position ( void )
 	info.fy = 1.0 - (y - info.maplet_y);
 }
 
+void
+synch_position_utm ( void )
+{
+	double x, y;
+
+	utm_to_ll ( info.utm_zone, info.utm_x, info.utm_y, &info.long_deg, &info.lat_deg );
+
+	x = info.utm_x / ( 200.0 * info.series->x_pixel_scale );
+	y = info.utm_y / ( 200.0 * info.series->y_pixel_scale );
+
+	/* indices of the maplet we are in
+	 */
+    	info.maplet_x = x;
+    	info.maplet_y = y;
+
+	if ( settings.verbose & V_BASIC ) {
+	    printf ( "Synch position: long/lat = %.3f %.3f\n", info.long_deg, info.lat_deg );
+	    printf ( "maplet indices of position: %d %d\n",
+		info.maplet_x, info.maplet_y );
+	}
+
+	/* fractional offset of our position in that maplet
+	 */
+	info.fx = 1.0 - (x - info.maplet_x);
+	info.fy = 1.0 - (y - info.maplet_y);
+}
+
 /* Used by mouse routine to check that a possible new
  * position still has map coverage.
  */
-int
-try_position ( double new_long, double new_lat )
+static int
+try_position ( double dx, double dy )
 {
-    	double orig_long, orig_lat;
+    	double save1, save2;
 
-	orig_long = info.long_deg;
-	orig_lat = info.lat_deg;
+	if ( info.series->terra ) {
+	    save1 = info.utm_x;
+	    save2 = info.utm_y;
 
-	info.long_deg = new_long;
-	info.lat_deg = new_lat;
-	synch_position ();
+	    info.utm_x -= dx;	/* XXX - note sign */
+	    info.utm_y += dy;
+	    synch_position_utm ();
+	} else {
+	    save1 = info.long_deg;
+	    save2 = info.lat_deg;
+
+	    info.long_deg += dx;
+	    info.lat_deg += dy;
+	    synch_position ();
+	}
 
 	if ( load_maplet ( info.maplet_x, info.maplet_y ) )
 	    return 1;
 
-	info.long_deg = orig_long;
-	info.lat_deg = orig_lat;
-	synch_position ();
+	/* Didn't like it, go back */
+	if ( info.series->terra ) {
+	    info.utm_x = save1;
+	    info.utm_y = save2;
+	    synch_position_utm ();
+	} else {
+	    info.long_deg = save1;
+	    info.lat_deg = save2;
+	    synch_position ();
+	}
 
 	return 0;
 }

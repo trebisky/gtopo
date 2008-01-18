@@ -355,6 +355,8 @@ series_init ( void )
 	    sp->maplet_long_deg = 0.0250;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
 	/* 2 of these in a square degree
 	 * one of top of the other a1 and e1
@@ -375,6 +377,8 @@ series_init ( void )
 	    sp->maplet_long_deg = 0.0625;
 	    sp->quad_lat_count = 4;
 	    sp->quad_long_count = 8;
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
 	/* This varies from state to state, and the only
 	 * thing that seems constant is that the maplets
@@ -399,6 +403,8 @@ series_init ( void )
 	    sp->maplet_long_deg = 0.5;
 	    sp->quad_lat_count = 8;
 	    sp->quad_long_count = 8;
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
 	/* XXX */
 	sp = &info.series_info[S_ATLAS];
@@ -418,6 +424,8 @@ series_init ( void )
 	    sp->long_count_d = 1;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
 	/* XXX - The entire state */
 	sp = &info.series_info[S_STATE];
@@ -463,6 +471,8 @@ series_init ( void )
 
 	    sp->xdim = 309;
 	    sp->ydim = 256;
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
 	/* Terraserver 2m (like 1:24k) */
 	sp = &info.series_info[S_TOPO_2M];
@@ -471,7 +481,8 @@ series_init ( void )
 	    sp->xdim = 200;
 	    sp->ydim = 200;
 	    sp->terra = 1;
-	    sp->scale = 2.0;
+	    sp->x_pixel_scale = 2.0;
+	    sp->y_pixel_scale = 2.0;
 	    sp->scale_name = "Scale2m";
 
 	/* Terraserver 8m (like 1:100) */
@@ -481,7 +492,8 @@ series_init ( void )
 	    sp->xdim = 200;
 	    sp->ydim = 200;
 	    sp->terra = 1;
-	    sp->scale = 8.0;
+	    sp->x_pixel_scale = 8.0;
+	    sp->y_pixel_scale = 8.0;
 	    sp->scale_name = "Scale8m";
 
 	/* Terraserver 32m */
@@ -491,7 +503,8 @@ series_init ( void )
 	    sp->xdim = 200;
 	    sp->ydim = 200;
 	    sp->terra = 1;
-	    sp->scale = 32.0;
+	    sp->x_pixel_scale = 32.0;
+	    sp->y_pixel_scale = 32.0;
 	    sp->scale_name = "Scale32m";
 }
 
