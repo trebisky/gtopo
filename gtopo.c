@@ -145,6 +145,13 @@ char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", "/home/topo", "/t
 
 GdkColormap *syscm;
 
+struct mouse {
+	double x;
+	double y;
+	int time;
+} mouse_info;
+
+/* XXX - should eliminate mo_ stuff below and use the above */
 struct viewport {
 	int vx;
 	int vy;
@@ -155,6 +162,17 @@ struct viewport {
 	int mo_time;
 	GtkWidget *da;
 } vp_info;
+
+enum info_status { GONE, HIDDEN, UP };
+
+struct info_info {
+	enum info_status status;
+	GtkWidget *main;
+	GtkWidget *l_long;
+	GtkWidget *l_lat;
+	GtkWidget *e_long;
+	GtkWidget *e_lat;
+} i_info = { GONE };
 
 /* Prototypes ..........
  */
@@ -531,11 +549,25 @@ show_pos ( void )
 }
 
 void
+full_redraw ( void )
+{
+	int i;
+
+	for ( i=0; i<N_SERIES; i++ )
+	    info.series_info[i].content = 0;
+
+	/* redraw on the new center */
+	pixmap_redraw ();
+
+	/* put the new pixmap on the screen */
+	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+}
+
+void
 move_xy ( int new_x, int new_y )
 {
 	int vxcent, vycent;
 	double dx, dy;
-	int i;
 
 	/* viewport center */
 	vxcent = vp_info.vx / 2;
@@ -561,27 +593,13 @@ move_xy ( int new_x, int new_y )
 	if ( ! try_position ( dx, -dy ) )
 	    return;
 
-	for ( i=0; i<N_SERIES; i++ )
-	    info.series_info[i].content = 0;
-
-	/* redraw on the new center */
-	pixmap_redraw ();
-
-	/* put the new pixmap on the screen */
-	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+	full_redraw ();
 }
 
 void
 shift_xy ( double shift_x, double shift_y )
 {
 	double dx, dy;
-	int i;
-
-	/*
-	double x_pixel_scale, y_pixel_scale;
-	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
-	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
-	*/
 
 	dx = shift_x * info.series->x_pixel_scale;
 	dy = shift_y * info.series->y_pixel_scale;
@@ -593,14 +611,7 @@ shift_xy ( double shift_x, double shift_y )
 	if ( ! try_position ( -dx, dy ) )
 	    return;
 
-	for ( i=0; i<N_SERIES; i++ )
-	    info.series_info[i].content = 0;
-
-	/* redraw on the new center */
-	pixmap_redraw ();
-
-	/* put the new pixmap on the screen */
-	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+	full_redraw ();
 }
 
 void
@@ -624,9 +635,136 @@ redraw_series ( void )
 {
 	if ( ! info.series->pixels )
 	    info.series->pixels = gdk_pixmap_new ( vp_info.da->window, vp_info.vx, vp_info.vy, -1 );
+
 	if ( ! info.series->content )
 	    pixmap_redraw ();
+
 	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+}
+
+gint
+info_destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
+{
+	i_info.status = GONE;
+
+	return FALSE;
+}
+
+gint
+go_button_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
+{
+	const gchar *sp;
+	double b_long, b_lat;
+
+	sp = gtk_entry_get_text ( GTK_ENTRY(i_info.e_long) );
+	if ( sp == '\0' )
+	    return;
+	b_long = parse_dms ( (char *) sp );
+	if ( b_long > 0.0 )
+	    b_long = -b_long;
+
+	sp = gtk_entry_get_text ( GTK_ENTRY(i_info.e_lat) );
+	if ( sp == '\0' )
+	    return;
+	b_lat = parse_dms ( (char *) sp );
+
+	if ( b_lat < 24.0 || b_lat > 50.0 )
+	    return;
+	if ( b_long < -125.0 || b_long > -66.0 )
+	    return;
+
+	printf ( "long: %.4f\n", b_long );
+	printf ( "lat: %.4f\n", b_lat );
+
+	set_position ( b_long, b_lat );
+
+	full_redraw ();
+
+	return FALSE;
+}
+
+/* XXX - It seems to me, that in this (and many other) places there is
+ * a half pixel error, we call the center of a 400 pixel screen, 200, but
+ * then get coordinates as 0-399
+ */
+void
+info_update ( void )
+{
+	char str[64];
+	double c_lat, c_long;
+
+	if ( i_info.status != UP )
+	    return;
+
+	c_long = info.long_deg + (mouse_info.x-vp_info.vxcent) * info.series->x_pixel_scale;
+	sprintf ( str, "%.5f", c_long );
+	gtk_label_set_text ( GTK_LABEL(i_info.l_long), str );
+
+	c_lat = info.lat_deg - (mouse_info.y-vp_info.vycent) * info.series->y_pixel_scale;
+	sprintf ( str, "%.5f", c_lat );
+	gtk_label_set_text ( GTK_LABEL(i_info.l_lat), str );
+}
+
+void
+info_window ( void )
+{
+	GtkWidget *w;
+	GtkWidget *vb;
+	GtkWidget *hb1;
+	GtkWidget *hb2;
+
+	if ( i_info.status == UP ) {
+	    printf ( "hiding\n" );
+	    gtk_widget_hide_all ( i_info.main );
+	    i_info.status = HIDDEN;
+	    return;
+	}
+
+	if ( i_info.status == HIDDEN ) {
+	    printf ( "unhiding\n" );
+	    gtk_widget_show_all ( i_info.main );
+	    i_info.status = UP;
+	    info_update ();
+	    return;
+	}
+
+	if ( i_info.status == GONE ) {
+	    printf ( "uping\n" );
+	    i_info.main = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
+	    vb = gtk_vbox_new ( FALSE, 0 );
+	    gtk_container_add ( GTK_CONTAINER(i_info.main), vb );
+
+	    hb1 = gtk_hbox_new ( FALSE, 0 );
+	    gtk_container_add ( GTK_CONTAINER(vb), hb1 );
+	    w = gtk_label_new ( "Long:" );
+	    gtk_box_pack_start ( GTK_BOX(hb1), w, TRUE, TRUE, 0 );
+	    i_info.l_long = gtk_label_new ( "-A-" );
+	    gtk_box_pack_start ( GTK_BOX(hb1), i_info.l_long, TRUE, TRUE, 0 );
+	    i_info.e_long = gtk_entry_new_with_max_length ( 16 );
+	    gtk_box_pack_start ( GTK_BOX(hb1), i_info.e_long, TRUE, TRUE, 0 );
+
+	    hb2 = gtk_hbox_new ( FALSE, 0 );
+	    gtk_container_add ( GTK_CONTAINER(vb), hb2 );
+	    w = gtk_label_new ( "Lat: " );
+	    gtk_box_pack_start ( GTK_BOX(hb2), w, TRUE, TRUE, 0 );
+	    i_info.l_lat = gtk_label_new ( "-B-" );
+	    gtk_box_pack_start ( GTK_BOX(hb2), i_info.l_lat, TRUE, TRUE, 0 );
+	    i_info.e_lat = gtk_entry_new_with_max_length ( 16 );
+	    gtk_box_pack_start ( GTK_BOX(hb2), i_info.e_lat, TRUE, TRUE, 0 );
+
+	    w = gtk_button_new_with_label ( "Go" );
+	    gtk_container_add ( GTK_CONTAINER(vb), w );
+	    g_signal_connect ( w, "clicked",
+			G_CALLBACK(go_button_handler), NULL );
+
+	    g_signal_connect ( i_info.main, "delete_event",
+			G_CALLBACK(info_destroy_handler), NULL );
+
+	    gtk_widget_show_all ( i_info.main );
+	    i_info.status = UP;
+
+	    info_update ();
+	}
 }
 
 #define KV_PAGE_UP	65365
@@ -639,13 +777,33 @@ redraw_series ( void )
 
 #define KV_CTRL		65507
 
+#define KV_A		'a'
+#define KV_A_UC		'A'
+
+#define KV_I		'i'
+#define KV_I_UC		'I'
+
+#define KV_S		's'
+#define KV_S_UC		'S'
+
 /* We don't use these yet, but ... */
 #define KV_ESC		65307
 #define KV_TAB		65289
-#define KV_A		97
-#define KV_A_UC		65
-#define KV_S		115
-#define KV_S_UC		83
+
+void
+local_up_series ( void )
+{
+	up_series ();
+	info_update ();
+}
+
+void
+local_down_series ( void )
+{
+	down_series ();
+	info_update ();
+}
+
 
 /* Used to modify mouse actions */
 int ctrl_key_pressed = 0;
@@ -681,9 +839,11 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 	    return TRUE;
 	
 	if ( event->keyval == KV_PAGE_UP )
-	    up_series ();
+	    local_up_series ();
 	else if ( event->keyval == KV_PAGE_DOWN )
-	    down_series ();
+	    local_down_series ();
+	else if ( event->keyval == KV_I || event->keyval == KV_I_UC )
+	    info_window ();
 	else if ( event->keyval == KV_S || event->keyval == KV_S_UC )
 	    snap ();
 	else if ( event->keyval == KV_LEFT )
@@ -769,13 +929,14 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 		move_xy ( event->x, event->y );
 	    if ( settings.m3_action == M3_ZOOM ) {
 		if ( ctrl_key_pressed )
-		    up_series ();
+		    local_up_series ();
 		else
-		    down_series ();
+		    local_down_series ();
 	    }
 	}
 
 	if ( event->button == 2 ) {
+	    /* XXX */
 	    show_pos ();
 	}
 
@@ -805,10 +966,23 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	    printf ( "Motion event  %u %8x %.3f %.3f in (%d %d)\n",
 		event->time, event->state, event->x, event->y, vp_info.vx, vp_info.vy );
 
+	/* Stash this (mostly to cleanly startup the info window)
+	 */
+	mouse_info.x = event->x;
+	mouse_info.y = event->y;
+	mouse_info.time = event->time;
+
+	/* plain old mouse moving around with no buttons down */
+	if ( event->state == 0 ) {
+	    info_update ();
+	    return;
+	}
+
 	/*
 	move_xy ( event->x, event->y );
 	*/
 
+	/* moving mouse with left button down - shift map */
 	if ( event->state & GDK_BUTTON1_MASK ) {
 	    dt = event->time - vp_info.mo_time;
 	    dx = event->x - vp_info.mo_x;
@@ -855,9 +1029,9 @@ gint
 scroll_handler ( GtkWidget *wp, GdkEventScroll *event, gpointer data )
 {
 	if ( event->direction == GDK_SCROLL_UP )
-	    up_series ();
+	    local_up_series ();
 	else if ( event->direction == GDK_SCROLL_DOWN )
-	    down_series ();
+	    local_down_series ();
 	else
 	    printf ( "Scroll event %d\n", event->direction );
 }
@@ -1025,15 +1199,21 @@ main ( int argc, char **argv )
 	settings_init ();
 	places_init ();
 
+#ifdef notdef
+	/* Temporary hack XXX */
+	settings.verbose = V_EVENT;
+#endif
+
 	info.series_info = series_info_buf;
 	info.center_only = 0;
 
+	/* XXX - really should dynamically generate version string at compile time */
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-V" ) == 0 )
 	    	settings.verbose = 0xffff;
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 1.9.x\n" );
+	    	printf ( "gtopo version 0.9.10\n" );
 		return 0;
 	    }
 	    if ( strcmp ( p, "-c" ) == 0 )

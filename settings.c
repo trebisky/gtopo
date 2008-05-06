@@ -57,7 +57,6 @@ static void
 settings_default ( void )
 {
 	settings.verbose = 0;
-	settings.verbose = 0x40;
 
 	/* 640 x 800 works pretty well for printing onto
 	 * 8.5 x 11 inch paper.
@@ -127,9 +126,11 @@ struct wtable series_words[] = {
     "100K", S_100K,
     "24k", S_24K,
     "24K", S_24K,
+#ifdef TERRA
     "2m", S_TOPO_2M,
     "8m", S_TOPO_8M,
     "32m", S_TOPO_32M,
+#endif
     NULL, 0 
 };
 

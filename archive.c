@@ -474,6 +474,7 @@ series_init ( void )
 	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
 	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
+#ifdef TERRA
 	/* Terraserver 2m (like 1:24k) */
 	sp = &info.series_info[S_TOPO_2M];
 	    series_init_one ( sp, S_TOPO_2M );
@@ -506,6 +507,7 @@ series_init ( void )
 	    sp->x_pixel_scale = 32.0;
 	    sp->y_pixel_scale = 32.0;
 	    sp->scale_name = "Scale32m";
+#endif
 }
 
 /* This is the usual initialization when we want to setup to

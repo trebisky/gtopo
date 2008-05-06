@@ -21,7 +21,20 @@
 /* gtopo.h
  */
 
+/* XXX
+ * This works, but can be very slow, and I sometimes accidentally get it trying
+ * to pull maps from terraserver, and I would rather not, so this must be turned
+ * on explicitly.  Someday this will be controlled from the config file.
+ */
+#ifdef notdef
+#define TERRA
+#endif
+
+#ifdef TERRA
 enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K, S_TOPO_32M, S_TOPO_8M, S_TOPO_2M };
+#else
+enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+#endif
 
 #define N_SERIES	8
 
