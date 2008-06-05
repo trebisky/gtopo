@@ -34,7 +34,9 @@ struct maplet *load_maplet ( int, int );
 struct maplet *load_maplet_any ( char * );
 
 /* from archive.c */
-int archive_init ( char ** );
+int archive_init ( void );
+void archive_clear ( void );
+void archive_add ( char * );
 int lookup_series ( struct maplet *, int, int );
 void set_series ( enum s_type );
 

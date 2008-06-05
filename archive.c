@@ -108,7 +108,7 @@ struct section_dir {
 static struct section *temp_section_head;
 
 /* Prototypes ... */
-static int add_archive ( char * );
+static int add_new_archive ( char * );
 static int add_disk ( char *, char * );
 static void add_full_usa ( char *, char * );
 static int add_dir ( char *, char * );
@@ -510,14 +510,61 @@ series_init ( void )
 #endif
 }
 
+/* Added this list of archives 6-5-2008, to allow this
+ * to by dynamically handled via the config file.
+ * We now check for the existence of the directories
+ * before we add them to the list, so the list may be
+ * empty by the time we try to initialize (which is a
+ * good thing, since we can declare an error then).
+ */
+struct archive_entry {
+	struct archive_entry *next;
+	char *path;
+};
+
+static struct archive_entry *archive_head = NULL;
+
+void
+archive_clear ( void )
+{
+	archive_head = NULL;
+}
+
+void
+archive_add ( char *path )
+{
+	struct archive_entry *ap;
+	struct archive_entry *lp;
+
+	if ( ! is_directory ( path ) )
+	    return;
+
+	ap = (struct archive_entry *) gmalloc ( sizeof(struct archive_entry) );
+	ap->next = NULL;
+	ap->path = strhide ( path );
+
+	/* keep list in order (if that matters, doesn't hurt) */
+	if ( ! archive_head )
+	    archive_head = ap;
+	else {
+	    lp = archive_head;
+	    while ( lp->next )
+	    	lp = lp->next;
+	    lp->next = ap;
+	}
+}
+
 /* This is the usual initialization when we want to setup to
  * view a whole collection of potentially multiple states.
  */
 int
-archive_init ( char *archives[] )
+archive_init ( void )
 {
-	char **p;
+	struct archive_entry *ap;
 	int nar;
+
+	if ( ! archive_head )
+	    return 0;
 
 	series_init ();
 
@@ -526,8 +573,8 @@ archive_init ( char *archives[] )
 	info.n_sections = 0;
 
 	/* Look for the SI_D01 thing first off */
-	for ( p=archives; *p; p++ ) {
-	    if ( add_usa ( *p, 1 ) )
+	for ( ap = archive_head; ap; ap = ap->next ) {
+	    if ( add_usa ( ap->path, 1 ) )
 		nar++;
 	}
 
@@ -535,8 +582,8 @@ archive_init ( char *archives[] )
 
 	temp_section_head = NULL;
 
-	for ( p=archives; *p; p++ ) {
-	    if ( add_archive ( *p ) )
+	for ( ap = archive_head; ap; ap = ap->next ) {
+	    if ( add_new_archive ( ap->path ) )
 		nar++;
 	}
 
@@ -941,7 +988,7 @@ add_usa ( char *archive, int depth )
 }
 
 static int
-add_archive ( char *archive )
+add_new_archive ( char *archive )
 {
 	DIR *dd;
 	struct dirent *dp;

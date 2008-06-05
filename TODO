@@ -49,6 +49,16 @@ to Terraserver and get maps, as well as photos, stay tuned.
 
 -- fixed bugs, new features, activity log.
 
+-- Latest stuff at the top.
+
+6/5/2008 - gtopo builds just fine on an intel OS-X mac laptop
+running OSx Leopard (10.5) and with gtk2 2.12.9 from darwinports.
+
+6/5/2008 - add the ability to specify the location of maps on
+the disk to the config file, and confirm that these can be split
+between several directories and work "seamlessly" (much as I hate
+to use that expression of speech).
+
 12/5/2007 - allow a grab and move feature on the left mouse
 button, which replaces the previous "recenter on mouse location".
 For now, this recenter is gone, but I intend to move it to
@@ -107,7 +117,7 @@ now it sees all 3 map series over the entire USA.
 8/30/2007 - Certain map sets (like backcountry explorer), which
 have C and G named tpq files can display nothing in 100K
 and maybe 500k.  This seems fine with lower case names.
-Fixed 9/1/2007, this wasa problem with mixed case filenames
+Fixed 9/1/2007, this was a problem with mixed case filenames
 such as C37120E1.tpq or some such nonsense, now OK.
 
 8/30/2007 - put version 0.9.3 up for download.
@@ -135,22 +145,6 @@ such a machine for half a day or so.
 * Be able to print to a 8.5 by 11 inch equivalent postscript
 file.  In particular the 7.5 minute maps should print at the
 true 1:24,000 scale
-
-* Be able to extract a region and emit it as a .jpg file to
-be included in web pages or email or whatever.
-
-* Get keyboard stuff working and use +- to flip forward and
-back in the scale series, as well as other things.
-
-* Make it do byte swapping so it will run on a big endian
-machine (like a power PC mac, which it fails on as of 0.9.3).
-
-=== Things to maybe do, or maybe not.
-
-* Use a notebook with tabs on the right side to switch
-between map series and indicate the current series in lieu
-of (or in addition to) the right mouse click scale switching
-currently used.
 
 === Things to probably not do.
 

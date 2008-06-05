@@ -137,12 +137,6 @@ struct series series_info_buf[N_SERIES];
  * machines that keep the topos in different places.
  */
 
-#ifdef INITIAL_ARCHIVE
-char *topo_archives[] = { INITIAL_ARCHIVE, NULL };
-#else
-char *topo_archives[] = { "/u1/topo", "/u2/topo", "/mmt/topo", "/home/topo", "/topo", NULL };
-#endif
-
 GdkColormap *syscm;
 
 struct mouse {
@@ -1182,11 +1176,17 @@ main ( int argc, char **argv )
 	char *p;
 	char *file_name;
 
-#ifdef notdef
-	if ( ! temp_init() ) {
-	    printf ("Sorry, I can't find a place to put temporary files\n");
-	    return 1;
-	}
+	/* Built in places to look for maps, can be overridden
+	 * from the settings file.
+	 */
+#ifdef INITIAL_ARCHIVE
+	archive_add ( INITIAL_ARCHIVE );
+#else
+	archive_add ( "/u1/topo" );
+	archive_add ( "/u2/topo" );
+	archive_add ( "/mmt/topo" );
+	archive_add ( "/home/topo" );
+	archive_add ( "/topo" );
 #endif
 
 	/* Let gtk strip off any of its arguments first
@@ -1265,7 +1265,7 @@ main ( int argc, char **argv )
 	    }
 	    printf ( "Displaying single file: %s\n", file_name );
 	} else {
-	    if ( ! archive_init ( topo_archives ) ) {
+	    if ( ! archive_init () ) {
 		printf ( "No topo archives found\n" );
 		return 1;
 	    }

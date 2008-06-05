@@ -7,9 +7,18 @@ program that is sold by the National Geographic Survey.
 It is able to read the .TPQ files that hold the scanned
 USGS maps that they sell in sets, state by state.
 
+For more information, see the gtopo home page:
+
+    http://cholla.mmto.org/gtopo
+
+In particular, for documentation see:
+
+    http://cholla.mmto.org/gtopo/documentation
+
 It should run on any linux system that has the GTK
-libraries.
+libraries, as well as on Mac machine running OS-X.
 
 Gtopo was written by Tom Trebisky in July of 2007.
 Questions and Comments should be directed to
-tom@mmto.org.
+
+    tom@mmto.org.
