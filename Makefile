@@ -19,14 +19,14 @@
 #
 # Makefile for gtopo
 # Tom Trebisky  6-26-2007
-# gtk-1.2.10 is the apparent default
-# however gtk-2.0 is on my system
 
 # This will get you gtk-1.2.10
+# gtk-1.2.10 is/was the apparent default
 #CFLAGS = `gtk-config --cflags`
 #GTKLIBS = `gtk-config --libs`
 
-# The following will get you gtk-2.10.12
+# The following will get you gtk-2.x.y
+# Now building with 2.12.8
 # -g switch gets debugging information.
 
 CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
