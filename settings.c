@@ -18,16 +18,6 @@
  *  Foundation, Inc., 59 Temple Street #330, Boston, MA 02111-1307, USA.
  */
 
-/* XXX - a todo note, (remove when done/confirmed)
- *  tjt  -- 12-28-2007
- * gtopo should allow a split archive.
- * this will be handy on a laptop which has a small disk and
- * space on two partitions that could be used.
- * This is simple to do, just search all directories on the
- * archive path that exist and add them to the datastructure.
- * (ACTUALLY, I think it works that way right now!!!)
- */
-
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>
 

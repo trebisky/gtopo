@@ -516,6 +516,11 @@ series_init ( void )
  * before we add them to the list, so the list may be
  * empty by the time we try to initialize (which is a
  * good thing, since we can declare an error then).
+ *
+ * Notice also that this scheme allows gtopo to handle
+ * an archive that is split into any number of directories,
+ * which I find handy on a laptop with space on two different
+ * disk partitions.
  */
 struct archive_entry {
 	struct archive_entry *next;
