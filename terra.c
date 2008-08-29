@@ -159,7 +159,7 @@ load_terra_maplet ( struct maplet *mp )
 
 	loader = gdk_pixbuf_loader_new_with_type ( "gif", NULL );
 
-	gdk_pixbuf_loader_write ( loader, buf, count, NULL );
+	gdk_pixbuf_loader_write ( loader, (guchar *) buf, count, NULL );
 
 	/* The following two calls work in either order */
 	gdk_pixbuf_loader_close ( loader, NULL );

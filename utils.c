@@ -255,6 +255,7 @@ parse_dms ( char *line )
 	int how_many_colons = 0;
 	int state = 0;
 	double rv;
+	char *safe;
 
 	for ( p=line; *p; p++ )
 	    if ( *p == ':' )
@@ -263,8 +264,11 @@ parse_dms ( char *line )
 	if ( how_many_colons == 0 )
 	    return atof ( line );
 
-	d = line;
-	for ( p=line; *p; p++ ) {
+	/* This puts two nulls in the
+	 * string, trashing it.
+	 */
+	d = safe = strhide ( line );
+	for ( p=safe; *p; p++ ) {
 	    if ( *p != ':' )
 		continue;
 	    *p++ = '\0';
@@ -287,14 +291,17 @@ parse_dms ( char *line )
 	else
 	    rv += atof ( m ) / 60.0;
 
-	if ( how_many_colons == 1 )
+	if ( how_many_colons == 1 ) {
+	    free ( safe );
 	    return rv;
+	}
 
 	if ( is_neg )
 	    rv -= atof ( s ) / 3600.0;
 	else
 	    rv += atof ( s ) / 3600.0;
 
+	free ( safe );
 	return rv;
 }
 

@@ -708,14 +708,14 @@ info_window ( void )
 	GtkWidget *hb2;
 
 	if ( i_info.status == UP ) {
-	    printf ( "hiding\n" );
+	    /* printf ( "hiding\n" ); */
 	    gtk_widget_hide_all ( i_info.main );
 	    i_info.status = HIDDEN;
 	    return;
 	}
 
 	if ( i_info.status == HIDDEN ) {
-	    printf ( "unhiding\n" );
+	    /* printf ( "unhiding\n" ); */
 	    gtk_widget_show_all ( i_info.main );
 	    i_info.status = UP;
 	    info_update ();
@@ -723,7 +723,7 @@ info_window ( void )
 	}
 
 	if ( i_info.status == GONE ) {
-	    printf ( "uping\n" );
+	    /* printf ( "uping\n" ); */
 	    i_info.main = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
 	    vb = gtk_vbox_new ( FALSE, 0 );
 	    gtk_container_add ( GTK_CONTAINER(i_info.main), vb );

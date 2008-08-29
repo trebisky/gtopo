@@ -643,7 +643,7 @@ load_tpq_maplet ( struct maplet *mp )
 	    nw = size < BUFSIZE ? size : BUFSIZE;
 	    if ( read( fd, buf, nw ) != nw )
 		error ( "TPQ file read error %s %d %d\n", mp->tpq_path, off, size );
-	    gdk_pixbuf_loader_write ( loader, buf, nw, NULL );
+	    gdk_pixbuf_loader_write ( loader, (guchar *)buf, nw, NULL );
 	    size -= nw;
 	}
 
