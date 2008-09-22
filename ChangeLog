@@ -24,3 +24,12 @@
 
 	* do maplet scaling the same over a sheet.
 	* look into the nevada whole USA series 123
+
+8/28/2008
+	Version 0.9.11
+	* Add debug for series change stuff.
+
+9/12/2008
+	Version 0.9.12
+	* fix bug for upper case filenames.
+	  (for Jay ... and everyone else)

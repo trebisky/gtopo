@@ -642,9 +642,11 @@ show_statistics ( void )
 	}
 }
 
-int
+static int
 try_series ( int new_series )
 {
+	int rv = 0;
+
 	/* Give it a whirl, see if we can load a maplet
 	 * for this series at the center position.
 	 * Trying to load the maplet avoids changing to
@@ -658,8 +660,12 @@ try_series ( int new_series )
 	 * to display anyway.
 	 */
 	if ( load_maplet ( info.maplet_x, info.maplet_y ) )
-	    return 1;
-	return 0;
+	    rv = 1;
+
+	if ( settings.verbose & V_BASIC )
+	    printf ( "try series returns %d for %d\n", rv, new_series );
+
+	return rv;
 }
 
 /* Move to a less detailed series */
@@ -668,14 +674,20 @@ up_series ( void )
 {
 	int series = info.series->series;
 
+	if ( settings.verbose & V_BASIC )
+	    printf ( "up series called on series %d\n", series );
+
 	if ( series == 0 )
 	    return;
 
 	if ( try_series ( series - 1 ) ) {
 	    redraw_series ();
+	    if ( settings.verbose & V_BASIC )
+		printf ( "up series moved to series %d\n", series-1 );
 	    return;
 	}
 
+	/* cannot switch, restore original series */
 	info.series = &info.series_info[series];
 	synch_position ();
 }
@@ -686,14 +698,20 @@ down_series ( void )
 {
 	int series = info.series->series;
 
+	if ( settings.verbose & V_BASIC )
+	    printf ( "down series called on series %d\n", series );
+
 	if ( series == N_SERIES - 1 )
 	    return;
 
 	if ( try_series ( series + 1 ) ) {
 	    redraw_series ();
+	    if ( settings.verbose & V_BASIC )
+		printf ( "down series moved to series %d\n", series+1 );
 	    return;
 	}
 
+	/* cannot switch, restore original series */
 	info.series = &info.series_info[series];
 	synch_position ();
 }
@@ -748,20 +766,6 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	lat_q  = 'a' + lat_quad * info.series->quad_lat_count;
 	long_q = '1' + long_quad * info.series->quad_long_count;
 
-#ifdef notdef
-	/* XXX */
-	series_letter = dp->q_code;
-	if ( info.series->series == S_100K ) {
-	    if ( series_letter == 'q' )
-		series_letter = 'k';
-	    else /* Nevada */
-		series_letter = 'c';
-	}
-	if ( info.series->series == S_500K ) {
-	    /* Nevada */
-	    series_letter = 'g';
-	}
-#endif
 	series_letter = dp->tpq_code[info.series->series];
 
 	/* 1 - try all lower case */
@@ -1148,6 +1152,10 @@ scan_section ( char *path, int codes[], int count[] )
 	    codes[S_100K] = 'c';
 	    count[S_100K] += letter_count['c'];
 	}
+	if ( letter_count['C'] ) {
+	    codes[S_100K] = 'C';
+	    count[S_100K] += letter_count['C'];
+	}
 	if ( letter_count['k'] ) {
 	    codes[S_100K] = 'k';
 	    count[S_100K] += letter_count['k'];
@@ -1161,6 +1169,10 @@ scan_section ( char *path, int codes[], int count[] )
 	if ( letter_count['n'] ) {
 	    codes[S_24K] = 'n';
 	    count[S_24K] += letter_count['n'];
+	}
+	if ( letter_count['N'] ) {
+	    codes[S_24K] = 'N';
+	    count[S_24K] += letter_count['N'];
 	}
 	if ( letter_count['q'] ) {
 	    codes[S_24K] = 'q';
