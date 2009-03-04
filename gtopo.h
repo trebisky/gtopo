@@ -267,4 +267,19 @@ struct tpq_index_e {
 	long	size;
 };
 
+enum win_status { GONE, HIDDEN, UP };
+
+enum {
+        NAME_COLUMN,
+	LONG_COLUMN,
+	LAT_COLUMN,
+	N_COLUMNS
+};
+
+struct places_info {
+	enum win_status status;
+	GtkWidget *main;
+	GtkListStore *store;
+};
+
 /* THE END */

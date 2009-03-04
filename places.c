@@ -31,12 +31,59 @@
 #define MAX_LINE	128
 #define MAX_WORDS	16
 
+extern struct places_info p_info;
+
+#ifdef notdef
+static struct place *place_head;
+static int next_id;
+
+struct place {
+	struct place *next;
+	char *p_name;
+	double p_long;
+	double p_lat;
+	int p_id;
+};
+#endif
+
 void
-set_place ( char *lon, char *lat, char *name )
+new_place ( char *lon, char *lat, char *name )
 {
+	GtkTreeIter iter;
+
 	/*
 	printf ( "set place %s %s -- %s\n", lon, lat, name );
 	*/
+
+	gtk_list_store_append ( p_info.store, &iter );
+
+	gtk_list_store_set ( p_info.store, &iter,
+		NAME_COLUMN, name,
+		LONG_COLUMN, lon,
+		LAT_COLUMN, lat, -1 );
+
+#ifdef notdef
+	struct place *pp;
+	struct place *lp;
+
+	pp = (struct place *) gmalloc ( sizeof(struct place) );
+	if ( ! pp )
+	    error ("new place - out of memory\n");
+
+	pp->next = NULL;
+        pp->p_name = strhide ( name );
+	pp->p_id = next_id++;
+
+        /* keep list in order */
+        if ( ! place_head )
+            place_head = pp;
+        else {
+            lp = place_head;
+            while ( lp->next )
+                lp = lp->next;
+            lp->next = pp;
+        }
+#endif
 }
 
 static void
@@ -51,6 +98,8 @@ load_places ( char *path )
 	if ( ! fp )
 	    return;
 
+	printf ( "Loading places from %s\n", path );
+
 	/* Remember fgets includes the newline */
 	while ( fgets ( line, MAX_LINE, fp ) ) {
 	    /* kill the newline */
@@ -64,10 +113,10 @@ load_places ( char *path )
 	    /* printf ( "split_n: %d %s\n", nw, wp[2] ); */
 
 	    if ( nw == 2 )
-	    	set_place ( wp[0], wp[1], "--" );
+	    	new_place ( wp[0], wp[1], "--" );
 
 	    if ( nw > 2 )
-	    	set_place ( wp[0], wp[1], wp[2] );
+	    	new_place ( wp[0], wp[1], wp[2] );
 	}
 
 	fclose ( fp );
@@ -79,6 +128,16 @@ places_init ( void )
 	char buf[128];
 	char *home;
 
+	p_info.store = gtk_list_store_new ( N_COLUMNS,
+	    G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING );
+
+	gtk_list_store_clear ( p_info.store );
+
+	/*
+	place_head = (struct place *) NULL;
+	next_id = 1;
+	*/
+
 	load_places ( "/etc/gtopo/places" );
 
 	home = find_home ();
@@ -88,5 +147,17 @@ places_init ( void )
 	    load_places ( buf );
 	}
 }
+
+/*
+void
+show_places ( void )
+{
+	struct place *pp;
+
+	for ( pp = place_head; pp; pp = pp->next ) {
+	    printf ( "Place %d: %s\n", pp->p_id, pp->p_name );
+	}
+}
+*/
 
 /* THE END */

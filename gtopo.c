@@ -125,6 +125,7 @@
 
 struct topo_info info;
 struct settings settings;
+struct places_info p_info;
 
 struct series series_info_buf[N_SERIES];
 
@@ -157,8 +158,6 @@ struct viewport {
 	GtkWidget *da;
 } vp_info;
 
-enum win_status { GONE, HIDDEN, UP };
-
 struct info_info {
 	enum win_status status;
 	GtkWidget *main;
@@ -167,11 +166,6 @@ struct info_info {
 	GtkWidget *e_long;
 	GtkWidget *e_lat;
 } i_info = { GONE };
-
-struct places_info {
-	enum win_status status;
-	GtkWidget *main;
-} p_info = { GONE };
 
 /* Prototypes ..........
  */
@@ -774,13 +768,68 @@ places_destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 	return FALSE;
 }
 
+#ifdef notdef
+gint
+places_select_handler ( GtkTreeSelection *sel, gpointer data )
+{
+	GtkTreeIter iter;
+	GtkTreeModel *model;
+	gchar *name;
+
+	printf ( "places selection made\n" );
+
+	/*
+	sel = gtk_tree_view_get_selection ( GTK_TREE_VIEW(view) );
+	*/
+	if ( gtk_tree_selection_get_selected ( sel, &model, &iter ) ) {
+		gtk_tree_model_get ( model, &iter, NAME_COLUMN, &name, -1 );
+		printf ("Selection of: %s\n", name );
+		g_free ( name );
+	}
+
+	/*
+	return FALSE;
+	*/
+}
+#endif
+
+gint
+places_select_func ( GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePath *path,
+			gboolean cur_selected, gpointer user_data )
+{
+	GtkTreeIter iter;
+	gchar *name;
+
+	printf ( "places selection change made\n" );
+
+	if ( gtk_tree_model_get_iter ( model, &iter, path ) ) {
+		gtk_tree_model_get ( model, &iter, NAME_COLUMN, &name, -1 );
+		if ( ! cur_selected ) {
+		    printf ( "%s will be selected\n", name );
+		} else {
+		    printf ( "%s will be DEselected\n", name );
+		}
+		if ( name )
+		    g_free ( name );
+	}
+
+	/* allow the selection change */
+	return TRUE;
+}
+
+/* PLACES */
+
+/* gtk2 no longer has a plain old "listbox"
+ * (it has one, but deprecated), so the thing to do is to use
+ * a TreeView with a ListStore in the new world order.
+ */
 void
 places_window ( void )
 {
-	GtkWidget *w;
-	GtkWidget *vb;
-	GtkWidget *hb1;
-	GtkWidget *hb2;
+	GtkWidget *view;
+	GtkTreeViewColumn *col;
+	GtkCellRenderer *rend;
+	GtkTreeSelection *sel;
 
 	if ( p_info.status == UP ) {
 	    /* printf ( "hiding\n" ); */
@@ -799,18 +848,47 @@ places_window ( void )
 	if ( p_info.status == GONE ) {
 	    /* printf ( "uping\n" ); */
 	    p_info.main = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
-	    vb = gtk_vbox_new ( FALSE, 0 );
-	    gtk_container_add ( GTK_CONTAINER(p_info.main), vb );
 
-	    hb1 = gtk_hbox_new ( FALSE, 0 );
-	    gtk_container_add ( GTK_CONTAINER(vb), hb1 );
-	    w = gtk_label_new ( "Test" );
-	    gtk_box_pack_start ( GTK_BOX(hb1), w, TRUE, TRUE, 0 );
+	    view = gtk_tree_view_new_with_model ( GTK_TREE_MODEL(p_info.store) );
 
-	    hb2 = gtk_hbox_new ( FALSE, 0 );
-	    gtk_container_add ( GTK_CONTAINER(vb), hb2 );
-	    w = gtk_label_new ( "Test2 " );
-	    gtk_box_pack_start ( GTK_BOX(hb2), w, TRUE, TRUE, 0 );
+	    /* Name column */
+	    col = gtk_tree_view_column_new ();
+	    gtk_tree_view_column_set_title ( col, "Name" );
+	    gtk_tree_view_append_column ( GTK_TREE_VIEW(view), col );
+	    rend = gtk_cell_renderer_text_new ();
+	    gtk_tree_view_column_pack_start ( col, rend, TRUE );
+	    g_object_set ( rend, "text", "Unknown", NULL );	/* XXX */
+	    gtk_tree_view_column_add_attribute ( col, rend, "text", NAME_COLUMN );
+
+	    /* Longitude column */
+	    col = gtk_tree_view_column_new ();
+	    gtk_tree_view_column_set_title ( col, "Long" );
+	    gtk_tree_view_append_column ( GTK_TREE_VIEW(view), col );
+	    rend = gtk_cell_renderer_text_new ();
+	    gtk_tree_view_column_pack_start ( col, rend, TRUE );
+	    g_object_set ( rend, "text", "Ulong", NULL );	/* XXX */
+	    gtk_tree_view_column_add_attribute ( col, rend, "text", LONG_COLUMN );
+
+	    /* Latitude column */
+	    col = gtk_tree_view_column_new ();
+	    gtk_tree_view_column_set_title ( col, "Lat" );
+	    gtk_tree_view_append_column ( GTK_TREE_VIEW(view), col );
+	    rend = gtk_cell_renderer_text_new ();
+	    gtk_tree_view_column_pack_start ( col, rend, TRUE );
+	    g_object_set ( rend, "text", "Ulat", NULL );	/* XXX */
+	    gtk_tree_view_column_add_attribute ( col, rend, "text", LAT_COLUMN );
+
+	    /* Get the selection object */
+	    sel = gtk_tree_view_get_selection ( GTK_TREE_VIEW(view) );
+	    gtk_tree_selection_set_mode ( sel, GTK_SELECTION_SINGLE );
+	    gtk_tree_selection_set_select_function ( sel, places_select_func, NULL, NULL );
+
+	    /*
+	    g_signal_connect ( view, "changed",
+			G_CALLBACK(places_select_handler), NULL );
+			*/
+
+	    gtk_container_add ( GTK_CONTAINER(p_info.main), view );
 
 	    g_signal_connect ( p_info.main, "delete_event",
 			G_CALLBACK(places_destroy_handler), NULL );
@@ -1261,7 +1339,12 @@ main ( int argc, char **argv )
 	argv++;
 
 	settings_init ();
+
+	p_info.status = GONE;
 	places_init ();
+	/*
+	show_places ();
+	*/
 
 #ifdef notdef
 	/* Temporary hack XXX */
