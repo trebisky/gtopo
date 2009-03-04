@@ -115,6 +115,15 @@ struct wtable series_words[] = {
     NULL, 0 
 };
 
+/* XXX - Should move to utils.c
+ * since this is now used also by places.c
+ */
+void
+gronk_series ( int *rv, char *val )
+{
+	gronk_word ( rv, val, series_words );
+}
+
 static void
 set_one ( char *name )
 {
@@ -141,8 +150,12 @@ set_two ( char *name, char *val )
 	    settings.starting_long = parse_dms ( val );
 	else if ( strcmp ( name, "starting_lat" ) == 0 )
 	    settings.starting_lat = parse_dms ( val );
-	else if ( strcmp ( name, "starting_series" ) == 0 )
+	else if ( strcmp ( name, "starting_series" ) == 0 ) {
+	    /*
 	    gronk_word ( (int *) &settings.starting_series, val, series_words );
+	    */
+	    gronk_series ( (int *) &settings.starting_series, val );
+	}
 	else if ( strcmp ( name, "m1_action" ) == 0 )
 	    gronk_word ( (int *) &settings.m1_action, val, m1_words );
 	else if ( strcmp ( name, "m3_action" ) == 0 )

@@ -783,6 +783,7 @@ places_select_func ( GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePath *pa
 	gchar *s_lat;
 	gchar *s_long;
 	double lat, lon;
+	int series;
 
 	/* We always get a notice of the current selection when the
 	 * window first comes up, we just want to ignore it.
@@ -801,6 +802,7 @@ places_select_func ( GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePath *pa
 		    NAME_COLUMN, &name,
 		    LAT_COLUMN, &s_lat,
 		    LONG_COLUMN, &s_long,
+		    SERIES_COLUMN, &series,
 		    -1 );
 
 		printf ( "%s will be selected (%s, %s)\n", name, s_long, s_lat );
@@ -812,6 +814,7 @@ places_select_func ( GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePath *pa
 		printf ( "lat: %.4f\n", lat );
 
 		set_position ( lon, lat );
+		initial_series ( series );
 		full_redraw ();
 
 		if ( name )

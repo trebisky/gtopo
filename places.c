@@ -47,20 +47,21 @@ struct place {
 #endif
 
 void
-new_place ( char *lon, char *lat, char *name )
+new_place ( char *s_series, char *lon, char *lat, char *name )
 {
 	GtkTreeIter iter;
+	int series;
 
-	/*
-	printf ( "set place %s %s -- %s\n", lon, lat, name );
-	*/
+	gronk_series ( &series, s_series );
 
 	gtk_list_store_append ( p_info.store, &iter );
 
 	gtk_list_store_set ( p_info.store, &iter,
 		NAME_COLUMN, name,
 		LONG_COLUMN, lon,
-		LAT_COLUMN, lat, -1 );
+		LAT_COLUMN, lat,
+		SERIES_COLUMN, series,
+		-1 );
 
 #ifdef notdef
 	struct place *pp;
@@ -91,7 +92,7 @@ load_places ( char *path )
 {
 	FILE *fp;
 	char line[MAX_LINE];
-	char *wp[3];
+	char *wp[5];
 	int nw;
 
 	fp = fopen ( path, "r" );
@@ -113,10 +114,17 @@ load_places ( char *path )
 	    /* printf ( "split_n: %d %s\n", nw, wp[2] ); */
 
 	    if ( nw == 2 )
-	    	new_place ( wp[0], wp[1], "--" );
+	    	new_place ( "24K", wp[0], wp[1], "--" );
 
 	    if ( nw > 2 )
-	    	new_place ( wp[0], wp[1], wp[2] );
+	    	new_place ( "24K", wp[0], wp[1], wp[2] );
+
+	    /* Not so easy, want to collect all words in name into
+	     * the final string */
+	    /*
+	    if ( nw > 3 )
+	    	new_place ( wp[0], wp[1], wp[2], wp[3] );
+		*/
 	}
 
 	fclose ( fp );
@@ -129,7 +137,7 @@ places_init ( void )
 	char *home;
 
 	p_info.store = gtk_list_store_new ( N_COLUMNS,
-	    G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING );
+	    G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT );
 
 	gtk_list_store_clear ( p_info.store );
 
