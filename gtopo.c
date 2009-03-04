@@ -768,47 +768,52 @@ places_destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 	return FALSE;
 }
 
-#ifdef notdef
-gint
-places_select_handler ( GtkTreeSelection *sel, gpointer data )
-{
-	GtkTreeIter iter;
-	GtkTreeModel *model;
-	gchar *name;
+static int first_sel;
 
-	printf ( "places selection made\n" );
-
-	/*
-	sel = gtk_tree_view_get_selection ( GTK_TREE_VIEW(view) );
-	*/
-	if ( gtk_tree_selection_get_selected ( sel, &model, &iter ) ) {
-		gtk_tree_model_get ( model, &iter, NAME_COLUMN, &name, -1 );
-		printf ("Selection of: %s\n", name );
-		g_free ( name );
-	}
-
-	/*
-	return FALSE;
-	*/
-}
-#endif
-
+/* Ask whether it is OK to change the selection status, we use it as an indicator
+ * that the selection IS going to change.  We see this called twice for every time
+ * an entry is selected, so it would be good to filter the two events.
+ */
 gint
 places_select_func ( GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePath *path,
 			gboolean cur_selected, gpointer user_data )
 {
 	GtkTreeIter iter;
 	gchar *name;
+	gchar *s_lat;
+	gchar *s_long;
+	double lat, lon;
 
-	printf ( "places selection change made\n" );
+	/* We always get a notice of the current selection when the
+	 * window first comes up, we just want to ignore it.
+	 */
+	if ( first_sel ) {
+		first_sel = 0;
+		return TRUE;
+	}
+
+	/* also ignore deselections */
+	if ( cur_selected )
+		return TRUE;
 
 	if ( gtk_tree_model_get_iter ( model, &iter, path ) ) {
-		gtk_tree_model_get ( model, &iter, NAME_COLUMN, &name, -1 );
-		if ( ! cur_selected ) {
-		    printf ( "%s will be selected\n", name );
-		} else {
-		    printf ( "%s will be DEselected\n", name );
-		}
+		gtk_tree_model_get ( model, &iter,
+		    NAME_COLUMN, &name,
+		    LAT_COLUMN, &s_lat,
+		    LONG_COLUMN, &s_long,
+		    -1 );
+
+		printf ( "%s will be selected (%s, %s)\n", name, s_long, s_lat );
+
+		lon = parse_dms ( s_long );
+		lat = parse_dms ( s_lat );
+
+		printf ( "long: %.4f\n", lon );
+		printf ( "lat: %.4f\n", lat );
+
+		set_position ( lon, lat );
+		full_redraw ();
+
 		if ( name )
 		    g_free ( name );
 	}
@@ -879,6 +884,7 @@ places_window ( void )
 	    gtk_tree_view_column_add_attribute ( col, rend, "text", LAT_COLUMN );
 
 	    /* Get the selection object */
+	    first_sel = 1;
 	    sel = gtk_tree_view_get_selection ( GTK_TREE_VIEW(view) );
 	    gtk_tree_selection_set_mode ( sel, GTK_SELECTION_SINGLE );
 	    gtk_tree_selection_set_select_function ( sel, places_select_func, NULL, NULL );
