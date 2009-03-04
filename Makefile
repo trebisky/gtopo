@@ -29,8 +29,13 @@
 # Now building with 2.12.8
 # -g switch gets debugging information.
 
-CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
-GTKLIBS = `pkg-config --libs gtk+-2.0`
+GTK_CONFIG = pkg-config gtk+-2.0
+
+#CFLAGS = $(COPTS) `pkg-config --cflags gtk+-2.0`
+#GTKLIBS = `pkg-config --libs gtk+-2.0`
+
+CFLAGS = $(COPTS) `$(GTK_CONFIG) --cflags`
+GTKLIBS = `$(GTK_CONFIG) --libs`
 
 OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o terra.o xml.o http.o utils.o
 
@@ -38,6 +43,9 @@ COPTS = -g
 TARGET = gtopo
 
 # -m32 lets you build a 32 bit version on a 64 bit system
+#  comment out the two lines above, and uncomment these two lines to do so.
+#  (and be sure and do a make clean first).
+#  I needed to yum install cairo-devel.i386 at some point for this to work.
 #COPTS = -g -m32
 #TARGET = gtopo-32
 

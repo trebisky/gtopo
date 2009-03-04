@@ -157,16 +157,21 @@ struct viewport {
 	GtkWidget *da;
 } vp_info;
 
-enum info_status { GONE, HIDDEN, UP };
+enum win_status { GONE, HIDDEN, UP };
 
 struct info_info {
-	enum info_status status;
+	enum win_status status;
 	GtkWidget *main;
 	GtkWidget *l_long;
 	GtkWidget *l_lat;
 	GtkWidget *e_long;
 	GtkWidget *e_lat;
 } i_info = { GONE };
+
+struct places_info {
+	enum win_status status;
+	GtkWidget *main;
+} p_info = { GONE };
 
 /* Prototypes ..........
  */
@@ -761,6 +766,60 @@ info_window ( void )
 	}
 }
 
+gint
+places_destroy_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
+{
+	p_info.status = GONE;
+
+	return FALSE;
+}
+
+void
+places_window ( void )
+{
+	GtkWidget *w;
+	GtkWidget *vb;
+	GtkWidget *hb1;
+	GtkWidget *hb2;
+
+	if ( p_info.status == UP ) {
+	    /* printf ( "hiding\n" ); */
+	    gtk_widget_hide_all ( p_info.main );
+	    p_info.status = HIDDEN;
+	    return;
+	}
+
+	if ( p_info.status == HIDDEN ) {
+	    /* printf ( "unhiding\n" ); */
+	    gtk_widget_show_all ( p_info.main );
+	    p_info.status = UP;
+	    return;
+	}
+
+	if ( p_info.status == GONE ) {
+	    /* printf ( "uping\n" ); */
+	    p_info.main = gtk_window_new ( GTK_WINDOW_TOPLEVEL );
+	    vb = gtk_vbox_new ( FALSE, 0 );
+	    gtk_container_add ( GTK_CONTAINER(p_info.main), vb );
+
+	    hb1 = gtk_hbox_new ( FALSE, 0 );
+	    gtk_container_add ( GTK_CONTAINER(vb), hb1 );
+	    w = gtk_label_new ( "Test" );
+	    gtk_box_pack_start ( GTK_BOX(hb1), w, TRUE, TRUE, 0 );
+
+	    hb2 = gtk_hbox_new ( FALSE, 0 );
+	    gtk_container_add ( GTK_CONTAINER(vb), hb2 );
+	    w = gtk_label_new ( "Test2 " );
+	    gtk_box_pack_start ( GTK_BOX(hb2), w, TRUE, TRUE, 0 );
+
+	    g_signal_connect ( p_info.main, "delete_event",
+			G_CALLBACK(places_destroy_handler), NULL );
+
+	    gtk_widget_show_all ( p_info.main );
+	    p_info.status = UP;
+	}
+}
+
 #define KV_PAGE_UP	65365
 #define KV_PAGE_DOWN	65366
 
@@ -776,6 +835,9 @@ info_window ( void )
 
 #define KV_I		'i'
 #define KV_I_UC		'I'
+
+#define KV_P		'p'
+#define KV_P_UC		'P'
 
 #define KV_S		's'
 #define KV_S_UC		'S'
@@ -838,6 +900,8 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 	    local_down_series ();
 	else if ( event->keyval == KV_I || event->keyval == KV_I_UC )
 	    info_window ();
+	else if ( event->keyval == KV_P || event->keyval == KV_P_UC )
+	    places_window ();
 	else if ( event->keyval == KV_S || event->keyval == KV_S_UC )
 	    snap ();
 	else if ( event->keyval == KV_LEFT )
@@ -1207,15 +1271,17 @@ main ( int argc, char **argv )
 	info.series_info = series_info_buf;
 	info.center_only = 0;
 
-	/* XXX - really should dynamically generate version string at compile time */
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-V" ) == 0 )
 	    	settings.verbose = 0xffff;
+
+	    /* XXX - really should dynamically generate version string at compile time */
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 0.9.10\n" );
+	    	printf ( "gtopo version 0.9.12\n" );
 		return 0;
 	    }
+
 	    if ( strcmp ( p, "-c" ) == 0 )
 	    	info.center_only = 1;
 	    if ( strcmp ( p, "-d" ) == 0 )
