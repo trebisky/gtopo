@@ -213,6 +213,16 @@ series_init_one ( struct series *sp, enum s_type series )
 	sp->long_offset = 0.0;
 }
 
+void
+series_init ( void )
+{
+	int s;
+
+	for ( s=0; s<N_SERIES; s++ ) {
+	    series_init_one ( &info.series_info[s], s );
+	}
+}
+
 char *
 wonk_series ( enum s_type series )
 {
@@ -330,8 +340,8 @@ file_init ( char *path )
 	return 1;
 }
 
-void
-series_init ( void )
+static void
+series_init_mapinfo ( void )
 {
 	struct series *sp;
 
@@ -340,7 +350,6 @@ series_init ( void )
 	 * 64 of these in a square degree
 	 */
 	sp = &info.series_info[S_24K];
-	    series_init_one ( sp, S_24K );
 
 	    /* Correct south of Tucson */
 	    sp->xdim = 435;
@@ -362,7 +371,6 @@ series_init ( void )
 	 * one of top of the other a1 and e1
 	 */
 	sp = &info.series_info[S_100K];
-	    series_init_one ( sp, S_100K );
 
 	    /* Correct near Tucson */
 	    sp->xdim = 333;
@@ -385,7 +393,6 @@ series_init ( void )
 	 * are 0.5 by 0.5 degrees on a side.
 	 */
 	sp = &info.series_info[S_500K];
-	    series_init_one ( sp, S_500K );
 
 	    /* Correct in Southern Nevada */
 	    sp->xdim = 380;
@@ -408,7 +415,6 @@ series_init ( void )
 
 	/* XXX */
 	sp = &info.series_info[S_ATLAS];
-	    series_init_one ( sp, S_ATLAS );
 
 	    /* true for full USA */
 	    sp->maplet_lat_deg = 1.0;
@@ -429,7 +435,6 @@ series_init ( void )
 
 	/* XXX - The entire state */
 	sp = &info.series_info[S_STATE];
-	    series_init_one ( sp, S_STATE );
 
 	    /* XXX - complete BS for this series */
 	    sp->lat_count = 1;
@@ -477,7 +482,6 @@ series_init ( void )
 #ifdef TERRA
 	/* Terraserver 2m (like 1:24k) */
 	sp = &info.series_info[S_TOPO_2M];
-	    series_init_one ( sp, S_TOPO_2M );
 
 	    sp->xdim = 200;
 	    sp->ydim = 200;
@@ -488,7 +492,6 @@ series_init ( void )
 
 	/* Terraserver 8m (like 1:100) */
 	sp = &info.series_info[S_TOPO_8M];
-	    series_init_one ( sp, S_TOPO_8M );
 
 	    sp->xdim = 200;
 	    sp->ydim = 200;
@@ -499,7 +502,6 @@ series_init ( void )
 
 	/* Terraserver 32m */
 	sp = &info.series_info[S_TOPO_32M];
-	    series_init_one ( sp, S_TOPO_32M );
 
 	    sp->xdim = 200;
 	    sp->ydim = 200;
@@ -571,7 +573,7 @@ archive_init ( void )
 	if ( ! archive_head )
 	    return 0;
 
-	series_init ();
+	series_init_mapinfo ();
 
 	nar = 0;
 
@@ -729,10 +731,7 @@ initial_series ( enum s_type s )
 void
 set_series ( enum s_type s )
 {
-    	if ( s < 0 || s >= N_SERIES )
-	    error ( "set_series, impossible value: %d\n", s );
-
-	info.series = &info.series_info[s];
+	initial_series ( s );
 
 	synch_position ();
 	if ( settings.verbose & V_BASIC ) {

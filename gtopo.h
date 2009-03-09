@@ -89,49 +89,6 @@ struct settings {
 	enum m3_type m3_action;
 };
 
-/* Structure to hold our current position */
-struct topo_info {
-	/* This is where we are in plain old degrees */
-	double lat_deg;
-	double long_deg;
-
-	/* Here is our position in UTM */
-	int utm_zone;
-	double utm_x;
-	double utm_y;
-
-	/* This specifies the maplet containing the above,
-	 * it changes every time we change series.
-	 */
-	long	maplet_x;
-	long	maplet_y;
-
-	/* fractional offset in the maplet */
-	double 	fx;
-	double	fy;
-
-	/* info for all the series */
-	struct series *series_info;
-
-	/* the current series */
-	struct series *series;
-
-	int have_usa;
-
-	/* stuff from command line options */
-	int center_only;
-
-	/* statistics to show when gtopo exits */
-	int n_sections;
-};
-
-struct method {
-	struct method *next;
-	enum m_type type;
-	struct section *sections;
-	struct tpq_info *tpq;
-};
-
 /* XXX - we need to introduce a tpq structure and link to it
  * from other appropriate structures (probably just the maplet
  * structure).  This is necessitated at level 3 where the TPQ
@@ -192,6 +149,50 @@ struct series {
 	/* size of each maplet */
 	double maplet_lat_deg;
 	double maplet_long_deg;
+};
+
+
+/* Structure to hold our current position */
+struct topo_info {
+	/* This is where we are in plain old degrees */
+	double lat_deg;
+	double long_deg;
+
+	/* Here is our position in UTM */
+	int utm_zone;
+	double utm_x;
+	double utm_y;
+
+	/* This specifies the maplet containing the above,
+	 * it changes every time we change series.
+	 */
+	long	maplet_x;
+	long	maplet_y;
+
+	/* fractional offset in the maplet */
+	double 	fx;
+	double	fy;
+
+	/* info for all the series */
+	struct series series_info[N_SERIES];
+
+	/* the current series */
+	struct series *series;
+
+	int have_usa;
+
+	/* stuff from command line options */
+	int center_only;
+
+	/* statistics to show when gtopo exits */
+	int n_sections;
+};
+
+struct method {
+	struct method *next;
+	enum m_type type;
+	struct section *sections;
+	struct tpq_info *tpq;
 };
 
 /* This is set up by load_maplet() and lookup_quad()

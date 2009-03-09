@@ -99,7 +99,9 @@ load_places ( char *path )
 	if ( ! fp )
 	    return;
 
+	/*
 	printf ( "Loading places from %s\n", path );
+	*/
 
 	/* Remember fgets includes the newline */
 	while ( fgets ( line, MAX_LINE, fp ) ) {

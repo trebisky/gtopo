@@ -127,8 +127,6 @@ struct topo_info info;
 struct settings settings;
 struct places_info p_info;
 
-struct series series_info_buf[N_SERIES];
-
 /* This is a list of "root directories" where images of the
  * CDROMS may be found.  It is used as a kind of search path,
  * if directories do not exist they are ignored.
@@ -408,27 +406,38 @@ pixmap_redraw ( void )
 	}
 }
 
-static int config_count = 0;
-
-/* This gets called when the drawing area gets created or resized.
- * (and after every one of these you get an expose event).
+/* We are changing location, and maybe also series, so we should not
+ * take for granted we already have a pixmap allocated for that series.
  */
-gint
-configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
+void
+new_redraw ( void )
 {
-	int vxdim, vydim;
+	int i;
+
+	/* invalidate content of any prior pixmaps */
+	for ( i=0; i<N_SERIES; i++ )
+	    info.series_info[i].content = 0;
+
+	if ( ! info.series->pixels )
+	    info.series->pixels = gdk_pixmap_new ( vp_info.da->window, vp_info.vx, vp_info.vy, -1 );
+
+	pixmap_redraw ();
+
+	/* put the new pixmap on the screen */
+	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+}
+
+/* Since this is called from the configure handler, we have just changed
+ * viewport size, so we need to toss any pixmaps and make new ones.
+ * We don't expose yet, an event will take care of that.
+ */
+void
+total_redraw ( void )
+{
 	int i;
 	struct series *sp;
 
-	/* get the viewport size */
-	vp_info.vx = vxdim = wp->allocation.width;
-	vp_info.vy = vydim = wp->allocation.height;
-	vp_info.vxcent = vp_info.vx / 2;
-	vp_info.vycent = vp_info.vy / 2;
-
-	if ( settings.verbose & V_WINDOW )
-	    printf ( "Configure event %d (%d, %d)\n", config_count++, vxdim, vydim );
-
+	/* invalidate all prior pixmaps */
 	for ( i=0; i<N_SERIES; i++ ) {
 	    sp = &info.series_info[i];
 	    /* Avoid memory leak */
@@ -438,8 +447,51 @@ configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
 	    sp->content = 0;
 	}
 
-	info.series->pixels = gdk_pixmap_new ( wp->window, vxdim, vydim, -1 );
+	info.series->pixels = gdk_pixmap_new ( vp_info.da->window, vp_info.vx, vp_info.vy, -1 );
+
 	pixmap_redraw ();
+}
+
+/* This is used when we are staying within series, but are doing a move or
+ * some kind of translation
+ */
+void
+full_redraw ( void )
+{
+	int i;
+
+	/* Note that we keep any pixmaps, as they will
+	 * be the correct geometry (the content is not valid).
+	 * the correct size and so forth.
+	 */
+	for ( i=0; i<N_SERIES; i++ )
+	    info.series_info[i].content = 0;
+
+	/* redraw on the new center */
+	pixmap_redraw ();
+
+	/* put the new pixmap on the screen */
+	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
+}
+
+static int config_count = 0;
+
+/* This gets called when the drawing area gets created or resized.
+ * (and after every one of these you get an expose event).
+ */
+gint
+configure_handler ( GtkWidget *wp, GdkEvent *event, gpointer data )
+{
+	/* get the viewport size */
+	vp_info.vx = wp->allocation.width;
+	vp_info.vy = wp->allocation.height;
+	vp_info.vxcent = vp_info.vx / 2;
+	vp_info.vycent = vp_info.vy / 2;
+
+	if ( settings.verbose & V_WINDOW )
+	    printf ( "Configure event %d (%d, %d)\n", config_count++, vp_info.vx, vp_info.vy );
+
+	total_redraw ();
 
 	return TRUE;
 }
@@ -539,21 +591,6 @@ void
 show_pos ( void )
 {
 	printf ( "Current center position (lat/long) %.4f %.4f\n", info.lat_deg, info.long_deg );
-}
-
-void
-full_redraw ( void )
-{
-	int i;
-
-	for ( i=0; i<N_SERIES; i++ )
-	    info.series_info[i].content = 0;
-
-	/* redraw on the new center */
-	pixmap_redraw ();
-
-	/* put the new pixmap on the screen */
-	pixmap_expose ( 0, 0, vp_info.vx, vp_info.vy );
 }
 
 void
@@ -805,17 +842,20 @@ places_select_func ( GtkTreeSelection *sel, GtkTreeModel *model, GtkTreePath *pa
 		    SERIES_COLUMN, &series,
 		    -1 );
 
-		printf ( "%s will be selected (%s, %s)\n", name, s_long, s_lat );
 
 		lon = parse_dms ( s_long );
 		lat = parse_dms ( s_lat );
 
+		/*
+		printf ( "%s will be selected (%s, %s)\n", name, s_long, s_lat );
 		printf ( "long: %.4f\n", lon );
 		printf ( "lat: %.4f\n", lat );
+		*/
 
-		set_position ( lon, lat );
 		initial_series ( series );
-		full_redraw ();
+		set_position ( lon, lat );
+
+		new_redraw ();
 
 		if ( name )
 		    g_free ( name );
@@ -1201,16 +1241,7 @@ synch_position ( void )
 	    ll_to_utm ( info.long_deg, info.lat_deg, &info.utm_zone, &info.utm_x, &info.utm_y );
 	    x = info.utm_x / ( 200.0 * info.series->x_pixel_scale );
 	    y = info.utm_y / ( 200.0 * info.series->y_pixel_scale );
-
 	} else {
-	    /*
-	    int maplets;
-	    maplets = tp->e_long / tp->maplet_long_deg;
-	    tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
-	    maplets = tp->s_lat / tp->maplet_lat_deg;
-	    tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
-	    */
-
 	    x = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
 	    y =   (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
 	}
@@ -1347,21 +1378,15 @@ main ( int argc, char **argv )
 	argc--;
 	argv++;
 
+	info.center_only = 0;
+
+	series_init ();
+
 	settings_init ();
 
 	p_info.status = GONE;
+
 	places_init ();
-	/*
-	show_places ();
-	*/
-
-#ifdef notdef
-	/* Temporary hack XXX */
-	settings.verbose = V_EVENT;
-#endif
-
-	info.series_info = series_info_buf;
-	info.center_only = 0;
 
 	while ( argc-- ) {
 	    p = *argv++;
@@ -1417,20 +1442,25 @@ main ( int argc, char **argv )
 	}
 
 	if ( file_opt ) {
+	    /* special: show a single specific .tpq file */
+
+	    /* XXX - should check file header and avoid trying
+	     * to display any old file with resultant segfault
+	     * or memory error or who knows what, i.e. we should
+	     * validate that the file in fact looks like a TPQ file
+	     */
 	    if ( ! file_init ( file_name ) ) {
 		printf ( "No TOPO file: %s\n", file_name );
 		return 1;
 	    }
 	    printf ( "Displaying single file: %s\n", file_name );
+
 	} else {
+	    /* The usual case */
 	    if ( ! archive_init () ) {
 		printf ( "No topo archives found\n" );
 		return 1;
 	    }
-	}
-
-	if ( ! file_opt ) {
-
 	    initial_series ( settings.starting_series );
 	    set_position ( settings.starting_long, settings.starting_lat );
 	}
@@ -1446,17 +1476,30 @@ main ( int argc, char **argv )
 	/* ### Second - a drawing area */
 	vp_info.da = da = gtk_drawing_area_new ();
 
-	/* Hook up the expose and configure signals, we could also
-	 * connect to the "realize" signal, but I haven't found a need
-	 * for that yet
+	/* Hook up the configure signal.
+	 * We get this first on startup, and use this
+	 * as an opportunity to set up the first pixbuf
+	 * of a size to match the display window.
+	 * (and we fill this with map pixels).
+	 * This handler will get called again each
+	 * time the window gets resized.
 	 */
-	g_signal_connect ( da, "expose_event",
-			G_CALLBACK(expose_handler), NULL );
 	g_signal_connect ( da, "configure_event",
 			G_CALLBACK(configure_handler), NULL );
 
-	/* We never see the release event, unless we add the press
-	 * event to the mask.
+	/* On startup, we get an expose event, right after
+	 * the configure event, and then put the pixels on
+	 * the screen.
+	 */
+	g_signal_connect ( da, "expose_event",
+			G_CALLBACK(expose_handler), NULL );
+
+	/* We could also connect to the "realize" signal,
+	 * but I haven't found a need for that yet.
+	 */
+
+	/* We never see the release event, unless we add
+	 * the press event to the mask.
 	 */
 	g_signal_connect ( da, "button_release_event",
 			G_CALLBACK(mouse_handler), NULL );

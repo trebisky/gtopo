@@ -33,3 +33,7 @@
 	Version 0.9.12
 	* fix bug for upper case filenames.
 	  (for Jay ... and everyone else)
+
+3/9/2009
+	Version 0.9.13
+	* Add places file support
