@@ -86,6 +86,59 @@ split ( char *buf, char **bufp, int max )
 	return i;
 }
 
+/* split a string in place.
+ * tosses nulls into string, trashing it.
+ *
+ * This is a variant on the above that allows
+ * the use of quotes to force blanks into a string.
+ * We only recognize a leading quote right after white space.
+ * We also expect white space after the trailing quote,
+ * and will act as if it was there if it isn't.
+ * In other words a quoted string should be preceded and followed
+ * by white space.
+ */
+int
+split_q ( char *buf, char **bufp, int max )
+{
+	int i;
+	char *p;
+	int inquote = 0;
+
+	p = buf;
+	for ( i=0; i<max; ) {
+	    /* skip white space */
+	    while ( *p && *p == ' ' )
+		p++;
+
+	    if ( *p == '"' ) {
+	    	inquote = 1;
+		p++;
+	    }
+	    if ( ! *p )
+		break;
+	    bufp[i++] = p;
+
+	    /* find end of this "word" */
+	    if ( inquote ) {
+		while ( *p && *p != '"' )
+		    p++;
+	    } else {
+		while ( *p && *p != ' ' )
+		    p++;
+	    }
+
+	    if ( ! *p )
+		break;
+
+	    if ( inquote && *p == '"' ) {
+		inquote = 0;
+	    }
+	    *p++ = '\0';
+	}
+
+	return i;
+}
+
 /* Split part of a string in place.
  * tosses nulls into string, trashing it.
  * You ask for two words and if there are more

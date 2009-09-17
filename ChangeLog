@@ -37,3 +37,8 @@
 3/9/2009
 	Version 0.9.13
 	* Add places file support
+
+4/21/2009
+	Version 0.9.14
+	* allows quoted arguments in settings files.
+	* add up_key and down_key to settings file.

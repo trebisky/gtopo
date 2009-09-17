@@ -87,6 +87,8 @@ struct settings {
 	int show_maplets;
 	enum m1_type m1_action;
 	enum m3_type m3_action;
+	int up_key;
+	int down_key;
 };
 
 /* XXX - we need to introduce a tpq structure and link to it

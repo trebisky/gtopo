@@ -935,7 +935,7 @@ places_window ( void )
 	    /*
 	    g_signal_connect ( view, "changed",
 			G_CALLBACK(places_select_handler), NULL );
-			*/
+	    */
 
 	    gtk_container_add ( GTK_CONTAINER(p_info.main), view );
 
@@ -946,9 +946,6 @@ places_window ( void )
 	    p_info.status = UP;
 	}
 }
-
-#define KV_PAGE_UP	65365
-#define KV_PAGE_DOWN	65366
 
 #define KV_LEFT		65361
 #define KV_UP		65362
@@ -1021,9 +1018,9 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 	if ( event->type != GDK_KEY_PRESS )
 	    return TRUE;
 	
-	if ( event->keyval == KV_PAGE_UP )
+	if ( event->keyval == settings.up_key )
 	    local_up_series ();
-	else if ( event->keyval == KV_PAGE_DOWN )
+	else if ( event->keyval == settings.down_key )
 	    local_down_series ();
 	else if ( event->keyval == KV_I || event->keyval == KV_I_UC )
 	    info_window ();
@@ -1395,7 +1392,7 @@ main ( int argc, char **argv )
 
 	    /* XXX - really should dynamically generate version string at compile time */
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 0.9.12\n" );
+	    	printf ( "gtopo version 0.9.14\n" );
 		return 0;
 	    }
 

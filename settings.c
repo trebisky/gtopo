@@ -30,6 +30,10 @@
 
 extern struct settings settings;
 
+/* PC keyboard Page-Up and Page-Down keys */
+#define KV_PAGE_UP	65365
+#define KV_PAGE_DOWN	65366
+
 /* You could hack this file and recompile, but
  * a more sensible thing to do is place a settings
  * file in /etc/gtopo/config or HOME/.gtopo/config
@@ -78,6 +82,10 @@ settings_default ( void )
 
 	settings.m1_action = M1_GRAB;
 	settings.m3_action = M1_CENTER;
+
+	/* Keyboard key to zoom in/out (go up/down series) */
+	settings.up_key = KV_PAGE_UP;
+	settings.down_key = KV_PAGE_DOWN;
 }
 
 struct wtable {
@@ -124,6 +132,16 @@ gronk_series ( int *rv, char *val )
 	gronk_word ( rv, val, series_words );
 }
 
+/* This is cheesy, but the expectation is that the user will
+ * do something like "up_key u"
+ * and this will extract the ascii for 'u'
+ */
+void
+gronk_key ( int *rv, char *val )
+{
+	*rv = *val;
+}
+
 static void
 set_one ( char *name )
 {
@@ -160,6 +178,10 @@ set_two ( char *name, char *val )
 	    gronk_word ( (int *) &settings.m1_action, val, m1_words );
 	else if ( strcmp ( name, "m3_action" ) == 0 )
 	    gronk_word ( (int *) &settings.m3_action, val, m3_words );
+	else if ( strcmp ( name, "up_key" ) == 0 )
+	    gronk_key ( (int *) &settings.up_key, val );
+	else if ( strcmp ( name, "down_key" ) == 0 )
+	    gronk_key ( (int *) &settings.down_key, val );
 	else if ( strcmp ( name, "add_archive" ) == 0 )
 	    archive_add ( val );
 }
@@ -188,7 +210,7 @@ load_settings ( char *path )
 	    if ( line[0] == '\0' || line[0] == '#' )
 	    	continue;
 
-	    nw = split ( line, wp, MAX_WORDS );
+	    nw = split_q ( line, wp, MAX_WORDS );
 	    /* printf ( "%d  %s  %s\n", nw, wp[0], wp[1] ); */
 
 	    if ( nw == 1 )

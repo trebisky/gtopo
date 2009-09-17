@@ -49,13 +49,16 @@ TARGET = gtopo
 #COPTS = -g -m32
 #TARGET = gtopo-32
 
+# To build on OSX, you need Xcode, and gtk2 from darwinports, the usual symptom
+# of not having the latter is that you won't have pkg-config and you will get a million
+# compile errors, the first of which complain about pkg-config missing, and then gtk.h
+# cannot be found.  (This is also the symptom of the gtk2-devel package missing on linux
+# for that matter).
+
 all:	$(TARGET)
 
 clean:
 	rm -f $(TARGET) $(OBJS)
-
-hinstall:
-	scp $(TARGET) hacksaw:/mmt/bin
 
 install:
 	cp $(TARGET) /home/tom/bin
