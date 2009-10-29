@@ -132,7 +132,7 @@ static struct section *lookup_section ( struct section *, int );
  * level 2 - file method for each state.
  * level 3 - file method for arizona, section for california
  * level 4 - section method
- * level 4 - section method
+ * level 5 - section method
  *
  * When the Nevada set came along and added the nicely organized SI_D01
  *  the scheme became:

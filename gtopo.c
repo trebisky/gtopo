@@ -28,6 +28,13 @@
 #include "gtopo.h"
 #include "protos.h"
 
+/* The land fell away in a vast sweep like a great, empty sea
+ * where no billows rolled, nor even waves.  Stiff grass stood in
+ * the wind, scarcely bending, and the cedar played low, humming
+ * songs with the wind.
+ *   From Louis L'Amour "The Proving Trail", end of chapter 7
+ */
+
 /* 640 x 800 works pretty well for printing onto
  * 8.5 x 11 inch paper.
  * Actually 640 x 828 has the same aspect ratio.
