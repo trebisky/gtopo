@@ -236,6 +236,7 @@ wonk_series ( enum s_type series )
 	    return "ATLAS";
 	if ( series == S_STATE )
 	    return "STATE";
+	return "unknown";
 }
 
 /* Print info about one TPQ file and exit */
@@ -656,6 +657,9 @@ try_series ( int new_series )
 	 */
 	info.series = &info.series_info[new_series];
 	synch_position ();
+
+	if ( settings.verbose & V_BASIC )
+	    printf ( "try_series wants maplet: %d %d\n", info.maplet_x, info.maplet_y );
 
 	/* No harm done in loading the maplet, this gets it
 	 * into the cache, and we will soon be fetching it
@@ -1083,6 +1087,10 @@ add_disk ( char *archive, char *disk )
  * 	n = 7.5 minute (24K)  16 of these
  * 	c = 100K ( 2 of these)
  * 	g = 500K
+ * Alaska 5-17-2011
+ *	n = 24k can be 16 of these
+ *	y = xxxxx only 1 of these
+ *	a = xxxxx can be 20 of these (ABCD, 12345)
  * Full USA (SI_D01)
  * 	G = 500K
  *
@@ -1211,6 +1219,8 @@ add_section ( char *disk, char *section, struct section **head )
 	dp->next = (struct section_dir *) NULL;
 
 	scan_section ( section_path, dp->tpq_code, dp->tpq_count );
+
+	/* is there anything in there that we recognize ? */
 	count = dp->tpq_count[S_500K] + dp->tpq_count[S_100K] + dp->tpq_count[S_24K];
 	if ( count == 0 ) {
 	    free ( (char *) dp );

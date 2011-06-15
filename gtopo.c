@@ -94,6 +94,9 @@
  * version 0.9.2 - 8/8/2007 - discover GdkPixbufLoader
  * version 0.9.3 - 8/30/2007 - works on x86_64 and powerpc
  * version 0.9.4 - 9/1/2007 - eliminate moves to white screen
+ * version 0.9.15 - 5/10/2011
+ *	fix info window update bug
+ *	fix segfault on close bug
  *
  *  TODO
  *   - add age field to maplet cache and expire/recycle
@@ -730,6 +733,9 @@ info_update ( void )
 	char str[64];
 	double c_lat, c_long;
 
+	if ( settings.verbose & V_EVENT )
+	    printf ( "info_update: %d\n", i_info.status );
+
 	if ( i_info.status != UP )
 	    return;
 
@@ -967,6 +973,10 @@ places_window ( void )
 #define KV_I		'i'
 #define KV_I_UC		'I'
 
+/* XXX - need to bind these to a help screen */
+#define KV_H		'h'
+#define KV_H_UC		'H'
+
 #define KV_P		'p'
 #define KV_P_UC		'P'
 
@@ -1137,6 +1147,8 @@ mouse_handler ( GtkWidget *wp, GdkEventButton *event, gpointer data )
 	return TRUE;
 }
 
+#define GDK_BUTTON_MASK		(GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK)
+
 /* The hint business is either poorly documented, poorly explained, or
  * poorly understood.  Or all the above.  The idea is that events get
  * lumped together and we get the first event when the mouse first enters
@@ -1161,8 +1173,14 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	mouse_info.y = event->y;
 	mouse_info.time = event->time;
 
-	/* plain old mouse moving around with no buttons down */
-	if ( event->state == 0 ) {
+	/* Plain old mouse moving around with no buttons down.
+	 * At one time we could just test == 0 here, but somewhere
+	 * along the line we started always seeing the 0x10 bit set
+	 * (which is GDK_MOD1_MASK, whatever that is)
+	 * so we now mask and check just the buttons.
+	 * see /usr/include//gtk-2.0/gdk/gdktypes.h
+	 */
+	if ( i_info.status == UP && (event->state & GDK_BUTTON_MASK) == 0 ) {
 	    info_update ();
 	    return;
 	}
@@ -1399,7 +1417,7 @@ main ( int argc, char **argv )
 
 	    /* XXX - really should dynamically generate version string at compile time */
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 0.9.14\n" );
+	    	printf ( "gtopo version 0.9.16\n" );
 		return 0;
 	    }
 

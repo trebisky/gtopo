@@ -73,6 +73,17 @@ maplet_lookup ( int maplet_x, int maplet_y )
 	return ( struct maplet *) NULL;
 }
 
+static void
+maplet_cache_dump ( void )
+{
+	struct maplet *cp;
+
+	for ( cp = info.series->cache; cp; cp = cp->next ) {
+	    printf ( "series %d, x, y = %d %d %s\n",
+		info.series->series, cp->world_x, cp->world_y, cp->tpq_path );
+	}
+}
+
 /* The need to scale popped up with the Mt. Hopkins quadrangle
  * which has 330x256 maplets, and to have equal x/y pixel scales
  * ought to have 436x256 maplets or so.  Most quadrangles do have
@@ -110,6 +121,7 @@ load_maplet_scale ( struct maplet *mp )
 	pixel_width = mp->ydim * tp->maplet_long_deg / tp->maplet_lat_deg;
 	pixel_width *= cos ( tp->mid_lat * DEGTORAD );
 	pixel_norm = pixel_width;
+
 	if ( settings.verbose & V_SCALE )
 	    printf ( "maplet scale: %d %d --> %d %d\n", mp->xdim, mp->ydim, pixel_norm, mp->ydim );
 
@@ -143,6 +155,11 @@ load_maplet ( int maplet_x, int maplet_y )
 	    if ( settings.verbose & V_MAPLET )
 		printf ( "maplet cache hit: %d %d\n", maplet_x, maplet_y );
 	    return mp;
+	} else {
+	    if ( settings.verbose & V_MAPLET ) {
+		printf ( "maplet cache lookup fails for: %d %d\n", maplet_x, maplet_y );
+		maplet_cache_dump ();
+	    }
 	}
 
 	/* Set up a new entry.
@@ -155,7 +172,6 @@ load_maplet ( int maplet_x, int maplet_y )
 	if ( settings.verbose & V_MAPLET )
 	    printf ( "Read maplet(%d) = %d %d\n", sp->cache_count,
 		    maplet_x, maplet_y );
-
 
 	if ( sp->terra ) {
 	    rv = load_terra_maplet ( mp );

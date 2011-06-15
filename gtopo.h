@@ -32,11 +32,12 @@
 
 #ifdef TERRA
 enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K, S_TOPO_32M, S_TOPO_8M, S_TOPO_2M };
+#define N_SERIES	8
 #else
 enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
+#define N_SERIES	5
 #endif
 
-#define N_SERIES	8
 
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
