@@ -97,6 +97,8 @@
  * version 0.9.15 - 5/10/2011
  *	fix info window update bug
  *	fix segfault on close bug
+ * version 0.9.16 - 6/15/2011
+ *	begin adding new series to support Alaska (AK) set
  *
  *  TODO
  *   - add age field to maplet cache and expire/recycle

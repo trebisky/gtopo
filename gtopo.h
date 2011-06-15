@@ -31,11 +31,13 @@
 #endif
 
 #ifdef TERRA
-enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K, S_TOPO_32M, S_TOPO_8M, S_TOPO_2M };
-#define N_SERIES	8
+enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_36K, S_24K, S_24K_AK,
+		S_TOPO_32M, S_TOPO_8M, S_TOPO_2M };
+#define N_SERIES	11
 #else
-enum s_type { S_STATE, S_ATLAS, S_500K, S_100K, S_24K };
-#define N_SERIES	5
+/* Added 250K, 36K, and 25K_AK to support Alaska 6/15/2011 */
+enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_36K, S_24K, S_24K_AK };
+#define N_SERIES	8
 #endif
 
 

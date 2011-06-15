@@ -5,6 +5,37 @@ Tom Trebisky  12/6/2007
 These are ideas, subject to revision as the time to implement
 them arises, but will give you an idea where gtopo is heading.
 
+After about 3 years time (in 6/2011), I am back to working on gtopo
+with the primary goal of adding support for Alaska.  Alaska has very
+different map series, and this will require changing some basic 
+assumptions in gtopo, and is tempting me to generalize the way I
+handle the maplet index internally.
+
+* It would be nice when gtopo starts that it would NEVER start with
+just a white screen.  If the starting lat/long do not locate a map
+for the specified starting series, one of two things ought to be
+done:
+
+1) First stay on that series if possible and find the closest point
+that is on a map (which could be thousands of miles away).  This
+would require keeping some info about the centroid of the area actually
+covered by maps (and this could get complex if there were disjoint areas,
+we would need to keep the centroid of each disjoint area in a list and
+then pick the closest of those to the specified lat/long and then do
+a binary search along the line between the centroid and the point
+specified.  This does not need to be done accurately, just correctly.
+
+2) If there are no maps at that series, gtopo should walk thru series
+to try to display something.  Display something, that is the guiding
+rule in all of this.
+
+3) It should be possible to not specify ANY starting lat/long and
+then gtopo would fire up displaying the center of the largest scale
+series, or something like that so the user could zoom in.
+Google earth is a good guiding light here.
+
+----
+
 Current work is focused on allowing gtopo to get maplets
 via the public SOAP interface to Terraserver.
 
@@ -30,10 +61,12 @@ This is harmless, but annoying, stay tuned.
 
 * Series 2 (and maybe 1) maps have a bug (sort of cosmetic)
 The maplets only match at the center of the viewed area,
-apparently there is a pixel change issue at this scale
-as latitude changes (the same issue is there with other
-map series, but is never a real issue with the size of
-screen usually used).
+All the maps actually change pixel count
+(along the longitude direction) as latitude changes.
+At the series 2 scale, this is visible sometimes;
+the same issue is there with other map series,
+but is never a real issue with the size of screen
+that is generally used).
 
 * Now that I have 4 states on my machine, gtopo can be a little
 slow starting up.  This isn't bad on my fast computer with a
