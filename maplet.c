@@ -59,6 +59,8 @@ maplet_new ( void )
 	return mp;
 }
 
+/* XXX - plain old linear search, maybe someday will do some hashing.
+ */
 static struct maplet *
 maplet_lookup ( int maplet_x, int maplet_y )
 {

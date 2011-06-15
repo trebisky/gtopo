@@ -332,6 +332,8 @@ pixmap_redraw ( void )
 
 	/* load the maplet containing the current position so
 	 * we can get the maplet pixel size up front.
+	 * we fetch the center maplet here to get some info from
+	 * it, the loop below will get it again (but from our cache).
 	 */
 	mp = load_maplet ( info.maplet_x, info.maplet_y );
 

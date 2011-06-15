@@ -288,7 +288,7 @@ file_info ( char *path, int extra )
 	    printf ( "(%d maplets)\n", nn );
 	printf ( " longitude range = %.4f to %.4f\n", tp->w_long, tp->e_long );
 	printf ( " latitude range = %.4f to %.4f\n", tp->s_lat, tp->n_lat );
-	printf ( " maplet size (long, lat) = %.4f to %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
+	printf ( " maplet size (long, lat) = %.4f by %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
 	printf ( " maplet pixels (x, y) = %d by %d\n", mp->xdim, mp->ydim );
 	printf ( " lat scale: %.8f\n", lat_scale );
 	printf ( " long scale: %.8f  (%.8f) at lat %.5f\n", long_scale, long_scale_raw, tp->mid_lat );
@@ -762,7 +762,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 
 	/* give a-h for latitude (a at the south)
 	 *  and 1-8 for longitude (1 at the east)
-	 * These run through the full range for 7.5 minute quads.
+	 * These run through the full range for the 24K series
 	 * For the 100K series, within a section, we only get 
 	 *  k37118a1 and k37118e1
 	 */
@@ -940,6 +940,7 @@ lookup_series ( struct maplet *mp, int maplet_x, int maplet_y )
 	sp = info.series;
 
 	done = 0;
+
 	/* We skip STATE_METHOD in this loop */
 	for ( xp = sp->methods; xp; xp = xp->next ) {
 	    if ( xp->type == M_SECTION )
@@ -1252,9 +1253,12 @@ add_section ( char *disk, char *section, struct section **head )
 
 	if ( settings.verbose & V_ARCHIVE ) {
 	    printf ( " %d  %s", latlong, dp->path );
-	    printf ( " %c %c %c\n",
+	    printf ( " %d:%c %d:%c %d:%c\n",
+		    dp->tpq_count[S_500K],
 		    dp->tpq_code[S_500K],
+		    dp->tpq_count[S_100K],
 		    dp->tpq_code[S_100K],
+		    dp->tpq_count[S_24K],
 		    dp->tpq_code[S_24K] );
 	}
 
