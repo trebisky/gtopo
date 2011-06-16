@@ -30,13 +30,15 @@
 #define TERRA
 #endif
 
+/* XXX - The 24K_AK is a kludge I plan to get rid of */
+
 #ifdef TERRA
-enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_36K, S_24K, S_24K_AK,
+enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_63K, S_24K, S_24K_AK,
 		S_TOPO_32M, S_TOPO_8M, S_TOPO_2M };
 #define N_SERIES	11
 #else
-/* Added 250K, 36K, and 25K_AK to support Alaska 6/15/2011 */
-enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_36K, S_24K, S_24K_AK };
+/* Added 250K, 63K, and 25K_AK to support Alaska 6/15/2011 */
+enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_63K, S_24K, S_24K_AK };
 #define N_SERIES	8
 #endif
 
@@ -104,6 +106,8 @@ struct series {
 	/* What series this is */
 	enum s_type series;
 
+	int tpq_count;		/* number of files seen */
+
 	/* pointer to the maplet cache for the
 	 * current series
 	 */
@@ -139,13 +143,17 @@ struct series {
 	int lat_count;
 	int long_count;
 
-	/* How many maps per section */
+	/* How many TPQ files per section */
 	int lat_count_d;
 	int long_count_d;
 
-	/* How many 7.5 minute units per TPQ */
+	/* Set to 1, unless we count A1 to E1 */
 	int quad_lat_count;
 	int quad_long_count;
+
+	/* degrees per section, 1x1 except in Alaska */
+	int lat_dps;
+	int long_dps;
 
 	/* When things don't start at zero */
 	double lat_offset;

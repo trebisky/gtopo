@@ -39,6 +39,7 @@ void archive_clear ( void );
 void archive_add ( char * );
 int lookup_series ( struct maplet *, int, int );
 void set_series ( enum s_type );
+char *wonk_series ( enum s_type );
 
 /* from utils.c */
 void error ( char *, ... );

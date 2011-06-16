@@ -247,99 +247,113 @@ build_index ( struct tpq_info *tp, int fd )
 }
 
 #ifndef NEW_HEADER
-static int
-read_tpq_header ( struct tpq_info *tp, int fd )
-{
-	struct tpq_header tpq_header;
-	int maplets;
-
-	/*
-	printf ( "sizeof long = %d\n", sizeof(long) );
-	printf ( "sizeof int = %d\n", sizeof(int) );
-	printf ( "sizeof INT4 = %d\n", sizeof(INT4) );
-	printf ( "sizeof double = %d\n", sizeof(double) );
-	*/
-
-	if ( sizeof(struct tpq_file) != TPQ_FILE_SIZE )
-	    error ( "Malformed TPQ file structure (my bug: %d)\n", sizeof(struct tpq_file) );
-
-	if ( sizeof(struct tpq_header) != TPQ_HEADER_SIZE )
-	    error ( "Malformed TPQ header structure (my bug: %d)\n", sizeof(struct tpq_header) );
-
-	/* read header */
-	if ( read( fd, &tpq_header, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
-	    return 0;
-
-	if ( settings.verbose & V_TPQ ) {
-	    printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.quad_name );
-	    printf ( "TPQ file maplet counts long/lat: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
-	    printf ( "TPQ file long range: %.3f %3f\n", tpq_header.west_long, tpq_header.east_long );
-	    printf ( "TPQ file lat range: %.3f %3f\n", tpq_header.south_lat, tpq_header.north_lat );
-	    printf ( "TPQ maplet size: %.5f %.5f\n",
-		(tpq_header.east_long-tpq_header.west_long) / tpq_header.maplet.nlong,
-		(tpq_header.north_lat-tpq_header.south_lat) / tpq_header.maplet.nlat );
-	}
-
-	tp->state = strhide ( tpq_header.state );
-	tp->quad = strhide ( tpq_header.quad_name );
-
-	tp->w_long = tpq_header.west_long;
-	tp->e_long = tpq_header.east_long;
-	tp->n_lat = tpq_header.north_lat;
-	tp->s_lat = tpq_header.south_lat;
-
-	/* When we need to scale pixels, we want to do all maplets on a TPQ sheet
-	 * the same, and (based on the Mt. Hopkins quad) use the midpoint latitude
-	 * to calculate the scaling.
-	 */
-	tp->mid_lat = (tp->n_lat + tp->s_lat) / 2.0;
-
-	tp->lat_count = tpq_header.maplet.nlat;
-	tp->long_count = tpq_header.maplet.nlong;
-
-	tp->maplet_lat_deg = (tp->n_lat - tp->s_lat) / tp->lat_count;
-	tp->maplet_long_deg = (tp->e_long - tp->w_long) / tp->long_count;
-
-	/* Not all maps place their maplet grid to coincide with the origin.
-	 * This is in particular the case for the level 1 full USA map,
-	 * which covers long -66 to -125 in 12 maplets (4.917 degrees each)
-	 *   and covers lat   24 to   50 in  8 maplets (3.25  degrees each)
-	 * XXX - this junk needs to get copied into the series structure
-	 *   during the archive setup phase.  For now, we hand initialize,
-	 *   but someday we will be sorry about this.
-	 */
-	maplets = tp->e_long / tp->maplet_long_deg;
-	tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
-	maplets = tp->s_lat / tp->maplet_lat_deg;
-	tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
-
-	/* Figure out the corner indices of our map */
-        tp->sheet_lat = (tp->s_lat - tp->lat_offset) / tp->maplet_lat_deg;
-	tp->sheet_long = - (tp->e_long - tp->long_offset) / tp->maplet_long_deg;
-
-	/* What we see so far, and I believe to be an invariant, is the following
-	 * sizes of maplets in the given series:
-	 *   24K  series = 0.0250 long by 0.0125 lat
-	 *  100K  series = 0.0625 long by 0.0625 lat
-	 *  500K  series = 0.5000 long by 0.5000 lat
-	 *  Atlas series = 1.0000 long by 1.0000 lat
-	 *  State series = quite variable
-	 *  (AZ = 7x7, CA = 11x10)
-	 *  (the new NV set has the entire USA as 4.9167 by 3.25)
-	 */
-	if ( tp->maplet_long_deg < 0.0350 )
-	    tp->series = S_24K;
-	else if ( tp->maplet_long_deg < 0.1 )
-	    tp->series = S_100K;
-	else if ( tp->maplet_long_deg < 0.75 )
-	    tp->series = S_500K;
-	else if ( tp->maplet_long_deg < 2.0 )
-	    tp->series = S_ATLAS;
-	else
-	    tp->series = S_STATE;
-
-	return 1;
-}
+Xstatic int
+Xread_tpq_header ( struct tpq_info *tp, int fd )
+X{
+X	struct tpq_header tpq_header;
+X	int maplets;
+X
+X	/*
+X	printf ( "sizeof long = %d\n", sizeof(long) );
+X	printf ( "sizeof int = %d\n", sizeof(int) );
+X	printf ( "sizeof INT4 = %d\n", sizeof(INT4) );
+X	printf ( "sizeof double = %d\n", sizeof(double) );
+X	*/
+X
+X	if ( sizeof(struct tpq_file) != TPQ_FILE_SIZE )
+X	    error ( "Malformed TPQ file structure (my bug: %d)\n", sizeof(struct tpq_file) );
+X
+X	if ( sizeof(struct tpq_header) != TPQ_HEADER_SIZE )
+X	    error ( "Malformed TPQ header structure (my bug: %d)\n", sizeof(struct tpq_header) );
+X
+X	/* read header */
+X	if ( read( fd, &tpq_header, TPQ_HEADER_SIZE ) != TPQ_HEADER_SIZE )
+X	    return 0;
+X
+X	if ( settings.verbose & V_TPQ ) {
+X	    printf ( "TPQ file for %s quadrangle: %s\n", tpq_header.state, tpq_header.quad_name );
+X	    printf ( "TPQ file maplet counts long/lat: %d %d\n", tpq_header.maplet.nlong, tpq_header.maplet.nlat );
+X	    printf ( "TPQ file long range: %.3f %3f\n", tpq_header.west_long, tpq_header.east_long );
+X	    printf ( "TPQ file lat range: %.3f %3f\n", tpq_header.south_lat, tpq_header.north_lat );
+X	    printf ( "TPQ maplet size: %.5f %.5f\n",
+X		(tpq_header.east_long-tpq_header.west_long) / tpq_header.maplet.nlong,
+X		(tpq_header.north_lat-tpq_header.south_lat) / tpq_header.maplet.nlat );
+X	}
+X
+X	tp->state = strhide ( tpq_header.state );
+X	tp->quad = strhide ( tpq_header.quad_name );
+X
+X	tp->w_long = tpq_header.west_long;
+X	tp->e_long = tpq_header.east_long;
+X	tp->n_lat = tpq_header.north_lat;
+X	tp->s_lat = tpq_header.south_lat;
+X
+X	/* When we need to scale pixels, we want to do all maplets on a TPQ sheet
+X	 * the same, and (based on the Mt. Hopkins quad) use the midpoint latitude
+X	 * to calculate the scaling.
+X	 */
+X	tp->mid_lat = (tp->n_lat + tp->s_lat) / 2.0;
+X
+X	tp->lat_count = tpq_header.maplet.nlat;
+X	tp->long_count = tpq_header.maplet.nlong;
+X
+X	tp->maplet_lat_deg = (tp->n_lat - tp->s_lat) / tp->lat_count;
+X	tp->maplet_long_deg = (tp->e_long - tp->w_long) / tp->long_count;
+X
+X	/* Not all maps place their maplet grid to coincide with the origin.
+X	 * This is in particular the case for the level 1 full USA map,
+X	 * which covers long -66 to -125 in 12 maplets (4.917 degrees each)
+X	 *   and covers lat   24 to   50 in  8 maplets (3.25  degrees each)
+X	 * XXX - this junk needs to get copied into the series structure
+X	 *   during the archive setup phase.  For now, we hand initialize,
+X	 *   but someday we will be sorry about this.
+X	 */
+X	maplets = tp->e_long / tp->maplet_long_deg;
+X	tp->lat_offset = tp->e_long - maplets * tp->maplet_long_deg;
+X	maplets = tp->s_lat / tp->maplet_lat_deg;
+X	tp->long_offset = tp->s_lat - maplets * tp->maplet_lat_deg;
+X
+X	/* Figure out the corner indices of our map */
+X        tp->sheet_lat = (tp->s_lat - tp->lat_offset) / tp->maplet_lat_deg;
+X	tp->sheet_long = - (tp->e_long - tp->long_offset) / tp->maplet_long_deg;
+X
+X	/* What we see so far, and I believe to be an invariant, is the following
+X	 * sizes of maplets in the given series:
+X	 *   24K  series = 0.0250 long by 0.0125 lat
+X	 *  100K  series = 0.0625 long by 0.0625 lat
+X	 *  500K  series = 0.5000 long by 0.5000 lat
+X	 *  Atlas series = 1.0000 long by 1.0000 lat
+X	 *  State series = quite variable
+X	 *  (AZ = 7x7, CA = 11x10)
+X	 *  (the new NV set has the entire USA as 4.9167 by 3.25)
+X	 *
+X	 *  Alaska adds some new things:
+X	 *   24K  series = 0.0600 long by 0.0125 lat ('N' file)
+X	 *   63K  series = 0.1500 long by 0.0250 lat ('A" file)
+X	 *  250K  series = 0.3000 long by 0.1000 lat ('Y' file)
+X	 */
+X
+X	if ( settings.verbose & V_TPQ ) {
+X	    printf ( "TPQ_IO maplet lat deg = %.3f\n", tp->maplet_lat_deg );
+X	}
+X
+X	if ( tp->maplet_lat_deg < 0.020 )
+X	    tp->series = S_24K;
+X	else if ( tp->maplet_lat_deg < 0.035 )
+X	    tp->series = S_63K;
+X	else if ( tp->maplet_lat_deg < 0.08 )
+X	    tp->series = S_100K;
+X	else if ( tp->maplet_lat_deg < 0.2 )
+X	    tp->series = S_250K;
+X	else if ( tp->maplet_lat_deg < 0.75 )
+X	    tp->series = S_500K;
+X	else if ( tp->maplet_lat_deg < 2.0 )
+X	    tp->series = S_ATLAS;
+X	else
+X	    tp->series = S_STATE;
+X
+X	return 1;
+X}
 #endif
 
 #ifdef NEW_HEADER
@@ -433,13 +447,22 @@ read_tpq_header ( struct tpq_info *tp, int fd )
 	 *  (AZ = 7x7, CA = 11x10)
 	 *  (the new NV set has the entire USA as 4.9167 by 3.25)
 	 */
-	if ( tp->maplet_long_deg < 0.0350 )
+
+	if ( settings.verbose & V_TPQ ) {
+	    printf ( "TPQ_IO maplet lat deg = %.3f\n", tp->maplet_lat_deg );
+	}
+
+	if ( tp->maplet_lat_deg < 0.020 )
 	    tp->series = S_24K;
-	else if ( tp->maplet_long_deg < 0.1 )
+	else if ( tp->maplet_lat_deg < 0.035 )
+	    tp->series = S_63K;
+	else if ( tp->maplet_lat_deg < 0.08 )
 	    tp->series = S_100K;
-	else if ( tp->maplet_long_deg < 0.75 )
+	else if ( tp->maplet_lat_deg < 0.2 )
+	    tp->series = S_250K;
+	else if ( tp->maplet_lat_deg < 0.75 )
 	    tp->series = S_500K;
-	else if ( tp->maplet_long_deg < 2.0 )
+	else if ( tp->maplet_lat_deg < 2.0 )
 	    tp->series = S_ATLAS;
 	else
 	    tp->series = S_STATE;

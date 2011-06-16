@@ -43,12 +43,19 @@
 extern struct topo_info info;
 extern struct settings settings;
 
-/* There are 5 map series,
+/* There are 8 map series,
  * level 1 is the state as a whole on the screen
  * level 2 "national atlas"
  * level 3 500K
- * level 4 100K
- * level 5 24K 7.5 minute quads in each TPQ file
+ * level 4 250K (Alaska)
+ * level 5 100K
+ * level 6 100K (Alaska)
+ * level 7 24K 
+ * level 8 24K_AK (Alaska)
+ *
+ * The 24K series represents each 7.5 minute quad by a single
+ * TPQ file (so there are 64 per 1x1 degree "section".
+ * At least that is how it is in the lower 48.
  *
  * For California, level 3 is a single TPQ file
  * with 440 maplets.  22 wide and 20 tall.
@@ -218,18 +225,23 @@ series_init ( void )
 {
 	int s;
 
-	for ( s=0; s<N_SERIES; s++ ) {
+	for ( s=0; s<N_SERIES; s++ )
 	    series_init_one ( &info.series_info[s], s );
-	}
 }
 
 char *
 wonk_series ( enum s_type series )
 {
+	if ( series == S_24K_AK )
+	    return "24K_AK";
 	if ( series == S_24K )
 	    return "24K";
+	if ( series == S_63K )
+	    return "63K";
 	if ( series == S_100K )
 	    return "100K";
+	if ( series == S_250K )
+	    return "250K";
 	if ( series == S_500K )
 	    return "500K";
 	if ( series == S_ATLAS )
@@ -351,18 +363,84 @@ series_init_mapinfo ( void )
 	 * 64 of these in a square degree
 	 */
 	sp = &info.series_info[S_24K];
+	    sp->tpq_count = 0;
+	    sp->terra = 0;
 
 	    /* Correct south of Tucson */
+
+	    /* Size of a maplet in pixels */
 	    sp->xdim = 435;
 	    sp->ydim = 256;
+
+	    /* number of maplets in TPQ file */
+	    sp->lat_count = 10;
+	    sp->long_count = 5;
+
+	    /* number of TPQ files per "section" */
+	    sp->lat_count_d = 8;
+	    sp->long_count_d = 8;
+
+	    /* degrees per "section" */
+	    sp->lat_dps = 1;
+	    sp->long_dps = 1;
+
+	    /* Size of a maplet in degrees */
+	    sp->maplet_lat_deg = 0.0125;
+	    sp->maplet_long_deg = 0.0250;
+
+	    /* set to 1 unless we don't count abcdefgh  */
+	    sp->quad_lat_count = 1;
+	    sp->quad_long_count = 1;
+
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
+
+	/* The 24K series maps in Alaska are different! */
+	sp = &info.series_info[S_24K_AK];
+	    sp->tpq_count = 0;
+
+	    /* Correct up around D70147 */
+	    sp->xdim = 406;
+	    sp->ydim = 248;
 	    sp->terra = 0;
 
 	    sp->lat_count = 10;
 	    sp->long_count = 5;
 	    sp->lat_count_d = 8;
-	    sp->long_count_d = 8;
+	    sp->long_count_d = 10;
+
+	    /* degrees per "section" */
+	    sp->lat_dps = 1;
+	    sp->long_dps = 3;
+
 	    sp->maplet_lat_deg = 0.0125;
-	    sp->maplet_long_deg = 0.0250;
+	    sp->maplet_long_deg = 0.06;
+	    sp->quad_lat_count = 1;
+	    sp->quad_long_count = 1;
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
+
+	/* Alaska Only.  The section (D70147 directory) is 3x1 degrees.
+	 * Each A70147A1.TPQ file is 0.6 wide and 0.25 tall, so it takes
+	 * 5 across and 4 up and down to cover the "section"
+	 */
+	sp = &info.series_info[S_63K];
+	    sp->tpq_count = 0;
+
+	    /* Correct for 70147 */
+	    sp->xdim = 508;
+	    sp->ydim = 248;
+	    sp->terra = 0;
+
+	    sp->lat_count = 10;
+	    sp->long_count = 4;
+	    sp->lat_count_d = 4;
+	    sp->long_count_d = 5;
+	    /* degrees per "section" */
+	    sp->lat_dps = 1;
+	    sp->long_dps = 3;
+	    sp->maplet_lat_deg = 0.025;
+	    sp->maplet_long_deg = 0.15;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
 	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
@@ -372,6 +450,7 @@ series_init_mapinfo ( void )
 	 * one of top of the other a1 and e1
 	 */
 	sp = &info.series_info[S_100K];
+	    sp->tpq_count = 0;
 
 	    /* Correct near Tucson */
 	    sp->xdim = 333;
@@ -382,18 +461,52 @@ series_init_mapinfo ( void )
 	    sp->long_count = 16;
 	    sp->lat_count_d = 2;
 	    sp->long_count_d = 1;
+	    /* degrees per "section" */
+	    sp->lat_dps = 1;
+	    sp->long_dps = 1;
 	    sp->maplet_lat_deg = 0.0625;
 	    sp->maplet_long_deg = 0.0625;
+
+	    /* Here we jump from A to E */
 	    sp->quad_lat_count = 4;
+	    sp->quad_long_count = 8;
+
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
+
+	/* As far as I know, we only see this in Alaska
+	 */
+	sp = &info.series_info[S_250K];
+	    sp->tpq_count = 0;
+
+	    /* Correct in Northern Alaska */
+	    sp->xdim = 250;
+	    sp->ydim = 248;
+	    sp->terra = 0;
+
+	    sp->lat_count = 10;
+	    sp->long_count = 10;
+	    sp->lat_count_d = 1;
+	    sp->long_count_d = 1;
+
+	    sp->maplet_lat_deg = 0.1;
+	    sp->maplet_long_deg = 0.3;
+
+	    /* degrees per "section" */
+	    sp->lat_dps = 1;
+	    sp->long_dps = 3;
+
+	    sp->quad_lat_count = 8;
 	    sp->quad_long_count = 8;
 	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
 	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
-	/* This varies from state to state, and the only
+	/* The 500K series varies from state to state, and the only
 	 * thing that seems constant is that the maplets
 	 * are 0.5 by 0.5 degrees on a side.
 	 */
 	sp = &info.series_info[S_500K];
+	    sp->tpq_count = 0;
 
 	    /* Correct in Southern Nevada */
 	    sp->xdim = 380;
@@ -407,8 +520,13 @@ series_init_mapinfo ( void )
 	    sp->long_count = 2;
 	    sp->lat_count_d = 1;
 	    sp->long_count_d = 1;
+	    /* degrees per "section" */
+	    sp->lat_dps = 1;
+	    sp->long_dps = 1;
 	    sp->maplet_lat_deg = 0.5;
 	    sp->maplet_long_deg = 0.5;
+
+	    /* Here we have only one TPQ per section */
 	    sp->quad_lat_count = 8;
 	    sp->quad_long_count = 8;
 	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
@@ -416,6 +534,7 @@ series_init_mapinfo ( void )
 
 	/* XXX */
 	sp = &info.series_info[S_ATLAS];
+	    sp->tpq_count = 0;
 
 	    /* true for full USA */
 	    sp->maplet_lat_deg = 1.0;
@@ -431,11 +550,14 @@ series_init_mapinfo ( void )
 	    sp->long_count_d = 1;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+	    sp->lat_dps = 1;
+	    sp->long_dps = 1;
 	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
 	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
 	/* XXX - The entire state */
 	sp = &info.series_info[S_STATE];
+	    sp->tpq_count = 0;
 
 	    /* XXX - complete BS for this series */
 	    sp->lat_count = 1;
@@ -444,6 +566,8 @@ series_init_mapinfo ( void )
 	    sp->long_count_d = 1;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+	    sp->lat_dps = 1;
+	    sp->long_dps = 1;
 
 	    sp->terra = 0;
 
@@ -597,7 +721,10 @@ archive_init ( void )
 
 	/* XXX - These all use the same section list */
 	add_section_method ( &info.series_info[S_24K], temp_section_head );
+	add_section_method ( &info.series_info[S_24K_AK], temp_section_head );
+	add_section_method ( &info.series_info[S_63K], temp_section_head );
 	add_section_method ( &info.series_info[S_100K], temp_section_head );
+	add_section_method ( &info.series_info[S_250K], temp_section_head );
 
 	/* Won't need this if we have the full USA set */
 	if ( ! info.have_usa )
@@ -640,7 +767,7 @@ show_statistics ( void )
 	printf ( "Total sections: %d\n", info.n_sections );
 
 	for ( s=0; s<N_SERIES; s++ ) {
-	    printf ( "Map series %d (%s)\n", s+1, wonk_series(s) );
+	    printf ( "Map series %d (%s) %d maps\n", s+1, wonk_series(s), info.series_info[s].tpq_count );
 	    show_methods ( &info.series_info[s] );
 	}
 }
@@ -648,8 +775,6 @@ show_statistics ( void )
 static int
 try_series ( int new_series )
 {
-	int rv = 0;
-
 	/* Give it a whirl, see if we can load a maplet
 	 * for this series at the center position.
 	 * Trying to load the maplet avoids changing to
@@ -659,42 +784,53 @@ try_series ( int new_series )
 	synch_position ();
 
 	if ( settings.verbose & V_BASIC )
-	    printf ( "try_series wants maplet: %d %d\n", info.maplet_x, info.maplet_y );
+	    printf ( "try_series wants maplet: %d %d at %s\n", info.maplet_x, info.maplet_y, wonk_series(new_series) );
 
 	/* No harm done in loading the maplet, this gets it
 	 * into the cache, and we will soon be fetching it
 	 * to display anyway.
 	 */
-	if ( load_maplet ( info.maplet_x, info.maplet_y ) )
-	    rv = 1;
+	if ( load_maplet ( info.maplet_x, info.maplet_y ) ) {
+	    if ( settings.verbose & V_BASIC )
+		printf ( "try series succeeded for %s (%d)\n", wonk_series(new_series), new_series );
+	    return 1;
+	}
 
 	if ( settings.verbose & V_BASIC )
-	    printf ( "try series returns %d for %d\n", rv, new_series );
+	    printf ( "try series FAILED for %s (%d)\n", wonk_series(new_series), new_series );
 
-	return rv;
+	return 0;
 }
 
 /* Move to a less detailed series */
 void
 up_series ( void )
 {
-	int series = info.series->series;
+	int series;
+	int orig_series;
+
+	orig_series = series = info.series->series;
 
 	if ( settings.verbose & V_BASIC )
-	    printf ( "up series called on series %d\n", series );
+	    printf ( "up series called on series %s (%d)\n", wonk_series(series), series );
 
-	if ( series == 0 )
-	    return;
+	for ( ;; ) {
+	    if ( series == 0 )
+		return;
+	    --series;
+	    if ( info.series_info[series].tpq_count > 0 )
+	    	break;
+	}
 
-	if ( try_series ( series - 1 ) ) {
+	if ( try_series ( series ) ) {
 	    redraw_series ();
 	    if ( settings.verbose & V_BASIC )
-		printf ( "up series moved to series %d\n", series-1 );
+		printf ( "up series moved to series %s (%d)\n", wonk_series(series), series );
 	    return;
 	}
 
 	/* cannot switch, restore original series */
-	info.series = &info.series_info[series];
+	info.series = &info.series_info[orig_series];
 	synch_position ();
 }
 
@@ -702,23 +838,31 @@ up_series ( void )
 void
 down_series ( void )
 {
-	int series = info.series->series;
+	int series;
+	int orig_series;
+
+	orig_series = series = info.series->series;
 
 	if ( settings.verbose & V_BASIC )
-	    printf ( "down series called on series %d\n", series );
+	    printf ( "down series called on series %s (%d)\n", wonk_series(series), series );
 
-	if ( series == N_SERIES - 1 )
-	    return;
+	for ( ;; ) {
+	    if ( series == N_SERIES - 1 )
+		return;
+	    ++series;
+	    if ( info.series_info[series].tpq_count > 0 )
+	    	break;
+	}
 
-	if ( try_series ( series + 1 ) ) {
+	if ( try_series ( series ) ) {
 	    redraw_series ();
 	    if ( settings.verbose & V_BASIC )
-		printf ( "down series moved to series %d\n", series+1 );
+		printf ( "down series moved to series %s (%d)\n", wonk_series(series), series );
 	    return;
 	}
 
 	/* cannot switch, restore original series */
-	info.series = &info.series_info[series];
+	info.series = &info.series_info[orig_series];
 	synch_position ();
 }
 
@@ -739,7 +883,7 @@ set_series ( enum s_type s )
 
 	synch_position ();
 	if ( settings.verbose & V_BASIC ) {
-	    printf ( "Switch to series %d (%s)\n", s+1, wonk_series ( s ) );
+	    printf ( "Switch to series %d (%s)\n", s+1, wonk_series ( s+1 ) );
 	    show_methods ( info.series );
 	}
 }
@@ -754,7 +898,7 @@ set_series ( enum s_type s )
  * 	c41120A1.TPQ
  */
 static char *
-section_map_path ( struct section_dir *dp, int lat_section, int long_section, int lat_quad, int long_quad )
+section_map_path ( struct section_dir *sdp, int lat_section, int long_section, int lat_quad, int long_quad )
 {
 	char path_buf[100];
 	int lat_q, long_q;
@@ -769,10 +913,10 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	lat_q  = 'a' + lat_quad * info.series->quad_lat_count;
 	long_q = '1' + long_quad * info.series->quad_long_count;
 
-	series_letter = dp->tpq_code[info.series->series];
+	series_letter = sdp->tpq_code[info.series->series];
 
 	/* 1 - try all lower case */
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", sdp->path, series_letter, lat_section, long_section, lat_q, long_q );
 	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
@@ -783,7 +927,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	lat_q  = toupper(lat_q);
 	series_letter = toupper(series_letter);
 
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", sdp->path, series_letter, lat_section, long_section, lat_q, long_q );
 	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
@@ -791,7 +935,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	    return strhide ( path_buf );
 
 	/* 3 - try upper case name, with lower case .tpq */
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.tpq", sdp->path, series_letter, lat_section, long_section, lat_q, long_q );
 	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
@@ -802,7 +946,7 @@ section_map_path ( struct section_dir *dp, int lat_section, int long_section, in
 	lat_q  = tolower(lat_q);
 	series_letter = tolower(series_letter);
 
-	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", dp->path, series_letter, lat_section, long_section, lat_q, long_q );
+	sprintf ( path_buf, "%s/%c%2d%03d%c%c.TPQ", sdp->path, series_letter, lat_section, long_section, lat_q, long_q );
 	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "Trying %d %d -- %s\n", lat_quad, long_quad, path_buf );
 
@@ -824,7 +968,7 @@ static char *
 section_find_map ( struct section *head, int lat_section, int long_section, int lat_quad, int long_quad )
 {
 	struct section *ep;
-	struct section_dir *dp;
+	struct section_dir *sdp;
 	char *rv;
 
 	ep = lookup_section ( head, lat_section * 1000 + long_section );
@@ -835,8 +979,8 @@ section_find_map ( struct section *head, int lat_section, int long_section, int 
 	 * cover the same area (such as along state boundaries
 	 * where one section directory comes from each state).
 	 */
-	for ( dp=ep->dir_head; dp; dp = dp->next ) {
-	    rv = section_map_path ( dp, lat_section, long_section, lat_quad, long_quad );
+	for ( sdp=ep->dir_head; sdp; sdp = sdp->next ) {
+	    rv = section_map_path ( sdp, lat_section, long_section, lat_quad, long_quad );
 	    if ( rv )
 	    	return rv;
 	}
@@ -885,23 +1029,31 @@ method_section ( struct maplet *mp, struct method *xp,
 {
 	struct series *sp;
 	int lat_section, long_section;
+	int lat_section_d, long_section_d;
 	int lat_quad, long_quad;
 	int x_index, y_index;
 
 	sp = info.series;
 
+	/* This is a "section" count */
 	lat_section = maplet_y / (sp->lat_count_d * sp->lat_count);
 	long_section = maplet_x / (sp->long_count_d * sp->long_count);
 
+	/* This is in degree units
+	 * (which is only different in Alaska).
+	 */
+	lat_section_d = lat_section * sp->lat_dps;
+	long_section_d = long_section * sp->long_dps;
+
 	if ( settings.verbose & V_ARCHIVE )
-	    printf ( "lookup_quad, section: %d %d\n", lat_section, long_section );
+	    printf ( "lookup_quad, section: %d %d\n", lat_section_d, long_section_d );
 
 	lat_quad = maplet_y / sp->lat_count - lat_section * sp->lat_count_d;
 	long_quad = maplet_x / sp->long_count - long_section * sp->long_count_d;
 
 	/* See if the map sheet is available.
 	 */
-	mp->tpq_path = section_find_map ( xp->sections, lat_section, long_section, lat_quad, long_quad );
+	mp->tpq_path = section_find_map ( xp->sections, lat_section_d, long_section_d, lat_quad, long_quad );
 	if ( ! mp->tpq_path )
 	    return 0;
 
@@ -1017,6 +1169,7 @@ add_new_archive ( char *archive )
 	 * for files with names 6 characters in length,
 	 * and the pattern: CA_D06 or AZ_D05 and in
 	 * any case.
+	 * XXX - why be so specific ???
 	 */
 	for ( ;; ) {
 	    if ( ! (dp = readdir ( dd )) )
@@ -1102,21 +1255,19 @@ add_disk ( char *archive, char *disk )
  * 	the "standard" letters which is also present.
  */
 
-#define N_LETTERS	256
-static int letter_count[N_LETTERS];
-
-static void
-scan_section ( char *path, int codes[], int count[] )
+static int
+scan_section ( struct section_dir *sdp, char *path )
 {
 	DIR *dd;
 	struct dirent *dp;
 	int i;
+	int total_count;
+	int letter;
 
-	count[S_STATE] = 0;
-	count[S_ATLAS] = 0;
-	count[S_500K] = 0;
-	count[S_100K] = 0;
-	count[S_24K] = 0;
+	for ( i=0; i<N_SERIES; i++ ) {
+	    sdp->tpq_count[i] = 0;
+	    sdp->tpq_code[i] = ' ';
+	}
 
 	if ( ! is_directory ( path ) )
 	    return;
@@ -1124,78 +1275,112 @@ scan_section ( char *path, int codes[], int count[] )
 	if ( ! (dd = opendir ( path )) )
 	    return;
 
-	for ( i=0; i< N_LETTERS; i++ )
-	    letter_count[i] = 0;
-
+	total_count = 0;
 	for ( ;; ) {
 	    if ( ! (dp = readdir ( dd )) )
 	    	break;
 	    if ( strlen(dp->d_name) != 12 )
 	    	continue;
-	    /* XXX - what is this about ? */
+
+	    /* We check that the file extension begins
+	     * with 't' or 'T'  - to be more thorough we
+	     * could check the full ".tpq", but we don't
+	     */
 	    if ( dp->d_name[9] != 't' && dp->d_name[9] != 'T' )
 	    	continue;
 
-	    letter_count[dp->d_name[0]]++;
+	    letter = dp->d_name[0];
+
+	    if ( letter == 'G' ) {
+		sdp->tpq_code[S_500K] = 'G';
+		sdp->tpq_count[S_500K] ++;
+		total_count ++;
+	    } else if ( letter == 'g' ) {
+		sdp->tpq_code[S_500K] = 'g';
+		sdp->tpq_count[S_500K] ++;
+		total_count ++;
+
+	    } else if ( letter == 'Y' ) {
+		/* Alaska Only */
+		sdp->tpq_code[S_250K] = 'Y';
+		sdp->tpq_count[S_250K] ++;
+		total_count ++;
+	    } else if ( letter == 'y' ) {
+		/* Alaska Only */
+		sdp->tpq_code[S_250K] = 'y';
+		sdp->tpq_count[S_250K] ++;
+		total_count ++;
+
+	    } else if ( letter == 'C' ) {
+		sdp->tpq_code[S_100K] = 'C';
+		sdp->tpq_count[S_100K] ++;
+		total_count ++;
+	    } else if ( letter == 'c' ) {
+		sdp->tpq_code[S_100K] = 'c';
+		sdp->tpq_count[S_100K] ++;
+		total_count ++;
+	    } else if ( letter == 'K' ) {
+		sdp->tpq_code[S_100K] = 'K';
+		sdp->tpq_count[S_100K] ++;
+		total_count ++;
+	    } else if ( letter == 'k' ) {
+		sdp->tpq_code[S_100K] = 'k';
+		sdp->tpq_count[S_100K] ++;
+		total_count ++;
+
+	    } else if ( letter == 'C' ) {
+		sdp->tpq_code[S_100K] = 'C';
+		sdp->tpq_count[S_100K] ++;
+		total_count ++;
+	    } else if ( letter == 'c' ) {
+		sdp->tpq_code[S_100K] = 'c';
+		sdp->tpq_count[S_100K] ++;
+		total_count ++;
+
+	    } else if ( letter == 'A' ) {
+		/* Alaska Only */
+		sdp->tpq_code[S_63K] = 'A';
+		sdp->tpq_count[S_63K] ++;
+		total_count ++;
+	    } else if ( letter == 'a' ) {
+		/* Alaska Only */
+		sdp->tpq_code[S_63K] = 'a';
+		sdp->tpq_count[S_63K] ++;
+		total_count ++;
+
+	    } else if ( letter == 'N' ) {
+		sdp->tpq_code[S_24K] = 'N';
+		sdp->tpq_count[S_24K] ++;
+		total_count ++;
+	    } else if ( letter == 'n' ) {
+		sdp->tpq_code[S_24K] = 'n';
+		sdp->tpq_count[S_24K] ++;
+		total_count ++;
+	    } else if ( letter == 'Q' ) {
+		sdp->tpq_code[S_24K] = 'Q';
+		sdp->tpq_count[S_24K] ++;
+		total_count ++;
+	    } else if ( letter == 'q' ) {
+		sdp->tpq_code[S_24K] = 'q';
+		sdp->tpq_count[S_24K] ++;
+		total_count ++;
+	    } else {
+	    	printf ( "Unrecognizable TPQ file: %s/%s\n", path, dp->d_name );
+	    }
 	}
 
 	closedir ( dd );
 
-	codes[S_STATE] = ' ';
-	codes[S_ATLAS] = ' ';
-
-	codes[S_500K] = ' ';
-	if ( letter_count['G'] ) {
-	    codes[S_500K] = 'G';
-	    count[S_500K] += letter_count['G'];
-	}
-
-	if ( letter_count['g'] ) {
-	    codes[S_500K] = 'g';
-	    count[S_500K] += letter_count['g'];
-	}
-
-	codes[S_100K] = ' ';
-	if ( letter_count['c'] ) {
-	    codes[S_100K] = 'c';
-	    count[S_100K] += letter_count['c'];
-	}
-	if ( letter_count['C'] ) {
-	    codes[S_100K] = 'C';
-	    count[S_100K] += letter_count['C'];
-	}
-	if ( letter_count['k'] ) {
-	    codes[S_100K] = 'k';
-	    count[S_100K] += letter_count['k'];
-	}
-	if ( letter_count['K'] ) {
-	    codes[S_100K] = 'K';
-	    count[S_100K] += letter_count['K'];
-	}
-
-	codes[S_24K] = ' ';
-	if ( letter_count['n'] ) {
-	    codes[S_24K] = 'n';
-	    count[S_24K] += letter_count['n'];
-	}
-	if ( letter_count['N'] ) {
-	    codes[S_24K] = 'N';
-	    count[S_24K] += letter_count['N'];
-	}
-	if ( letter_count['q'] ) {
-	    codes[S_24K] = 'q';
-	    count[S_24K] += letter_count['q'];
-	}
-	if ( letter_count['Q'] ) {
-	    codes[S_24K] = 'Q';
-	    count[S_24K] += letter_count['Q'];
-	}
+	return total_count;
 }
 
-/* A section is a term we use only in this program for a 1x1 degree
- * piece of land, NOT a section in the one square mile land survey
- * nomenclature.  It is a directory that actually holds TPQ files
- * which represent individual 7.5 minute maps (and more!)
+/* A section is a term peculiar to gtopo.
+ * We use the word "section" in this program to denote the files
+ * within (and land covered) by one of the Dxxyyy directories.
+ * In the lower 48, this is a 1x1 degree piece of land.
+ * In Alaska, it a 1x3 degrees (3 degrees wide in longitude).
+ * It is NOT a section in the one square mile land survey scheme.
+ * It is a directory that actually holds TPQ files.
  * Note that the same section can be covered by more than one path
  * if it is on the boundary of several states.
  */
@@ -1203,30 +1388,44 @@ int
 add_section ( char *disk, char *section, struct section **head )
 {
 	char section_path[100];
-	struct section_dir *dp;
+	struct section_dir *sdp;
 	struct section *ep;
 	int latlong;
+	int lat;
 	int count;
+	int i;
 
 	sprintf ( section_path, "%s/%s", disk, section );
 
-	dp = (struct section_dir *) gmalloc ( sizeof(struct section_dir) );
-	if ( ! dp )
+	sdp = (struct section_dir *) gmalloc ( sizeof(struct section_dir) );
+	if ( ! sdp )
 	    error ("Section new (dir) - out of memory\n");
 
 	latlong = atol ( &section[1] );
+	lat = latlong / 1000;
 
-	dp->path = strhide ( section_path );
-	dp->next = (struct section_dir *) NULL;
+	sdp->path = strhide ( section_path );
+	sdp->next = (struct section_dir *) NULL;
 
-	scan_section ( section_path, dp->tpq_code, dp->tpq_count );
+	count = scan_section ( sdp, section_path );
+
+	/* Alaska */
+	if ( lat > 52 ) {
+	    sdp->tpq_code[S_24K_AK] = sdp->tpq_code[S_24K];
+	    sdp->tpq_count[S_24K_AK] = sdp->tpq_count[S_24K];
+	    sdp->tpq_code[S_24K] = ' ';
+	    sdp->tpq_count[S_24K] = 0;
+	}
 
 	/* is there anything in there that we recognize ? */
-	count = dp->tpq_count[S_500K] + dp->tpq_count[S_100K] + dp->tpq_count[S_24K];
 	if ( count == 0 ) {
-	    free ( (char *) dp );
+	    printf ("Empty section directory: %s\n", section_path );
+	    free ( (char *) sdp );
 	    return 0;
 	}
+
+	for ( i=0; i<N_SERIES; i++ )
+	    info.series_info[i].tpq_count += sdp->tpq_count[i];
 
 	ep = lookup_section ( *head, latlong );
 
@@ -1252,18 +1451,18 @@ add_section ( char *disk, char *section, struct section **head )
 	}
 
 	if ( settings.verbose & V_ARCHIVE ) {
-	    printf ( " %d  %s", latlong, dp->path );
+	    printf ( " %d  %s", latlong, sdp->path );
 	    printf ( " %d:%c %d:%c %d:%c\n",
-		    dp->tpq_count[S_500K],
-		    dp->tpq_code[S_500K],
-		    dp->tpq_count[S_100K],
-		    dp->tpq_code[S_100K],
-		    dp->tpq_count[S_24K],
-		    dp->tpq_code[S_24K] );
+		    sdp->tpq_count[S_500K],
+		    sdp->tpq_code[S_500K],
+		    sdp->tpq_count[S_100K],
+		    sdp->tpq_code[S_100K],
+		    sdp->tpq_count[S_24K],
+		    sdp->tpq_code[S_24K] );
 	}
 
-	dp->next = ep->dir_head;
-	ep->dir_head = dp;
+	sdp->next = ep->dir_head;
+	ep->dir_head = sdp;
 	ep->dir_count++;
 
 	return 1;

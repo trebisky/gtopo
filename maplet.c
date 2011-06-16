@@ -172,7 +172,7 @@ load_maplet ( int maplet_x, int maplet_y )
 	mp->world_y = maplet_y;
 
 	if ( settings.verbose & V_MAPLET )
-	    printf ( "Read maplet(%d) = %d %d\n", sp->cache_count,
+	    printf ( "Read maplet(cache=%d) = %d %d\n", sp->cache_count,
 		    maplet_x, maplet_y );
 
 	if ( sp->terra ) {

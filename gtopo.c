@@ -1279,8 +1279,9 @@ synch_position ( void )
 
 	if ( settings.verbose & V_BASIC ) {
 	    printf ( "Synch position: long/lat = %.3f %.3f\n", info.long_deg, info.lat_deg );
-	    printf ( "maplet indices of position: %d %d\n",
-		info.maplet_x, info.maplet_y );
+	    printf ( "maplet size: %.3f %.3f\n", info.series->maplet_long_deg, info.series->maplet_lat_deg );
+	    printf ( "maplet indices of position: %d %d for series %s\n",
+		info.maplet_x, info.maplet_y, wonk_series(info.series->series) );
 	}
 
 	/* fractional offset of our position in that maplet

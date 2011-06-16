@@ -60,7 +60,7 @@ all:	$(TARGET)
 clean:
 	rm -f $(TARGET) $(OBJS)
 
-install:
+install:	$(TARGET)
 	cp $(TARGET) /home/tom/bin
 
 .c.o:	
