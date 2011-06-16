@@ -534,7 +534,7 @@ series_init_mapinfo ( void )
 
 	/* XXX */
 	sp = &info.series_info[S_ATLAS];
-	    sp->tpq_count = 0;
+	    sp->tpq_count = 99;
 
 	    /* true for full USA */
 	    sp->maplet_lat_deg = 1.0;
@@ -557,7 +557,7 @@ series_init_mapinfo ( void )
 
 	/* XXX - The entire state */
 	sp = &info.series_info[S_STATE];
-	    sp->tpq_count = 0;
+	    sp->tpq_count = 99;
 
 	    /* XXX - complete BS for this series */
 	    sp->lat_count = 1;
