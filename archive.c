@@ -767,7 +767,11 @@ show_statistics ( void )
 	printf ( "Total sections: %d\n", info.n_sections );
 
 	for ( s=0; s<N_SERIES; s++ ) {
-	    printf ( "Map series %d (%s) %d maps\n", s+1, wonk_series(s), info.series_info[s].tpq_count );
+	    printf ( "Map series %d (%s) %d maps", s, wonk_series(s), info.series_info[s].tpq_count );
+	    if ( s == info.series->series )
+	    	printf ( " <-- current series\n" );
+	    else
+	    	printf ( "\n" );
 	    show_methods ( &info.series_info[s] );
 	}
 }
@@ -798,7 +802,6 @@ try_series ( int new_series )
 
 	if ( settings.verbose & V_BASIC )
 	    printf ( "try series FAILED for %s (%d)\n", wonk_series(new_series), new_series );
-
 	return 0;
 }
 
@@ -814,15 +817,15 @@ up_series ( void )
 	if ( settings.verbose & V_BASIC )
 	    printf ( "up series called on series %s (%d)\n", wonk_series(series), series );
 
-	for ( ;; ) {
-	    if ( series == 0 )
-		return;
+	while ( series > 0 ) {
 	    --series;
-	    if ( info.series_info[series].tpq_count > 0 )
-	    	break;
-	}
+	    printf ( "up series trying series %s (%d)\n", wonk_series(series), series );
+	    if ( info.series_info[series].tpq_count <= 0 )
+	    	continue;
+	    if ( ! try_series ( series ) )
+	    	continue;
 
-	if ( try_series ( series ) ) {
+	    /* Found a winner */
 	    redraw_series ();
 	    if ( settings.verbose & V_BASIC )
 		printf ( "up series moved to series %s (%d)\n", wonk_series(series), series );
@@ -846,15 +849,15 @@ down_series ( void )
 	if ( settings.verbose & V_BASIC )
 	    printf ( "down series called on series %s (%d)\n", wonk_series(series), series );
 
-	for ( ;; ) {
-	    if ( series == N_SERIES - 1 )
-		return;
+	while ( series + 1 < N_SERIES ) {
 	    ++series;
-	    if ( info.series_info[series].tpq_count > 0 )
-	    	break;
-	}
+	    printf ( "down series trying series %s (%d)\n", wonk_series(series), series );
+	    if ( info.series_info[series].tpq_count <= 0 )
+	    	continue;
+	    if ( ! try_series ( series ) )
+	    	continue;
 
-	if ( try_series ( series ) ) {
+	    /* Found a winner */
 	    redraw_series ();
 	    if ( settings.verbose & V_BASIC )
 		printf ( "down series moved to series %s (%d)\n", wonk_series(series), series );
@@ -886,6 +889,36 @@ set_series ( enum s_type s )
 	    printf ( "Switch to series %d (%s)\n", s+1, wonk_series ( s+1 ) );
 	    show_methods ( info.series );
 	}
+}
+
+/* This is how things usually start up, and this is
+ * how we pick our first map and series.
+ *
+ * if no staring position and series is given,
+ * use the largest scale at Tucson Arizona.
+ *
+ * if a starting position is given, try to honor it,
+ * but if it us going to give a white screen, we have
+ * avoid that like the plague, and do the following:
+ *
+ * 1) search all series at the given position.
+ * 2) if the given series has any maps, display one
+ *    at a different position (close if possible).
+ * 3) if that fails try different series at alternate
+ *    positions.
+ * 4) that can only fail if there are no maps at all
+ *    (or our logic is broken), but we may return
+ *    a failure status.
+ */
+int
+first_series ( void )
+{
+	initial_series ( settings.starting_series );
+	set_position ( settings.starting_long, settings.starting_lat );
+
+	if ( try_series ( settings.starting_series ) )
+	    return 1;
+	return 0;
 }
 
 /* Try both upper and lower case path names for the tpq file.

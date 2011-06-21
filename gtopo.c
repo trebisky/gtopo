@@ -987,9 +987,23 @@ places_window ( void )
 #define KV_S		's'
 #define KV_S_UC		'S'
 
+/* Added 6-20-2011 to display map debug info */
+#define KV_M		'm'
+#define KV_M_UC		'M'
+
 /* We don't use these yet, but ... */
 #define KV_ESC		65307
 #define KV_TAB		65289
+
+/* Print (to stdout) information about where we are
+ * and what map(s) are under the cursor.
+ */
+void
+kb_maps ( void )
+{
+	printf ( "Current series is: %s (%d)\n", wonk_series(info.series->series), info.series->series );
+	show_statistics ();
+}
 
 void
 local_up_series ( void )
@@ -1049,6 +1063,8 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 	    places_window ();
 	else if ( event->keyval == KV_S || event->keyval == KV_S_UC )
 	    snap ();
+	else if ( event->keyval == KV_M || event->keyval == KV_M_UC )
+	    kb_maps ();
 	else if ( event->keyval == KV_LEFT )
 	    move_map ( -1, 0 );
 	else if ( event->keyval == KV_UP )
@@ -1488,8 +1504,15 @@ main ( int argc, char **argv )
 		printf ( "No topo archives found\n" );
 		return 1;
 	    }
+	    if ( ! first_series () ) {
+		printf ( "Cannot find map to display at Long = %.3f, Lat = %.3f\n",
+		    settings.starting_long, settings.starting_lat );
+		return 1;
+	    }
+	    /*
 	    initial_series ( settings.starting_series );
 	    set_position ( settings.starting_long, settings.starting_lat );
+	    */
 	}
 
 	/* --- set up the GTK stuff we need */

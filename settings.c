@@ -50,9 +50,8 @@ settings_default ( void )
 	settings.x_view = 640;
 	settings.y_view = 800;
 
-	settings.starting_series = S_STATE;
-
 #ifdef notdef
+	settings.starting_series = S_STATE;
 	/* Mt. Hopkins, Arizona */
 	settings.starting_long = -110.88;
 	settings.starting_lat = 31.69;
@@ -68,11 +67,16 @@ settings_default ( void )
 	/* Near Las Vegas, Nevada */
 	settings.starting_long = -114.9894;
 	settings.starting_lat = 36.2338;
-#endif
 
 	/* Flagstaff, Arizona */
 	settings.starting_long = -111.6722;
 	settings.starting_lat = 35.18;
+#endif
+
+	/* Tucson, Arizona */
+	settings.starting_series = S_500K;
+	settings.starting_long = -110.94;
+	settings.starting_lat = 32.27;
 
 	/* Marker size is "half" the marker from center to end */
 	settings.center_marker = 1;
