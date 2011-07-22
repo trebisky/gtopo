@@ -752,6 +752,34 @@ info_update ( void )
 	gtk_label_set_text ( GTK_LABEL(i_info.l_lat), str );
 }
 
+/* This generates debug information about the
+ * current mouse location.
+ */
+void
+debug_dumper ( void )
+{
+	double c_lat, c_long;
+	int s;
+
+	c_long = info.long_deg + (mouse_info.x-vp_info.vxcent) * info.series->x_pixel_scale;
+	c_lat = info.lat_deg - (mouse_info.y-vp_info.vycent) * info.series->y_pixel_scale;
+
+	printf (" Long, Lat = %.5f %.5f\n", c_long, c_lat );
+
+	/* from show_statistics, archive.c */
+	printf ( "Total sections: %d\n", info.n_sections );
+
+	for ( s=0; s<N_SERIES; s++ )
+	    if ( s == info.series->series )
+		printf ( "Map series %d (%s) %d maps << current series **\n", s+1, wonk_series(s), info.series_info[s].tpq_count );
+	    else
+		printf ( "Map series %d (%s) %d maps\n", s+1, wonk_series(s), info.series_info[s].tpq_count );
+
+	/*
+	printf ( "Current series: %d (%s)\n", info.series->series + 1, wonk_series(info.series->series) );
+	*/
+}
+
 void
 info_window ( void )
 {
@@ -974,6 +1002,9 @@ places_window ( void )
 #define KV_A		'a'
 #define KV_A_UC		'A'
 
+#define KV_D		'd'
+#define KV_D_UC		'D'
+
 #define KV_I		'i'
 #define KV_I_UC		'I'
 
@@ -1057,6 +1088,8 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 	    local_up_series ();
 	else if ( event->keyval == settings.down_key )
 	    local_down_series ();
+	else if ( event->keyval == KV_D || event->keyval == KV_D_UC )
+	    debug_dumper ();
 	else if ( event->keyval == KV_I || event->keyval == KV_I_UC )
 	    info_window ();
 	else if ( event->keyval == KV_P || event->keyval == KV_P_UC )
