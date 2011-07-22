@@ -759,12 +759,17 @@ void
 debug_dumper ( void )
 {
 	double c_lat, c_long;
+    	double x, y;
+	double fx, fy;
+	int mx, my;
 	int s;
+	struct maplet *mp;
+	struct tpq_info *tp;
 
 	c_long = info.long_deg + (mouse_info.x-vp_info.vxcent) * info.series->x_pixel_scale;
 	c_lat = info.lat_deg - (mouse_info.y-vp_info.vycent) * info.series->y_pixel_scale;
 
-	printf (" Long, Lat = %.5f %.5f\n", c_long, c_lat );
+	printf (" Mouse long, lat = %.5f %.5f\n", c_long, c_lat );
 
 	/* from show_statistics, archive.c */
 	printf ( "Total sections: %d\n", info.n_sections );
@@ -778,6 +783,36 @@ debug_dumper ( void )
 	/*
 	printf ( "Current series: %d (%s)\n", info.series->series + 1, wonk_series(info.series->series) );
 	*/
+
+	printf ( "maplet size (%s): %.3f %.3f\n", wonk_series(info.series->series), info.series->maplet_long_deg, info.series->maplet_lat_deg );
+
+	printf ( "Center long, lat = %.5f %.5f\n", info.long_deg, info.lat_deg );
+	x = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
+	y =   (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
+
+	printf ( "Center maplet raw x,y = %.5f %.5f\n", x, y );
+
+    	mx = x;
+    	my = y;
+	printf ( "Center maplet x,y = %d %d\n", mx, my );
+
+	fx = 1.0 - (x - mx);
+	fy = 1.0 - (y - my);
+	printf ( "Center offset in maplet fx, fy = %.5f %.5f\n", fx, fy );
+
+	mp = load_maplet ( info.maplet_x, info.maplet_y );
+	if ( ! mp ) {
+	    printf ("load maplet fails for series %s\n", wonk_series(info.series->series) );
+	    return;
+	}
+
+
+	tp = mp->tpq;
+	printf ( " maplet from file: %s\n", tp->path );
+	printf ( " maplet from quad: %s (%s)\n", tp->quad, tp->state );
+
+	printf ( " sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
+	printf ( " sheet, W, E: %.4f %.4f\n", tp->w_long, tp->e_long );
 }
 
 void
