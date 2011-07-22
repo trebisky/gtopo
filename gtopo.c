@@ -769,7 +769,7 @@ debug_dumper ( void )
 	c_long = info.long_deg + (mouse_info.x-vp_info.vxcent) * info.series->x_pixel_scale;
 	c_lat = info.lat_deg - (mouse_info.y-vp_info.vycent) * info.series->y_pixel_scale;
 
-	printf (" Mouse long, lat = %.5f %.5f\n", c_long, c_lat );
+	printf (" Current mouse long, lat = %.5f %.5f\n", c_long, c_lat );
 
 	/* from show_statistics, archive.c */
 	printf ( "Total sections: %d\n", info.n_sections );
