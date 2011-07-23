@@ -159,11 +159,43 @@ set_one ( char *name )
 	    archive_clear ();
 }
 
+static int
+gronk_debug ( char *val )
+{
+	if ( strcmp ( val, "basic" ) == 0 )
+	    return V_BASIC;
+	if ( strcmp ( val, "window" ) == 0 )
+	    return V_WINDOW;
+	if ( strcmp ( val, "draw" ) == 0 )
+	    return V_DRAW;
+	if ( strcmp ( val, "draw2" ) == 0 )
+	    return V_DRAW2;
+
+	if ( strcmp ( val, "tpq" ) == 0 )
+	    return V_TPQ;
+	if ( strcmp ( val, "archive" ) == 0 )
+	    return V_ARCHIVE;
+	if ( strcmp ( val, "archive2" ) == 0 )
+	    return V_ARCHIVE2;
+	if ( strcmp ( val, "maplet" ) == 0 )
+	    return V_MAPLET;
+
+	if ( strcmp ( val, "scale" ) == 0 )
+	    return V_SCALE;
+	if ( strcmp ( val, "event" ) == 0 )
+	    return V_EVENT;
+
+	/* unknown debug flag */
+	return 0;
+}
+
 static void
 set_two ( char *name, char *val )
 {
 	if ( strcmp ( name, "verbose" ) == 0 )
 	    settings.verbose = strtol ( val, NULL, 16 );
+	else if ( strcmp ( name, "debug" ) == 0 )
+	    settings.verbose |= gronk_debug ( val );
 	else if ( strcmp ( name, "x_view" ) == 0 )
 	    settings.x_view = atol ( val );
 	else if ( strcmp ( name, "y_view" ) == 0 )

@@ -1310,13 +1310,13 @@ scan_section ( struct section_dir *sdp, char *path )
 {
 	DIR *dd;
 	struct dirent *dp;
-	int i;
 	int total_count;
 	int letter;
+	int series;
 
-	for ( i=0; i<N_SERIES; i++ ) {
-	    sdp->tpq_count[i] = 0;
-	    sdp->tpq_code[i] = ' ';
+	for ( series=0; series<N_SERIES; series++ ) {
+	    sdp->tpq_count[series] = 0;
+	    sdp->tpq_code[series] = ' ';
 	}
 
 	if ( ! is_directory ( path ) )
@@ -1332,7 +1332,7 @@ scan_section ( struct section_dir *sdp, char *path )
 	    if ( strlen(dp->d_name) != 12 )
 	    	continue;
 
-	    /* We check that the file extension begins
+	    /* We verify that the file extension begins
 	     * with 't' or 'T'  - to be more thorough we
 	     * could check the full ".tpq", but we don't
 	     */
@@ -1341,78 +1341,37 @@ scan_section ( struct section_dir *sdp, char *path )
 
 	    letter = dp->d_name[0];
 
-	    if ( letter == 'G' ) {
-		sdp->tpq_code[S_500K] = 'G';
-		sdp->tpq_count[S_500K] ++;
-		total_count ++;
-	    } else if ( letter == 'g' ) {
-		sdp->tpq_code[S_500K] = 'g';
-		sdp->tpq_count[S_500K] ++;
-		total_count ++;
-
-	    } else if ( letter == 'Y' ) {
+	    /* Note the inherent assumption in the following that
+	     * a given section directory does NOT contain mixed case
+	     * filenames.
+	     */
+	    if ( toupper(letter) == 'G' ) {
+	    	series = S_500K;
+	    } else if ( toupper(letter) == 'Y' ) {
 		/* Alaska Only */
-		sdp->tpq_code[S_250K] = 'Y';
-		sdp->tpq_count[S_250K] ++;
-		total_count ++;
-	    } else if ( letter == 'y' ) {
+	    	series = S_250K;
+	    } else if ( toupper(letter) == 'C' ) {
+	    	series = S_100K;
+	    } else if ( toupper(letter) == 'K' ) {
+	    	series = S_100K;
+	    } else if ( toupper(letter) == 'C' ) {
+	    	series = S_100K;
+	    } else if ( toupper(letter) == 'A' ) {
 		/* Alaska Only */
-		sdp->tpq_code[S_250K] = 'y';
-		sdp->tpq_count[S_250K] ++;
-		total_count ++;
+	    	series = S_63K;
+	    } else if ( toupper(letter) == 'N' ) {
+	    	series = S_24K;
+	    } else if ( toupper(letter) == 'Q' ) {
+	    	series = S_24K;
+	    } else {
+		series = -1;
+	    }
 
-	    } else if ( letter == 'C' ) {
-		sdp->tpq_code[S_100K] = 'C';
-		sdp->tpq_count[S_100K] ++;
-		total_count ++;
-	    } else if ( letter == 'c' ) {
-		sdp->tpq_code[S_100K] = 'c';
-		sdp->tpq_count[S_100K] ++;
-		total_count ++;
-	    } else if ( letter == 'K' ) {
-		sdp->tpq_code[S_100K] = 'K';
-		sdp->tpq_count[S_100K] ++;
-		total_count ++;
-	    } else if ( letter == 'k' ) {
-		sdp->tpq_code[S_100K] = 'k';
-		sdp->tpq_count[S_100K] ++;
-		total_count ++;
-
-	    } else if ( letter == 'C' ) {
-		sdp->tpq_code[S_100K] = 'C';
-		sdp->tpq_count[S_100K] ++;
-		total_count ++;
-	    } else if ( letter == 'c' ) {
-		sdp->tpq_code[S_100K] = 'c';
-		sdp->tpq_count[S_100K] ++;
-		total_count ++;
-
-	    } else if ( letter == 'A' ) {
-		/* Alaska Only */
-		sdp->tpq_code[S_63K] = 'A';
-		sdp->tpq_count[S_63K] ++;
-		total_count ++;
-	    } else if ( letter == 'a' ) {
-		/* Alaska Only */
-		sdp->tpq_code[S_63K] = 'a';
-		sdp->tpq_count[S_63K] ++;
-		total_count ++;
-
-	    } else if ( letter == 'N' ) {
-		sdp->tpq_code[S_24K] = 'N';
-		sdp->tpq_count[S_24K] ++;
-		total_count ++;
-	    } else if ( letter == 'n' ) {
-		sdp->tpq_code[S_24K] = 'n';
-		sdp->tpq_count[S_24K] ++;
-		total_count ++;
-	    } else if ( letter == 'Q' ) {
-		sdp->tpq_code[S_24K] = 'Q';
-		sdp->tpq_count[S_24K] ++;
-		total_count ++;
-	    } else if ( letter == 'q' ) {
-		sdp->tpq_code[S_24K] = 'q';
-		sdp->tpq_count[S_24K] ++;
+	    if ( series >= 0 ) {
+		if ( settings.verbose & V_ARCHIVE2 )
+		    printf ( "Adding file %s/%s for series %s\n", path, dp->d_name, wonk_series(series) );
+		sdp->tpq_code[series] = letter;
+		sdp->tpq_count[series] ++;
 		total_count ++;
 	    } else {
 	    	printf ( "Unrecognizable TPQ file: %s/%s\n", path, dp->d_name );

@@ -42,7 +42,6 @@ enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_63K, S_24K, S_24K_AK }
 #define N_SERIES	8
 #endif
 
-
 #define PI		3.141592654
 #define DEGTORAD	(PI/180.0)
 #define RADTODEG	(180.0/PI)
@@ -61,11 +60,12 @@ enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE, M_TERRA };
 #define	V_WINDOW	0x0002
 #define	V_DRAW		0x0004
 #define	V_DRAW2		0x0008
-#define	V_EVENT		0x0010
+#define	V_TPQ		0x0010
 #define	V_ARCHIVE	0x0020
-#define	V_MAPLET	0x0040
-#define	V_SCALE		0x0080
-#define	V_TPQ		0x0100
+#define	V_ARCHIVE2	0x0040
+#define	V_MAPLET	0x0080
+#define	V_SCALE		0x0100
+#define	V_EVENT		0x0200
 
 /*
 #define INITIAL_VERBOSITY	(V_BASIC | V_ARCHIVE )
