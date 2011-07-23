@@ -422,7 +422,7 @@ series_init_mapinfo ( void )
 
 	/* Alaska Only.  The section (D70147 directory) is 3x1 degrees.
 	 * Each A70147A1.TPQ file is 0.6 wide and 0.25 tall, so it takes
-	 * 5 across and 4 up and down to cover the "section"
+	 * 6 across and 4 up and down to cover the "section"
 	 */
 	sp = &info.series_info[S_63K];
 	    sp->tpq_count = 0;
@@ -434,15 +434,28 @@ series_init_mapinfo ( void )
 
 	    sp->lat_count = 10;
 	    sp->long_count = 4;
+
+	    /* True in northern Alaska
 	    sp->lat_count_d = 4;
 	    sp->long_count_d = 5;
+
+	    sp->maplet_lat_deg = 0.025;
+	    sp->maplet_long_deg = 0.15;
+	    */
+
+	    sp->lat_count_d = 4;
+	    sp->long_count_d = 6;
+
+	    sp->maplet_lat_deg = 0.025;
+	    sp->maplet_long_deg = 0.125;
+
 	    /* degrees per "section" */
 	    sp->lat_dps = 1;
 	    sp->long_dps = 3;
-	    sp->maplet_lat_deg = 0.025;
-	    sp->maplet_long_deg = 0.15;
+
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+
 	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
 	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
@@ -929,6 +942,10 @@ first_series ( void )
  * 	C41120A1.TPQ
  * 	C41120A1.tpq
  * 	c41120A1.TPQ
+ *
+ * Note:
+ *  A1 is in the lower right, ABC run from bottom to top.
+ *  D6 (or the moral equivalent) is in the upper left, 123 run right to left.
  */
 static char *
 section_map_path ( struct section_dir *sdp, int lat_section, int long_section, int lat_quad, int long_quad )
