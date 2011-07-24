@@ -186,10 +186,13 @@ add_file_method ( struct series *sp, char *path )
 	    printf ( " Maplets long, lat = %d %d\n", tp->long_count, tp->lat_count );
 	}
 
+#ifdef notdef
 	if ( tp->series == S_STATE && tp->lat_count == 1 && tp->long_count == 1 )
 	    xp->type = M_STATE;
 	else
 	    xp->type = M_FILE;
+#endif
+	xp->type = M_FILE;
 
 	xp->tpq = tp;
 	xp->cache = NULL;
@@ -222,12 +225,13 @@ add_section_method ( struct series *sp, struct section *head )
 static void
 series_init_one ( struct series *sp, enum s_type series )
 {
+	sp->series = series;
 	sp->cache = (struct maplet *) NULL;
 	sp->cache_count = 0;
 	sp->pixels = NULL;
 	sp->content = 0;
 	sp->methods = NULL;
-	sp->series = series;
+	sp->cur_method = NULL;
 	sp->lat_offset = 0.0;
 	sp->long_offset = 0.0;
 }
@@ -763,8 +767,6 @@ wonk_method ( int type )
 {
     	if ( type == M_FILE )
 	    return "File";
-    	if ( type == M_STATE )
-	    return "State";
 	else if ( type == M_SECTION )
 	    return "Section";
 	else
@@ -928,7 +930,7 @@ lookup_method ( struct series *sp )
 	struct tpq_info *tp;
 
 	for ( xp = sp->methods; xp; xp = xp->next ) {
-	    if ( xp->type != M_FILE && xp->type != M_STATE )
+	    if ( xp->type != M_FILE )
 		continue;
 
 	    tp = xp->tpq;
@@ -951,6 +953,40 @@ lookup_method ( struct series *sp )
 	}
 
 	return NULL;
+}
+
+/* Right now the STATE and ATLAS series handle disjoint regions,
+ * each of which (us, ak, hi) is a separate single TPQ file, which
+ * is a file method.  The job of this routine is to identify which
+ * file object we want and dummy up the stuff in the series structure
+ * properly.
+ */
+int
+setup_series ( void )
+{
+	struct method *xp;
+	struct series *sp;
+	struct tpq_info *tp;
+
+	sp = info.series;
+
+	if ( sp->series != S_STATE && sp->series != S_ATLAS )
+	    return 0;
+
+	xp = lookup_method(sp);
+	if ( ! xp )
+	    return 0;
+
+	tp = xp->tpq;
+
+	sp->cur_method = xp;
+
+	sp->maplet_long_deg = tp->maplet_long_deg;
+	sp->maplet_lat_deg = tp->maplet_lat_deg;
+	sp->long_offset = tp->e_long;
+	sp->lat_offset = tp->s_lat;
+
+	return 1;
 }
 
 /* This is called only to get a pass/fail return on whether there
@@ -1017,10 +1053,6 @@ iterate_series_method ( mfptr handler )
 
 	if ( xp->type == M_FILE )
 	    file_maplets ( xp, handler );
-
-	/* XXX */
-	if ( xp->type == M_STATE )
-	    state_maplet ( xp, handler );
 }
 
 /* Try both upper and lower case path names for the tpq file.
@@ -1126,18 +1158,43 @@ section_find_map ( struct section *head, int lat_section, int long_section, int 
 	return NULL;
 }
 
-/* We have a single file of some sort, we just need to figure
- * out if we are on the sheet, and if so, get the offsets.
- *
- * XXX - this works only if the info in the series structure
- * matches what is in the file itself.
+/* Handle a single file (typically a STATE or ATLAS map).
  */
 static int
-method_file ( struct maplet *mp, struct method *xp,
-		int maplet_x, int maplet_y )
+method_file ( struct maplet *mp, struct method *xp )
 {
+	int maplet_x, maplet_y;
 	int x_index, y_index;
+	struct tpq_info *tp;
+	int rv;
 
+	maplet_x = mp->world_x;
+	maplet_y = mp->world_y;
+
+	tp = xp->tpq;
+
+	/* flip the count to origin from the NW corner */
+	x_index = tp->long_count - mp->world_x - 1;
+	y_index = tp->lat_count - mp->world_y - 1;
+
+	rv = 1;
+	if ( x_index < 0 || x_index >= tp->long_count )
+	    rv = 0;
+	if ( y_index < 0 || y_index >= tp->lat_count )
+	    rv = 0;
+
+	if ( settings.verbose & V_ARCHIVE ) {
+	    printf ( "method_file accessing file: %s\n", tp->path );
+	    printf ( "method_file maplet indices (x/y) : %d %d\n", maplet_x, maplet_y );
+	    printf ( "method_file TPQ x : %d (0-%d)\n", x_index, tp->long_count-1 );
+	    printf ( "method_file TPQ y : %d (0-%d)\n", y_index, tp->lat_count-1 );
+	    printf ( rv ? " OK\n" : " Sorry\n" );
+	}
+
+	if ( ! rv )
+	    return 0;
+
+#ifdef notdef
 	/* Now figure which maplet within the sheet we need.
 	 */
 	mp->sheet_x = maplet_x - xp->tpq->sheet_long;
@@ -1155,28 +1212,32 @@ method_file ( struct maplet *mp, struct method *xp,
 	if ( mp->sheet_y < 0 || mp->sheet_y >= xp->tpq->lat_count )
 	    return 0;
 
-	mp->tpq_path = xp->tpq->path;
-
 	/* flip the count to origin from the NW corner */
 	x_index = xp->tpq->long_count - mp->sheet_x - 1;
 	y_index = xp->tpq->lat_count - mp->sheet_y - 1;
+#endif
 
-	mp->tpq_index = y_index * xp->tpq->long_count + x_index;
+	/* These are the vital things we need to set */
+	mp->tpq_path = tp->path;
+	mp->tpq_index = y_index * tp->long_count + x_index;
 
 	return 1;	
 }
 
 static int
-method_section ( struct maplet *mp, struct method *xp,
-		    int maplet_x, int maplet_y )
+method_section ( struct maplet *mp, struct method *xp )
 {
 	struct series *sp;
 	int lat_section, long_section;
 	int lat_section_d, long_section_d;
 	int lat_quad, long_quad;
 	int x_index, y_index;
+	int maplet_x, maplet_y;
 
 	sp = info.series;
+
+	maplet_x = mp->world_x;
+	maplet_y = mp->world_y;
 
 	/* This is a "section" count */
 	lat_section = maplet_y / (sp->lat_count_d * sp->lat_count);
@@ -1226,7 +1287,7 @@ method_section ( struct maplet *mp, struct method *xp,
  *	sheet_y
  */
 int
-lookup_series ( struct maplet *mp, int maplet_x, int maplet_y )
+lookup_series ( struct maplet *mp )
 {
 	struct series *sp;
 	struct method *xp;
@@ -1234,14 +1295,19 @@ lookup_series ( struct maplet *mp, int maplet_x, int maplet_y )
 
 	sp = info.series;
 
-	done = 0;
+	/* setup_series() has already chosen our method, so run with it */
+	if ( sp->cur_method ) {
+	    done = method_file ( mp, sp->cur_method );
+	    return done;
+	}
 
-	/* We skip STATE_METHOD in this loop */
+	/* try all methods in the list, stop with the first one that works */
+	done = 0;
 	for ( xp = sp->methods; xp; xp = xp->next ) {
 	    if ( xp->type == M_SECTION )
-	    	done = method_section ( mp, xp, maplet_x, maplet_y );
+	    	done = method_section ( mp, xp );
 	    if ( xp->type == M_FILE )
-	    	done = method_file ( mp, xp, maplet_x, maplet_y );
+	    	done = method_file ( mp, xp );
 	    if ( done )
 	    	return 1;
 	}

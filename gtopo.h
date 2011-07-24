@@ -50,7 +50,7 @@ enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_63K, S_24K, S_24K_AK }
  * or method to find maplets.  Each series has a
  * list of methods to try until one works.
  */
-enum m_type { M_UNK, M_SECTION, M_FILE, M_STATE, M_TERRA };
+enum m_type { M_UNK, M_SECTION, M_FILE, M_TERRA };
 
 /* We have a series of bits in the "verbose" variable to
  * trigger debug from different subsystems.
@@ -121,6 +121,7 @@ struct series {
 	int content;
 
 	struct method *methods;
+	struct method *cur_method;
 
 	/* pixel size of maplet XXX */
 	int xdim;

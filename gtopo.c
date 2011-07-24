@@ -381,14 +381,18 @@ state_handler ( struct maplet *mp )
 	draw_maplet ( mp, origx, origy );
 }
 
-/* This is the guts of what goes on during a reconfigure.
+/* SIGNS, Signs, signs, keeping signs straight is what this is all about!
  * Watch out for a multitude of sign conventions, here is a
  * quick orientation:
  * 	long,lat    - long increases to the east (right), lat increases to north (up)
+ *		(Do not be fooled by longitude values which are negative and
+ *		 become more negative to the west, this is still decreasing!!)
  * 	maplet x,y  - x increases to west (left), y increases to north (up)
  * 	pixmap x,y  - x increases to the right (east), y increases down (south)
  * 	utm x,y     - x increases to east, y increases to north.
  *	viewport    - x increases to right, y increases down
+ *
+ * pixmap_redraw is the guts of what goes on during a reconfigure.
  */
 void
 pixmap_redraw ( void )
@@ -423,11 +427,16 @@ pixmap_redraw ( void )
 	    state_maplets ( state_handler );
 	    return;
 	}
-#endif
+
 	if ( info.series->series == S_STATE || info.series->series == S_ATLAS ) {
 	    iterate_series_method ( state_handler );
 	    return;
 	}
+#endif
+
+	/* XXX - hackish thing for FILE method */
+	setup_series();
+	synch_position();
 
 	/* A first guess, hopefuly to be corrected
 	 * as soon as we actually read a maplet

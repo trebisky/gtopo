@@ -168,6 +168,7 @@ load_maplet ( int maplet_x, int maplet_y )
 	 */
 	mp = maplet_new ();
 
+	/* This is what lookup_series uses */
 	mp->world_x = maplet_x;
 	mp->world_y = maplet_y;
 
@@ -182,7 +183,7 @@ load_maplet ( int maplet_x, int maplet_y )
 	     * This will set tpq_path as well as
 	     * tpq_index in the maplet structure.
 	     */
-	    if ( ! lookup_series ( mp, maplet_x, maplet_y ) ) {
+	    if ( ! lookup_series ( mp ) ) {
 		free ( (char *) mp );
 		return NULL;
 	    }
@@ -294,6 +295,7 @@ file_maplets ( struct method *xp, mfptr handler )
 	}
 }
 
+#ifdef notdef
 /* States are weird, what we do is use this as an iterator to
  * grind through all the maplets and call our callback for each.
  * For states there is one TPQ file with one giant maplet per state.
@@ -354,6 +356,7 @@ state_maplet ( struct method *xp, mfptr handler )
 
 	(*handler) (mp);
 }
+#endif
 
 /* This is used when we want to "sniff at" a TPQ file prior to actually loading and
  * displaying maplets from it.  The best thing to do is to load a maplet near

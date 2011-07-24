@@ -41,7 +41,7 @@ void file_maplets ( struct method *, mfptr );
 int archive_init ( void );
 void archive_clear ( void );
 void archive_add ( char * );
-int lookup_series ( struct maplet *, int, int );
+int lookup_series ( struct maplet * );
 void set_series ( enum s_type );
 char *wonk_series ( enum s_type );
 int first_series ( void );
