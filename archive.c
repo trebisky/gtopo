@@ -773,15 +773,17 @@ wonk_method ( int type )
 	    return "Unknown";
 }
 
-static void
+void
 show_methods ( struct series *sp )
 {
 	struct method *xp;
 
 	for ( xp = sp->methods; xp; xp = xp->next ) {
 	    printf ( "%s method", wonk_method(xp->type) );
-	    if ( xp->type != M_SECTION )
+	    if ( xp->type == M_FILE )
 		printf ( ": %s", xp->tpq->path );
+	    if ( xp == sp->cur_method )
+		printf ( " <-- current method" );
 	    printf ( "\n" );
 	}
 }
@@ -803,6 +805,41 @@ show_statistics ( void )
 	}
 }
 
+/* run down a list of file/state methods for a series
+ * and find which one holds the desired long and lat
+ */
+static struct method *
+lookup_method ( struct series *sp )
+{
+	struct method *xp;
+	struct tpq_info *tp;
+
+	for ( xp = sp->methods; xp; xp = xp->next ) {
+	    if ( xp->type != M_FILE )
+		continue;
+
+	    tp = xp->tpq;
+
+	    if ( settings.verbose & V_ARCHIVE ) {
+		printf ( "lookup method checking: %s\n", tp->path );
+	    	printf ( "lookup method, long %.4f (%.4f - %.4f)\n", info.long_deg, tp->w_long, tp->e_long );
+	    	printf ( "lookup method, lat %.4f (%.4f - %.4f)\n", info.lat_deg, tp->n_lat, tp->n_lat );
+	    }
+
+	    if ( info.long_deg < tp->w_long )
+		continue;
+	    if ( info.long_deg > tp->e_long )
+		continue;
+	    if ( info.lat_deg < tp->s_lat )
+		continue;
+	    if ( info.lat_deg > tp->n_lat )
+		continue;
+	    return xp;
+	}
+
+	return NULL;
+}
+
 static int
 try_series ( int new_series )
 {
@@ -813,6 +850,14 @@ try_series ( int new_series )
 	 */
 	info.series = &info.series_info[new_series];
 	synch_position ();
+
+	/* don't rely on maplet tests for these */
+	if ( info.series->series == S_STATE
+		|| info.series->series == S_ATLAS ) {
+	    if ( lookup_method(info.series) )
+	    	return 1;
+	    return 0;
+	}
 
 	if ( settings.verbose & V_BASIC )
 	    printf ( "try_series wants maplet: %d %d at %s\n", info.maplet_x, info.maplet_y, wonk_series(new_series) );
@@ -858,6 +903,7 @@ up_series ( void )
 	    redraw_series ();
 	    if ( settings.verbose & V_BASIC )
 		printf ( "up series moved to series %s (%d)\n", wonk_series(series), series );
+	    setup_series();
 	    return;
 	}
 
@@ -890,6 +936,7 @@ down_series ( void )
 	    redraw_series ();
 	    if ( settings.verbose & V_BASIC )
 		printf ( "down series moved to series %s (%d)\n", wonk_series(series), series );
+	    setup_series();
 	    return;
 	}
 
@@ -906,6 +953,7 @@ initial_series ( enum s_type s )
 	    error ( "initial_series, impossible value: %d\n", s );
 
 	info.series = &info.series_info[s];
+	setup_series();
 }
 
 void
@@ -920,41 +968,6 @@ set_series ( enum s_type s )
 	}
 }
 
-/* run down a list of file/state methods for a series
- * and find which one holds the desired long and lat
- */
-static struct method *
-lookup_method ( struct series *sp )
-{
-	struct method *xp;
-	struct tpq_info *tp;
-
-	for ( xp = sp->methods; xp; xp = xp->next ) {
-	    if ( xp->type != M_FILE )
-		continue;
-
-	    tp = xp->tpq;
-
-	    if ( settings.verbose & V_ARCHIVE ) {
-		printf ( "lookup method checking: %s\n", tp->path );
-	    	printf ( "lookup method, long %.4f (%.4f - %.4f)\n", info.long_deg, tp->w_long, tp->e_long );
-	    	printf ( "lookup method, lat %.4f (%.4f - %.4f)\n", info.lat_deg, tp->n_lat, tp->n_lat );
-	    }
-
-	    if ( info.long_deg < tp->w_long )
-		continue;
-	    if ( info.long_deg > tp->e_long )
-		continue;
-	    if ( info.lat_deg < tp->s_lat )
-		continue;
-	    if ( info.lat_deg > tp->n_lat )
-		continue;
-	    return xp;
-	}
-
-	return NULL;
-}
-
 /* Right now the STATE and ATLAS series handle disjoint regions,
  * each of which (us, ak, hi) is a separate single TPQ file, which
  * is a file method.  The job of this routine is to identify which
@@ -967,6 +980,7 @@ setup_series ( void )
 	struct method *xp;
 	struct series *sp;
 	struct tpq_info *tp;
+	struct maplet *mp;
 
 	sp = info.series;
 
@@ -983,8 +997,17 @@ setup_series ( void )
 
 	sp->maplet_long_deg = tp->maplet_long_deg;
 	sp->maplet_lat_deg = tp->maplet_lat_deg;
+
 	sp->long_offset = tp->e_long;
 	sp->lat_offset = tp->s_lat;
+
+	/* Just so we can set pixel scale ! */
+	mp = load_maplet_any ( tp->path );
+	if ( ! mp )
+	    return 0;
+
+	sp->x_pixel_scale = sp->maplet_long_deg / mp->xdim;
+	sp->y_pixel_scale = sp->maplet_lat_deg / mp->ydim;
 
 	return 1;
 }
@@ -1022,6 +1045,8 @@ first_series ( void )
 	initial_series ( settings.starting_series );
 	set_position ( settings.starting_long, settings.starting_lat );
 
+#ifdef notdef
+/* Moved into try_series */
 	/* don't rely on maplet count tests for these */
 	if ( settings.starting_series == S_STATE
 		|| settings.starting_series == S_ATLAS ) {
@@ -1030,13 +1055,15 @@ first_series ( void )
 	    	return 1;
 	    return 0;
 	}
+#endif
 
 	/* We assume maplet size uniformity for these for now.
 	 * XXX - even though we know this is not true for 63K
 	 * up in Alaska.
 	 */
-	if ( try_series ( settings.starting_series ) )
+	if ( try_series ( settings.starting_series ) ) {
 	    return 1;
+	}
 
 	return 0;
 }

@@ -204,18 +204,20 @@ load_maplet ( int maplet_x, int maplet_y )
 
 /* This is an iterator to crank through all the maplets in a file
  * and feed them one by one to some handler function.
+ * NO LONGER USED, method_file() in archive.c does this now!
+ *
  * This involves some keeping straight of coordinate systems,
- * here we go.
+ * ---
  * Long and lat should be familiar,
  *  long is positive up (to the north)
- *  lat is positive left (to the west)
- * My maplet count system is an integer count with the
- *  east-west sign flipped, so:
- *   mx increases right (to the east)
+ *  lat is positive right (to the east)
+ *  (don't get fooled!!)
+ * My maplet count system is an integer count so that:
+ *   mx increases left (to the west)
  *   my increases up (to the north)
  * Counts within a TPQ file have
  *   the upper left is the 0,0 maplet in the TPQ file,
- *   ix increases right (like mx) from 0 on the left.
+ *   ix increases right (opposite mx) from 0 on the left.
  *   iy increases down (opposite my) from 0 at the top.
  *   the tpq index is computed from ix and iy.
  *
@@ -294,69 +296,6 @@ file_maplets ( struct method *xp, mfptr handler )
 	    }
 	}
 }
-
-#ifdef notdef
-/* States are weird, what we do is use this as an iterator to
- * grind through all the maplets and call our callback for each.
- * For states there is one TPQ file with one giant maplet per state.
- *
- * XXX - I honestly think we could ditch this routine and just
- * call the above, and should !
- */
-void
-state_maplet ( struct method *xp, mfptr handler )
-{
-    	struct maplet *mp;
-	struct series *sp;
-	struct tpq_info *tp;
-	int maplet_x, maplet_y;
-
-	sp = info.series;
-
-	if ( xp->type != M_STATE )
-	    return;
-
-	tp = xp->tpq;
-
-	/* Use these as indices */
-	maplet_x = 0;
-	maplet_y = 0;
-
-	/* First try the cache */
-	mp = maplet_cache_lookup ( xp->cache, maplet_x, maplet_y );
-	if ( mp ) {
-	    if ( settings.verbose & V_MAPLET )
-		printf ( "state maplet cache hit\n" );
-	    (*handler) (mp);
-	    return;
-	}
-
-	mp = maplet_new ();
-
-	mp->world_x = maplet_x;
-	mp->world_y = maplet_y;
-
-	mp->sheet_x = 0;	/* XXX */
-	mp->sheet_y = 0;
-
-	if ( settings.verbose & V_MAPLET )
-	    printf ( "State maplet read (%d) = %s\n", sp->cache_count, tp->path );
-
-	mp->tpq_path = tp->path;
-	mp->tpq_index = 0;	/* that is all there is !! */
-
-	if ( ! load_maplet_scale ( mp ) ) {
-	    free ( (char *) mp );
-	    return;
-	}
-
-	mp->next = xp->cache;
-	xp->cache = mp;
-	mp->time = sp->cache_count++;
-
-	(*handler) (mp);
-}
-#endif
 
 /* This is used when we want to "sniff at" a TPQ file prior to actually loading and
  * displaying maplets from it.  The best thing to do is to load a maplet near

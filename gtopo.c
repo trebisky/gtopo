@@ -259,62 +259,11 @@ draw_maplet ( struct maplet *mp, int x, int y )
  * Currently this assumes it gets one big maplet that is the
  * entire TPQ file.
  */
-#ifdef notdef
---void
---state_handler ( struct maplet *mp )
---{
---	struct tpq_info *tp;
---	double fx, fy;
---	int offx, offy;
---	int origx, origy;
---	double dpp_ew, dpp_ns;
---	double vpe, vpw, vps, vpn;
---
---	tp = mp->tpq;
---
---	if ( settings.verbose & V_BASIC ) {
---	    printf ( "State handler %s\n", mp->tpq->path );
---	    printf ( "Position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
---	    printf ( "Sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
---	    printf ( "Sheet, W, E: %.4f %.4f\n", tp->w_long, tp->e_long );
---	}
---
---	/* degrees per pixel */
---	dpp_ew = (tp->e_long - tp->w_long) / mp->xdim;
---	dpp_ns = (tp->n_lat - tp->s_lat) / mp->ydim;
---
---	/* viewport limits in degrees */
---	vpw = info.long_deg - vp_info.vxcent * dpp_ew;
---	vpe = info.long_deg + vp_info.vxcent * dpp_ew;
---	vps = info.lat_deg - vp_info.vycent * dpp_ns;
---	vpn = info.lat_deg + vp_info.vycent * dpp_ns;
---
---	/* Test if this map is not in our viewport */ 
---	if ( tp->e_long < vpw )
---	    return;
---	if ( tp->w_long > vpe )
---	    return;
---	if ( tp->n_lat < vps )
---	    return;
---	if ( tp->s_lat > vpn )
---	    return;
---
---	fx = (info.long_deg - tp->w_long ) / (tp->e_long - tp->w_long );
---	fy = 1.0 - (info.lat_deg - tp->s_lat ) / (tp->n_lat - tp->s_lat );
---
---	/* location of the center within the maplet */
---	offx = fx * mp->xdim;
---	offy = fy * mp->ydim;
---
---	origx = vp_info.vxcent - offx;
---	origy = vp_info.vycent - offy;
---
---	draw_maplet ( mp, origx, origy );
---}
-#endif
 
-/* This works just swell, but there is no way to navigate using the mouse
- * at this point.  XXX XXX
+/* This routine works just swell,
+ * but is obsolete now that method_file works properly.
+ * Anyway, with this, there was no way to navigate using the mouse.
+ * DELETE ALL THIS SOMEDAY, NO LONGER USED.
  */
 void
 state_handler ( struct maplet *mp )
@@ -733,12 +682,6 @@ move_xy ( int new_x, int new_y )
 	    printf ( "Button: orig position (lat/long) %.4f %.4f\n",
 		info.lat_deg, info.long_deg );
 
-	/*
-	double x_pixel_scale, y_pixel_scale;
-	x_pixel_scale = info.series->maplet_long_deg / (double) info.series->xdim;
-	y_pixel_scale = info.series->maplet_lat_deg / (double) info.series->ydim;
-	*/
-
 	dx = (new_x - (double)vxcent) * info.series->x_pixel_scale;
 	dy = (new_y - (double)vycent) * info.series->y_pixel_scale;
 
@@ -886,15 +829,13 @@ debug_dumper ( void )
 	/* from show_statistics, archive.c */
 	printf ( "Total sections: %d\n", info.n_sections );
 
-	for ( s=0; s<N_SERIES; s++ )
-	    if ( s == info.series->series )
+	for ( s=0; s<N_SERIES; s++ ) {
+	    if ( s == info.series->series ) {
 		printf ( "Map series %d (%s) %d maps << current series **\n", s+1, wonk_series(s), info.series_info[s].tpq_count );
-	    else
+		show_methods ( &info.series_info[s] );
+	    } else
 		printf ( "Map series %d (%s) %d maps\n", s+1, wonk_series(s), info.series_info[s].tpq_count );
-
-	/*
-	printf ( "Current series: %d (%s)\n", info.series->series + 1, wonk_series(info.series->series) );
-	*/
+	}
 
 	printf ( "maplet size (%s): %.3f %.3f\n", wonk_series(info.series->series), info.series->maplet_long_deg, info.series->maplet_lat_deg );
 
