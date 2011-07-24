@@ -100,10 +100,14 @@ struct wtable {
 static void
 gronk_word ( int *val, char *arg, struct wtable *wp )
 {
+	char *lower_arg = str_lower(arg);
+
 	for ( ; wp->word; wp++ ) {
-	    if ( strcmp ( arg, wp->word ) == 0 )
+	    if ( strcmp ( lower_arg, wp->word ) == 0 )
 	    	*val = wp->index;
 	}
+
+	free ( lower_arg );
 }
 
 struct wtable m1_words[] = { "center", M1_CENTER, "grab", M1_GRAB, NULL, 0 };
@@ -114,17 +118,11 @@ struct wtable series_words[] = {
     "state", S_STATE,
     "atlas", S_ATLAS,
     "500k", S_500K,
-    "500K", S_500K,
     "250k", S_250K,
-    "250K", S_250K,
     "100k", S_100K,
-    "100K", S_100K,
     "63k", S_63K,
-    "63K", S_63K,
     "24k", S_24K,
-    "24K", S_24K,
     "24k_ak", S_24K_AK,
-    "24K_AK", S_24K_AK,
 #ifdef TERRA
     "2m", S_TOPO_2M,
     "8m", S_TOPO_8M,
@@ -211,9 +209,6 @@ set_two ( char *name, char *val )
 	else if ( strcmp ( name, "starting_lat" ) == 0 )
 	    settings.starting_lat = parse_dms ( val );
 	else if ( strcmp ( name, "starting_series" ) == 0 ) {
-	    /*
-	    gronk_word ( (int *) &settings.starting_series, val, series_words );
-	    */
 	    gronk_series ( (int *) &settings.starting_series, val );
 	}
 	else if ( strcmp ( name, "m1_action" ) == 0 )

@@ -62,11 +62,11 @@ maplet_new ( void )
 /* XXX - plain old linear search, maybe someday will do some hashing.
  */
 static struct maplet *
-maplet_lookup ( int maplet_x, int maplet_y )
+maplet_cache_lookup ( struct maplet *head, int maplet_x, int maplet_y )
 {
 	struct maplet *cp;
 
-	for ( cp = info.series->cache; cp; cp = cp->next ) {
+	for ( cp = head; cp; cp = cp->next ) {
 	    if ( cp->world_y == maplet_y &&
 	    	cp->world_x == maplet_x ) {
 		    return cp;
@@ -152,7 +152,7 @@ load_maplet ( int maplet_x, int maplet_y )
 	if ( settings.verbose & V_MAPLET )
 	    printf ( "Load maplet for position %d %d\n", maplet_x, maplet_y );
 
-	mp = maplet_lookup ( maplet_x, maplet_y );
+	mp = maplet_cache_lookup ( info.series->cache, maplet_x, maplet_y );
 	if ( mp ) {
 	    if ( settings.verbose & V_MAPLET )
 		printf ( "maplet cache hit: %d %d\n", maplet_x, maplet_y );
@@ -201,69 +201,158 @@ load_maplet ( int maplet_x, int maplet_y )
 	return mp;
 }
 
-typedef void (*mfptr) ( struct maplet * );
+/* This is an iterator to crank through all the maplets in a file
+ * and feed them one by one to some handler function.
+ * This involves some keeping straight of coordinate systems,
+ * here we go.
+ * Long and lat should be familiar,
+ *  long is positive up (to the north)
+ *  lat is positive left (to the west)
+ * My maplet count system is an integer count with the
+ *  east-west sign flipped, so:
+ *   mx increases right (to the east)
+ *   my increases up (to the north)
+ * Counts within a TPQ file have
+ *   the upper left is the 0,0 maplet in the TPQ file,
+ *   ix increases right (like mx) from 0 on the left.
+ *   iy increases down (opposite my) from 0 at the top.
+ *   the tpq index is computed from ix and iy.
+ *
+ * Maplet counts are of little use for the file method here.
+ *  each file in a series typically has a different maplet size,
+ *  so maplet counts for one file cannot be compared to maplet
+ *  counts from another file in the same series.
+ * (This is true for alaska versus hawaii versus US at the
+ *  ATLAS and STATE levels).
+ * We just keep track of maplets to locate them in the cache,
+ * and so the handler we call knows what it is getting.
+ */
+
+void
+file_maplets ( struct method *xp, mfptr handler )
+{
+    	struct maplet *mp;
+	struct series *sp;
+	struct tpq_info *tp;
+	int maplet_x, maplet_y;
+	int tpq_x, tpq_y;
+
+	sp = info.series;
+
+	if ( xp->type != M_FILE )
+	    return;
+
+	tp = xp->tpq;
+
+	for ( tpq_y = 0; tpq_y < tp->lat_count; tpq_y++ ) {
+	    for ( tpq_x = 0; tpq_x < tp->long_count; tpq_x++ ) {
+
+		/*
+		maplet_x = tp->long_count - tpq_x - 1;
+		*/
+		maplet_x = tpq_x;
+		maplet_y = tp->lat_count - tpq_y - 1;
+
+		if ( settings.verbose & V_MAPLET )
+		    printf ( "file maplet mx, my: %d %d\n", maplet_x, maplet_y );
+
+		/* First try the cache */
+		mp = maplet_cache_lookup ( xp->cache, maplet_x, maplet_y );
+		if ( mp ) {
+		    if ( settings.verbose & V_MAPLET )
+			printf ( "file maplets cache hit\n" );
+		    (*handler) (mp);
+		    continue;
+		}
+
+		mp = maplet_new ();
+
+		mp->world_x = maplet_x;
+		mp->world_y = maplet_y;
+
+		mp->sheet_x = 0;	/* XXX */
+		mp->sheet_y = 0;
+
+		if ( settings.verbose & V_MAPLET )
+		    printf ( "File maplets read (%d) = %s\n", sp->cache_count, tp->path );
+
+		mp->tpq_path = tp->path;
+		mp->tpq_index = tpq_y * tp->long_count + tpq_x;
+
+		if ( ! load_maplet_scale ( mp ) ) {
+		    free ( (char *) mp );
+		    continue;
+		}
+
+		mp->next = xp->cache;
+		xp->cache = mp;
+		mp->time = sp->cache_count++;
+
+		(*handler) (mp);
+
+	    }
+	}
+}
 
 /* States are weird, what we do is use this as an iterator to
  * grind through all the maplets and call our callback for each.
  * For states there is one TPQ file with one giant maplet per state.
+ *
+ * XXX - I honestly think we could ditch this routine and just
+ * call the above, and should !
  */
 void
-state_maplets ( mfptr handler )
+state_maplet ( struct method *xp, mfptr handler )
 {
     	struct maplet *mp;
 	struct series *sp;
-	struct method *xp;
 	struct tpq_info *tp;
 	int maplet_x, maplet_y;
 
 	sp = info.series;
 
-	/* loop through all the state methods, and that
-	 * is all we expect at this level ....
-	 */
-	for ( xp = sp->methods; xp; xp = xp->next ) {
-	    if ( xp->type != M_STATE )
-		continue;
-	    tp = xp->tpq;
+	if ( xp->type != M_STATE )
+	    return;
 
-	    /* Use these as indices */
-	    maplet_x = - tp->w_long;
-	    maplet_y = tp->s_lat;
+	tp = xp->tpq;
+
+	/* Use these as indices */
+	maplet_x = 0;
+	maplet_y = 0;
+
+	/* First try the cache */
+	mp = maplet_cache_lookup ( xp->cache, maplet_x, maplet_y );
+	if ( mp ) {
 	    if ( settings.verbose & V_MAPLET )
-		printf ( "state maplets long/lat: %d %d\n", maplet_x, maplet_y );
-
-	    /* First try the cache */
-	    mp = maplet_lookup ( maplet_x, maplet_y );
-	    if ( mp ) {
-		if ( settings.verbose & V_MAPLET )
-		    printf ( "state maplets cache hit\n" );
-		(*handler) (mp);
-	    }
-
-	    mp = maplet_new ();
-
-	    mp->world_x = maplet_x;
-	    mp->world_y = maplet_y;
-	    mp->sheet_x = 0;
-	    mp->sheet_y = 0;
-
-	    if ( settings.verbose & V_MAPLET )
-		printf ( "State maplets read (%d) = %s\n", sp->cache_count, tp->path );
-
-	    mp->tpq_path = tp->path;
-	    mp->tpq_index = 0;
-
-	    if ( ! load_maplet_scale ( mp ) ) {
-		free ( (char *) mp );
-		continue;
-	    }
-
-	    mp->next = sp->cache;
-	    sp->cache = mp;
-	    mp->time = sp->cache_count++;
-
+		printf ( "state maplet cache hit\n" );
 	    (*handler) (mp);
+	    return;
 	}
+
+	mp = maplet_new ();
+
+	mp->world_x = maplet_x;
+	mp->world_y = maplet_y;
+
+	mp->sheet_x = 0;	/* XXX */
+	mp->sheet_y = 0;
+
+	if ( settings.verbose & V_MAPLET )
+	    printf ( "State maplet read (%d) = %s\n", sp->cache_count, tp->path );
+
+	mp->tpq_path = tp->path;
+	mp->tpq_index = 0;	/* that is all there is !! */
+
+	if ( ! load_maplet_scale ( mp ) ) {
+	    free ( (char *) mp );
+	    return;
+	}
+
+	mp->next = xp->cache;
+	xp->cache = mp;
+	mp->time = sp->cache_count++;
+
+	(*handler) (mp);
 }
 
 /* This is used when we want to "sniff at" a TPQ file prior to actually loading and

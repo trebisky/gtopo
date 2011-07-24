@@ -180,14 +180,23 @@ add_file_method ( struct series *sp, char *path )
 	if ( ! tp )
 	    return 0;
 
+	if ( settings.verbose & V_ARCHIVE2 ) {
+	    printf ( "Adding file method for %s for series %s\n", path, wonk_series(sp->series) );
+	    printf ( " TPQ file claims series %s\n", wonk_series(tp->series) );
+	    printf ( " Maplets long, lat = %d %d\n", tp->long_count, tp->lat_count );
+	}
+
 	if ( tp->series == S_STATE && tp->lat_count == 1 && tp->long_count == 1 )
 	    xp->type = M_STATE;
 	else
 	    xp->type = M_FILE;
-	xp->tpq = tp;
-	xp->next = sp->methods;
 
+	xp->tpq = tp;
+	xp->cache = NULL;
+
+	xp->next = sp->methods;
 	sp->methods = xp;
+
 	return 1;
 }
 
@@ -203,7 +212,10 @@ add_section_method ( struct series *sp, struct section *head )
 	xp->type = M_SECTION;
 	xp->sections = head;
 	xp->next = sp->methods;
+	xp->tpq = NULL;
+	xp->cache = NULL;
 
+	xp->next = sp->methods;
 	sp->methods = xp;
 }
 
@@ -547,7 +559,7 @@ series_init_mapinfo ( void )
 
 	/* XXX */
 	sp = &info.series_info[S_ATLAS];
-	    sp->tpq_count = 99;
+	    sp->tpq_count = 0;
 
 	    /* true for full USA */
 	    sp->maplet_lat_deg = 1.0;
@@ -570,7 +582,7 @@ series_init_mapinfo ( void )
 
 	/* XXX - The entire state */
 	sp = &info.series_info[S_STATE];
-	    sp->tpq_count = 99;
+	    sp->tpq_count = 0;
 
 	    /* XXX - complete BS for this series */
 	    sp->lat_count = 1;
@@ -806,6 +818,8 @@ try_series ( int new_series )
 	/* No harm done in loading the maplet, this gets it
 	 * into the cache, and we will soon be fetching it
 	 * to display anyway.
+	 * load_maplet() looks in the cache, and if/when it does not find it,
+	 * calls lookup_series() in this file.
 	 */
 	if ( load_maplet ( info.maplet_x, info.maplet_y ) ) {
 	    if ( settings.verbose & V_BASIC )
@@ -904,14 +918,55 @@ set_series ( enum s_type s )
 	}
 }
 
-/* This is how things usually start up, and this is
- * how we pick our first map and series.
+/* run down a list of file/state methods for a series
+ * and find which one holds the desired long and lat
+ */
+static struct method *
+lookup_method ( struct series *sp )
+{
+	struct method *xp;
+	struct tpq_info *tp;
+
+	for ( xp = sp->methods; xp; xp = xp->next ) {
+	    if ( xp->type != M_FILE && xp->type != M_STATE )
+		continue;
+
+	    tp = xp->tpq;
+
+	    if ( settings.verbose & V_ARCHIVE ) {
+		printf ( "lookup method checking: %s\n", tp->path );
+	    	printf ( "lookup method, long %.4f (%.4f - %.4f)\n", info.long_deg, tp->w_long, tp->e_long );
+	    	printf ( "lookup method, lat %.4f (%.4f - %.4f)\n", info.lat_deg, tp->n_lat, tp->n_lat );
+	    }
+
+	    if ( info.long_deg < tp->w_long )
+		continue;
+	    if ( info.long_deg > tp->e_long )
+		continue;
+	    if ( info.lat_deg < tp->s_lat )
+		continue;
+	    if ( info.lat_deg > tp->n_lat )
+		continue;
+	    return xp;
+	}
+
+	return NULL;
+}
+
+/* This is called only to get a pass/fail return on whether there
+ * is a map under the given starting point for the given starting
+ * series.  It does not matter what this does as far as reading
+ * files and/or loading information into caches. This does happen
+ * as a side effect and is not merely harmless, but beneficial.
  *
- * if no staring position and series is given,
- * use the largest scale at Tucson Arizona.
+ * Someday this may be more clever and ...
  *
- * if a starting position is given, try to honor it,
- * but if it us going to give a white screen, we have
+ * XXX - if the selected series has no maps, try to
+ * pick a different series (or location) and show the user
+ * something, a possible scheme is as follows:
+ *
+ * If a starting position is given, try to honor it,
+ * but if it is going to give a white screen, we want to
  * avoid that like the plague, and do the following:
  *
  * 1) search all series at the given position.
@@ -926,12 +981,46 @@ set_series ( enum s_type s )
 int
 first_series ( void )
 {
+	struct method *xp;
+
 	initial_series ( settings.starting_series );
 	set_position ( settings.starting_long, settings.starting_lat );
 
+	/* don't rely on maplet count tests for these */
+	if ( settings.starting_series == S_STATE
+		|| settings.starting_series == S_ATLAS ) {
+
+	    if ( lookup_method(info.series) )
+	    	return 1;
+	    return 0;
+	}
+
+	/* We assume maplet size uniformity for these for now.
+	 * XXX - even though we know this is not true for 63K
+	 * up in Alaska.
+	 */
 	if ( try_series ( settings.starting_series ) )
 	    return 1;
+
 	return 0;
+}
+
+void
+iterate_series_method ( mfptr handler )
+{
+	struct method *xp;
+
+	xp = lookup_method(info.series);
+
+	if ( ! xp )
+	    return;
+
+	if ( xp->type == M_FILE )
+	    file_maplets ( xp, handler );
+
+	/* XXX */
+	if ( xp->type == M_STATE )
+	    state_maplet ( xp, handler );
 }
 
 /* Try both upper and lower case path names for the tpq file.
@@ -1039,6 +1128,9 @@ section_find_map ( struct section *head, int lat_section, int long_section, int 
 
 /* We have a single file of some sort, we just need to figure
  * out if we are on the sheet, and if so, get the offsets.
+ *
+ * XXX - this works only if the info in the series structure
+ * matches what is in the file itself.
  */
 static int
 method_file ( struct maplet *mp, struct method *xp,
@@ -1052,6 +1144,7 @@ method_file ( struct maplet *mp, struct method *xp,
 	mp->sheet_y = maplet_y - xp->tpq->sheet_lat;
 
 	if ( settings.verbose & V_ARCHIVE ) {
+	    printf ( "MF trying file: %s\n", xp->tpq->path );
 	    printf ( "MF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
 	    printf ( "MF maplet indices (x/y) : %d %d\n", maplet_x, maplet_y );
 	    printf ( "MF sheet indices (x/y): %d %d\n", mp->sheet_x, mp->sheet_y );
@@ -1625,20 +1718,28 @@ static void
 add_usa_file ( int series, char *path, char *name )
 {
 	char map_path[100];
-	char *new_path;
 
 	sprintf ( map_path, "%s/%s", path, name );
 	if ( is_file ( map_path ) ) {
 	    (void) add_file_method ( &info.series_info[series], map_path );
-	    return;
+	    info.series_info[series].tpq_count ++;
+	    /* return; */
 	}
 
-	new_path = str_lower ( map_path );
-	if ( is_file ( new_path ) )
-	    (void) add_file_method ( &info.series_info[series], new_path );
-	free ( new_path );
+	/* Not needed, the path and file have been validated
+	 * char *new_path;
+	 * new_path = str_lower ( map_path );
+	 * if ( is_file ( new_path ) ) {
+	 *   (void) add_file_method ( &info.series_info[series], new_path );
+	 *   info.series_info[series].tpq_count ++;
+	 * }
+	 * free ( new_path );
+	 */
 }
 
+/* called in the directory si_d01/usmaps to handle the
+ * level 1 and 2 maps as special cases.
+ */
 static void
 add_usa_12 ( char *path, char *name )
 {
@@ -1660,9 +1761,22 @@ add_usa_12 ( char *path, char *name )
 	    if ( ! (dp = readdir ( dd )) )
 	    	break;
 
+	    /* The lower 48 */
 	    if ( strcmp_l("us1_map1.tpq", dp->d_name) == 0 )
 		add_usa_file ( S_STATE, map_path, dp->d_name );
 	    if ( strcmp_l("us1_map2.tpq", dp->d_name) == 0 )
+		add_usa_file ( S_ATLAS, map_path, dp->d_name );
+
+	    /* Alaska */
+	    if ( strcmp_l("ak1_map1.tpq", dp->d_name) == 0 )
+		add_usa_file ( S_STATE, map_path, dp->d_name );
+	    if ( strcmp_l("ak1_map2.tpq", dp->d_name) == 0 )
+		add_usa_file ( S_ATLAS, map_path, dp->d_name );
+
+	    /* Hawaii */
+	    if ( strcmp_l("hi1_map1.tpq", dp->d_name) == 0 )
+		add_usa_file ( S_STATE, map_path, dp->d_name );
+	    if ( strcmp_l("hi1_map2.tpq", dp->d_name) == 0 )
 		add_usa_file ( S_ATLAS, map_path, dp->d_name );
 	}
 
@@ -1729,31 +1843,6 @@ add_full_usa ( char *path, char *name )
 
 	if ( settings.verbose & V_BASIC )
 	    printf ( "Found level 123 for full USA at %s\n", si_path );
-
-#ifdef notdef
-	/* believe it or not, these weird mixed case file names actually
-	 * are what appear, namely US1_MAP1.tpq
-	 * XXX - this would be cleaner if we would just loop
-	 * through the names actually in the archive and do a
-	 * str_cmp_l against target names.
-	 */
-
-	sprintf ( map_path, "%s/USMAPS", si_path );
-	if ( is_directory ( map_path ) ) {
-	    add_usa_file ( S_STATE, map_path, "US1_MAP1.TPQ" );
-	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.TPQ" );
-	    add_usa_file ( S_STATE, map_path, "US1_MAP1.tpq" );
-	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.tpq" );
-	}
-
-	sprintf ( map_path, "%s/usmaps", si_path );
-	if ( is_directory ( map_path ) ) {
-	    add_usa_file ( S_STATE, map_path, "US1_MAP1.TPQ" );
-	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.TPQ" );
-	    add_usa_file ( S_STATE, map_path, "US1_MAP1.tpq" );
-	    add_usa_file ( S_ATLAS, map_path, "US1_MAP2.tpq" );
-	}
-#endif
 
 	if ( ! (dd = opendir ( si_path )) )
 	    return;

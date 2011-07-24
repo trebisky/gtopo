@@ -206,6 +206,7 @@ struct method {
 	enum m_type type;
 	struct section *sections;
 	struct tpq_info *tpq;
+	struct maplet *cache;
 };
 
 /* This is set up by load_maplet() and lookup_quad()

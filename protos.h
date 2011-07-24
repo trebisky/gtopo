@@ -21,6 +21,8 @@
 /* protos.h
  */
 
+typedef void (*mfptr) ( struct maplet * );
+
 /* from gtopo.c */
 void synch_position ( void );
 void set_position ( double, double );
@@ -32,6 +34,8 @@ struct tpq_info *tpq_lookup ( char * );
 /* from maplet.c */
 struct maplet *load_maplet ( int, int );
 struct maplet *load_maplet_any ( char * );
+void state_maplet ( struct method *, mfptr );
+void file_maplets ( struct method *, mfptr );
 
 /* from archive.c */
 int archive_init ( void );
@@ -41,6 +45,7 @@ int lookup_series ( struct maplet *, int, int );
 void set_series ( enum s_type );
 char *wonk_series ( enum s_type );
 int first_series ( void );
+void iterate_series_method ( mfptr );
 
 /* from utils.c */
 void error ( char *, ... );

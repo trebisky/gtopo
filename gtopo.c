@@ -48,12 +48,20 @@
  */
 
 /*
- Possible series are the 5 following:
+ Possible series in the lower 48 are the 5 following:
 
     S_STATE;
     S_ATLAS;
     S_500K;
     S_100K;
+    S_24K;
+
+ Possible series in Alaska are the 5 following:
+
+    S_STATE;
+    S_ATLAS;
+    S_250K;
+    S_63K;
     S_24K;
 */
 
@@ -233,6 +241,81 @@ draw_maplet ( struct maplet *mp, int x, int y )
 		GDK_RGB_DITHER_NONE, 0, 0 );
 }
 
+/* When dealing with a "state", we have typically one giant maplet
+ * that comprises the entire TPQ file.  This is a callback handler
+ * that will get called one by one for all maplets in a state or atlas
+ * type object.  The fact that this is called once via an iterator for
+ * "state" objects is indeed silly, but the iterator scheme is ideal for
+ * ATLAS type TPQ files with multiple maplets.
+ *
+ * In particular though, note that the only variables referenced from the
+ * info structure are long_deg and lat_deg.
+ * This means that the maplets passed to this routine are
+ *  "self identifying", which is ideal for STATE and ATLAS series
+ *  which have different maplet sizes and pixel scales for each
+ *  disjoint chunk (HI, AK, US) which comprises them.
+ * Nothing at all is used from the series structure.
+ *
+ * Currently this assumes it gets one big maplet that is the
+ * entire TPQ file.
+ */
+#ifdef notdef
+--void
+--state_handler ( struct maplet *mp )
+--{
+--	struct tpq_info *tp;
+--	double fx, fy;
+--	int offx, offy;
+--	int origx, origy;
+--	double dpp_ew, dpp_ns;
+--	double vpe, vpw, vps, vpn;
+--
+--	tp = mp->tpq;
+--
+--	if ( settings.verbose & V_BASIC ) {
+--	    printf ( "State handler %s\n", mp->tpq->path );
+--	    printf ( "Position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
+--	    printf ( "Sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
+--	    printf ( "Sheet, W, E: %.4f %.4f\n", tp->w_long, tp->e_long );
+--	}
+--
+--	/* degrees per pixel */
+--	dpp_ew = (tp->e_long - tp->w_long) / mp->xdim;
+--	dpp_ns = (tp->n_lat - tp->s_lat) / mp->ydim;
+--
+--	/* viewport limits in degrees */
+--	vpw = info.long_deg - vp_info.vxcent * dpp_ew;
+--	vpe = info.long_deg + vp_info.vxcent * dpp_ew;
+--	vps = info.lat_deg - vp_info.vycent * dpp_ns;
+--	vpn = info.lat_deg + vp_info.vycent * dpp_ns;
+--
+--	/* Test if this map is not in our viewport */ 
+--	if ( tp->e_long < vpw )
+--	    return;
+--	if ( tp->w_long > vpe )
+--	    return;
+--	if ( tp->n_lat < vps )
+--	    return;
+--	if ( tp->s_lat > vpn )
+--	    return;
+--
+--	fx = (info.long_deg - tp->w_long ) / (tp->e_long - tp->w_long );
+--	fy = 1.0 - (info.lat_deg - tp->s_lat ) / (tp->n_lat - tp->s_lat );
+--
+--	/* location of the center within the maplet */
+--	offx = fx * mp->xdim;
+--	offy = fy * mp->ydim;
+--
+--	origx = vp_info.vxcent - offx;
+--	origy = vp_info.vycent - offy;
+--
+--	draw_maplet ( mp, origx, origy );
+--}
+#endif
+
+/* This works just swell, but there is no way to navigate using the mouse
+ * at this point.  XXX XXX
+ */
 void
 state_handler ( struct maplet *mp )
 {
@@ -242,19 +325,18 @@ state_handler ( struct maplet *mp )
 	int origx, origy;
 	double dpp_ew, dpp_ns;
 	double vpe, vpw, vps, vpn;
+	double me, mw, ms, mn;
+	double dx, dy;
 
 	tp = mp->tpq;
 
-	if ( settings.verbose & V_BASIC ) {
-	    printf ( "State handler %s\n", mp->tpq->path );
-	    printf ( "Position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
-	    printf ( "Sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
-	    printf ( "Sheet, W, E: %.4f %.4f\n", tp->w_long, tp->e_long );
-	}
+	/* maplet sizes */
+	dx = (tp->e_long - tp->w_long) / tp->long_count;
+	dy = (tp->n_lat - tp->s_lat) / tp->lat_count;
 
 	/* degrees per pixel */
-	dpp_ew = (tp->e_long - tp->w_long) / mp->xdim;
-	dpp_ns = (tp->n_lat - tp->s_lat) / mp->ydim;
+	dpp_ew = dx / mp->xdim;
+	dpp_ns = dy / mp->ydim;
 
 	/* viewport limits in degrees */
 	vpw = info.long_deg - vp_info.vxcent * dpp_ew;
@@ -262,25 +344,39 @@ state_handler ( struct maplet *mp )
 	vps = info.lat_deg - vp_info.vycent * dpp_ns;
 	vpn = info.lat_deg + vp_info.vycent * dpp_ns;
 
-	/* Test if this map is not in our viewport */ 
-	if ( tp->e_long < vpw )
+	/* maplet limits in degrees */
+	mw = tp->w_long + mp->world_x * dx;
+	me = mw + dx;
+	ms = tp->s_lat + mp->world_y * dy;
+	mn = ms + dy;
+
+	if ( settings.verbose & V_BASIC ) {
+	    printf ( "State handler %s\n", mp->tpq->path );
+	    printf ( " Center position, long, lat: %.4f %.4f\n", info.long_deg, info.lat_deg );
+	    printf ( " World x, y: %d %d\n", mp->world_x, mp->world_y );
+	    printf ( " Maplet, S, N: %.4f %.4f  vp: %.4f %.4f\n", ms, mn, vps, vpn );
+	    printf ( " Maplet, W, E: %.4f %.4f  vp: %.4f %.4f\n", mw, me, vpw, vpe );
+	}
+
+	/* Bail out if this map is not in our viewport */ 
+	if ( me < vpw )
 	    return;
-	if ( tp->w_long > vpe )
+	if ( mw > vpe )
 	    return;
-	if ( tp->n_lat < vps )
+	if ( mn < vps )
 	    return;
-	if ( tp->s_lat > vpn )
+	if ( ms > vpn )
 	    return;
 
-	fx = (info.long_deg - tp->w_long ) / (tp->e_long - tp->w_long );
-	fy = 1.0 - (info.lat_deg - tp->s_lat ) / (tp->n_lat - tp->s_lat );
+	/* Calculate the offset within the viewport of the
+	 * lower left corner of this maplet.
+	 */
+	origx = vp_info.vxcent + (mw-info.long_deg) / dpp_ew;
+	origy = vp_info.vycent + (info.lat_deg-mn) / dpp_ns;
 
-	/* location of the center within the maplet */
-	offx = fx * mp->xdim;
-	offy = fy * mp->ydim;
-
-	origx = vp_info.vxcent - offx;
-	origy = vp_info.vycent - offy;
+	if ( settings.verbose & V_BASIC ) {
+	    printf ( " Orig, x, y: %d %d\n", origx, origy );
+	}
 
 	draw_maplet ( mp, origx, origy );
 }
@@ -292,6 +388,7 @@ state_handler ( struct maplet *mp )
  * 	maplet x,y  - x increases to west (left), y increases to north (up)
  * 	pixmap x,y  - x increases to the right (east), y increases down (south)
  * 	utm x,y     - x increases to east, y increases to north.
+ *	viewport    - x increases to right, y increases down
  */
 void
 pixmap_redraw ( void )
@@ -303,7 +400,7 @@ pixmap_redraw ( void )
 	int x, y;
 	struct maplet *mp;
 	int xx, yy;
-	int mx, my;
+	int px, py;	/* maplet size in pixels */
 
 	/* get the viewport size */
 	vxdim = vp_info.vx;
@@ -313,6 +410,7 @@ pixmap_redraw ( void )
 	gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
 	info.series->content = 1;
 
+#ifdef notdef
 	/* The state series are a special case.  In fact the usual
 	 * thing here (if there is a usual thing) is that the whole
 	 * state is handled with a single tpq file with one big maplet,
@@ -325,12 +423,17 @@ pixmap_redraw ( void )
 	    state_maplets ( state_handler );
 	    return;
 	}
+#endif
+	if ( info.series->series == S_STATE || info.series->series == S_ATLAS ) {
+	    iterate_series_method ( state_handler );
+	    return;
+	}
 
 	/* A first guess, hopefuly to be corrected
 	 * as soon as we actually read a maplet
 	 */
-	mx = info.series->xdim;
-	my = info.series->ydim;
+	px = info.series->xdim;
+	py = info.series->ydim;
 
 	/* load the maplet containing the current position so
 	 * we can get the maplet pixel size up front.
@@ -346,15 +449,15 @@ pixmap_redraw ( void )
 	 * about maplet size -- with a hopefully better guess.
 	 */
 	if ( mp ) {
-	    info.series->xdim = mx = mp->xdim;
-	    info.series->ydim = my = mp->ydim;
+	    info.series->xdim = px = mp->xdim;
+	    info.series->ydim = py = mp->ydim;
 	    if ( settings.verbose & V_DRAW )
-		printf ( "Center maplet x,ydim = %d, %d\n", mx, my );
+		printf ( "Center maplet size x,y = %d, %d\n", px, py );
 	}
 
 	/* location of the center within the maplet */
-	offx = info.fx * mx;
-	offy = info.fy * my;
+	offx = info.fx * px;
+	offy = info.fy * py;
 
 	origx = vp_info.vxcent - offx;
 	origy = vp_info.vycent - offy;
@@ -366,15 +469,15 @@ pixmap_redraw ( void )
 	    nx1 = nx2 = 0;
 	    ny1 = ny2 = 0;
 	} else {
-	    nx1 = - (vxdim - (origx + mx) + mx - 1 ) / mx;
-	    nx2 = + (origx + mx - 1 ) / mx;
-	    ny1 = - (vydim - (origy + my) + my - 1 ) / my;
-	    ny2 = + (origy + my - 1 ) / my;
+	    nx1 = - (vxdim - (origx + px) + px - 1 ) / px;
+	    nx2 = + (origx + px - 1 ) / px;
+	    ny1 = - (vydim - (origy + py) + py - 1 ) / py;
+	    ny2 = + (origy + py - 1 ) / py;
 	}
 
 	if ( settings.verbose & V_DRAW ) {
 	    printf ( "redraw -- viewport: %d %d -- maplet %d %d -- offset: %d %d\n",
-		vxdim, vydim, mx, my, offx, offy );
+		vxdim, vydim, px, py, offx, offy );
 	    printf ( "redraw range: x,y = %d %d %d %d\n", nx1, nx2, ny1, ny2 );
 	}
 
@@ -408,12 +511,12 @@ pixmap_redraw ( void )
 
 	if ( settings.show_maplets ) {
 	    for ( x = nx1+1; x <= nx2; x++ ) {
-		xx = origx - mx * x,
+		xx = origx - px * x,
 		gdk_draw_line ( info.series->pixels, vp_info.da->style->black_gc,
 		    xx, 0, xx, vp_info.vy );
 	    }
 	    for ( y = ny1+1; y <= ny2; y++ ) {
-		yy = origy - my * y,
+		yy = origy - py * y,
 		gdk_draw_line ( info.series->pixels, vp_info.da->style->black_gc,
 		    0, yy, vp_info.vx, yy );
 	    }
@@ -1470,7 +1573,7 @@ main ( int argc, char **argv )
 	char *file_name;
 
 	/* Built in places to look for maps, can be overridden
-	 * from the settings file.
+	 * from the settings file (and usually is).
 	 */
 #ifdef INITIAL_ARCHIVE
 	archive_add ( INITIAL_ARCHIVE );
@@ -1568,19 +1671,25 @@ main ( int argc, char **argv )
 
 	} else {
 	    /* The usual case */
+
 	    if ( ! archive_init () ) {
 		printf ( "No topo archives found\n" );
 		return 1;
 	    }
+
+	    /* Just probe to see if we can display a map at the
+	     * starting position and series requested.
+	     * If not, we exit here and now with a message rather
+	     * than presenting a blank white screen.
+	     */
 	    if ( ! first_series () ) {
-		printf ( "Cannot find map to display at Long = %.3f, Lat = %.3f\n",
-		    settings.starting_long, settings.starting_lat );
+		show_statistics ();
+		printf ( "Cannot find map at Long = %.3f, Lat = %.3f for series: %s\n",
+		    settings.starting_long, settings.starting_lat, wonk_series(settings.starting_series));
 		return 1;
 	    }
-	    /*
-	    initial_series ( settings.starting_series );
-	    set_position ( settings.starting_long, settings.starting_lat );
-	    */
+	    if ( settings.verbose & V_BASIC )
+	    	printf ( "first_series() gives a green light\n" );
 	}
 
 	/* --- set up the GTK stuff we need */
