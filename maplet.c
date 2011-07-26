@@ -59,6 +59,20 @@ maplet_new ( void )
 	return mp;
 }
 
+static void
+maplet_free ( struct maplet *mp )
+{
+	/* You might think you should also be freeing
+	 * mp->tpq and mp->path, but you can't just do
+	 * that (even if you wanted to).
+	 * In general many maplet structures point to the
+	 * same tpq structure, and in most cases mp->path
+	 * likewise points to the path in that same tpq
+	 * structure, so doing so would yield chaos.
+	 */
+	free ( (char *) mp );
+}
+
 /* XXX - plain old linear search, maybe someday will do some hashing.
  */
 static struct maplet *
@@ -184,14 +198,14 @@ load_maplet ( int maplet_x, int maplet_y )
 	     * tpq_index in the maplet structure.
 	     */
 	    if ( ! lookup_series ( mp ) ) {
-		free ( (char *) mp );
+		maplet_free ( mp );
 		return NULL;
 	    }
 	    rv = load_maplet_scale ( mp );
 	}
 
 	if ( ! rv ) {
-	    free ( (char *) mp );
+	    maplet_free ( mp );
 	    return NULL;
 	}
 
@@ -231,94 +245,107 @@ load_maplet ( int maplet_x, int maplet_y )
  * and so the handler we call knows what it is getting.
  */
 
-void
-file_maplets ( struct method *xp, mfptr handler )
-{
-    	struct maplet *mp;
-	struct series *sp;
-	struct tpq_info *tp;
-	int maplet_x, maplet_y;
-	int tpq_x, tpq_y;
-
-	sp = info.series;
-
-	if ( xp->type != M_FILE )
-	    return;
-
-	tp = xp->tpq;
-
-	for ( tpq_y = 0; tpq_y < tp->lat_count; tpq_y++ ) {
-	    for ( tpq_x = 0; tpq_x < tp->long_count; tpq_x++ ) {
-
-		/*
-		maplet_x = tp->long_count - tpq_x - 1;
-		*/
-		maplet_x = tpq_x;
-		maplet_y = tp->lat_count - tpq_y - 1;
-
-		if ( settings.verbose & V_MAPLET )
-		    printf ( "file maplet mx, my: %d %d\n", maplet_x, maplet_y );
-
-		/* First try the cache */
-		mp = maplet_cache_lookup ( xp->cache, maplet_x, maplet_y );
-		if ( mp ) {
-		    if ( settings.verbose & V_MAPLET )
-			printf ( "file maplets cache hit\n" );
-		    (*handler) (mp);
-		    continue;
-		}
-
-		mp = maplet_new ();
-
-		mp->world_x = maplet_x;
-		mp->world_y = maplet_y;
-
-		mp->sheet_x = 0;	/* XXX */
-		mp->sheet_y = 0;
-
-		if ( settings.verbose & V_MAPLET )
-		    printf ( "File maplets read (%d) = %s\n", sp->cache_count, tp->path );
-
-		mp->tpq_path = tp->path;
-		mp->tpq_index = tpq_y * tp->long_count + tpq_x;
-
-		if ( ! load_maplet_scale ( mp ) ) {
-		    free ( (char *) mp );
-		    continue;
-		}
-
-		mp->next = xp->cache;
-		xp->cache = mp;
-		mp->time = sp->cache_count++;
-
-		(*handler) (mp);
-
-	    }
-	}
-}
+#ifdef notdef
+--void
+--file_maplets ( struct method *xp, mfptr handler )
+--{
+--    	struct maplet *mp;
+--	struct series *sp;
+--	struct tpq_info *tp;
+--	int maplet_x, maplet_y;
+--	int tpq_x, tpq_y;
+--
+--	sp = info.series;
+--
+--	if ( xp->type != M_FILE )
+--	    return;
+--
+--	tp = xp->tpq;
+--
+--	for ( tpq_y = 0; tpq_y < tp->lat_count; tpq_y++ ) {
+--	    for ( tpq_x = 0; tpq_x < tp->long_count; tpq_x++ ) {
+--
+--		/*
+--		maplet_x = tp->long_count - tpq_x - 1;
+--		*/
+--		maplet_x = tpq_x;
+--		maplet_y = tp->lat_count - tpq_y - 1;
+--
+--		if ( settings.verbose & V_MAPLET )
+--		    printf ( "file maplet mx, my: %d %d\n", maplet_x, maplet_y );
+--
+--		/* First try the cache */
+--		mp = maplet_cache_lookup ( xp->cache, maplet_x, maplet_y );
+--		if ( mp ) {
+--		    if ( settings.verbose & V_MAPLET )
+--			printf ( "file maplets cache hit\n" );
+--		    (*handler) (mp);
+--		    continue;
+--		}
+--
+--		mp = maplet_new ();
+--
+--		mp->world_x = maplet_x;
+--		mp->world_y = maplet_y;
+--
+--		mp->sheet_x = 0;	/* XXX */
+--		mp->sheet_y = 0;
+--
+--		if ( settings.verbose & V_MAPLET )
+--		    printf ( "File maplets read (%d) = %s\n", sp->cache_count, tp->path );
+--
+--		mp->tpq_path = tp->path;
+--		mp->tpq_index = tpq_y * tp->long_count + tpq_x;
+--
+--		if ( ! load_maplet_scale ( mp ) ) {
+--		    free ( (char *) mp );
+--		    continue;
+--		}
+--
+--		mp->next = xp->cache;
+--		xp->cache = mp;
+--		mp->time = sp->cache_count++;
+--
+--		(*handler) (mp);
+--
+--	    }
+--	}
+--}
+#endif
 
 /* This is used when we want to "sniff at" a TPQ file prior to actually loading and
  * displaying maplets from it.  The best thing to do is to load a maplet near
  * the center of the map, at least when we are in file view mode.
  */
 struct maplet *
-load_maplet_any ( char *path )
+load_maplet_any ( char *path, struct series *sp )
 {
     	struct maplet *mp;
-	struct series *sp;
 
 	mp = maplet_new ();
 
 	mp->tpq_path = strhide ( path );
 	mp->tpq_index = -1;
 
-	load_maplet_scale ( mp );
+	if ( ! load_maplet_scale ( mp ) ) {
+	    maplet_free ( mp );
+	    return NULL;
+	}
 
-	/* Put this on the cache for that series */
-	sp = &info.series_info[mp->tpq->series];
-	mp->next = sp->cache;
-	sp->cache = mp;
-	mp->time = sp->cache_count++;
+	/* If we are given the series,
+	 * put this on the cache for that series.
+	 * world_x and world_y are set in tpq_io.c
+	 * but only correctly for a FILE method use,
+	 * which at this time is the only way this is called
+	 * when it is asked to do caching.
+	 */
+	if ( sp ) {
+	    mp->next = sp->cur_method->cache;
+	    sp->cur_method->cache = mp;
+	    mp->time = sp->cache_count++;
+	} else {
+	    maplet_free ( mp );
+	}
 
 	return mp;
 }

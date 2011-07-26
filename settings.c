@@ -74,7 +74,11 @@ settings_default ( void )
 #endif
 
 	/* Tucson, Arizona */
-	settings.starting_series = S_500K;
+	/* XXX - this really needs to be dynamic, what if
+	 * the user only has the Alaska or Utah set and does
+	 * not have SI_D01 ??
+	 */
+	settings.starting_series = S_STATE;
 	settings.starting_long = -110.94;
 	settings.starting_lat = 32.27;
 

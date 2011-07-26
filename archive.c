@@ -285,7 +285,7 @@ file_info ( char *path, int extra )
 	    return;
 	}
 
-	mp = load_maplet_any ( path );
+	mp = load_maplet_any ( path, NULL );
 	if ( ! mp ) {
 	    printf ( "Cannot grog file: %s\n", path );
 	    return;
@@ -343,7 +343,7 @@ file_init ( char *path )
 	if ( ! is_file(path) )
 	    return 0;
 
-	mp = load_maplet_any ( path );
+	mp = load_maplet_any ( path, NULL );
 	if ( ! mp )
 	    return 0;
 
@@ -620,13 +620,6 @@ series_init_mapinfo ( void )
 	    /* true for full USA */
 	    sp->maplet_lat_deg = 3.250;
 	    sp->maplet_long_deg = 4.9167;
-
-	    /* XXX - yecch, this should get calculated from
-	     * the file when we read the header.
-	     * (as the above)
-	     */
-	    sp->lat_offset = 1.25;
-	    sp->long_offset = -2.079;
 
 	    sp->xdim = 309;
 	    sp->ydim = 256;
@@ -1002,7 +995,7 @@ setup_series ( void )
 	sp->lat_offset = tp->s_lat;
 
 	/* Just so we can set pixel scale ! */
-	mp = load_maplet_any ( tp->path );
+	mp = load_maplet_any ( tp->path, sp );
 	if ( ! mp )
 	    return 0;
 
@@ -1045,29 +1038,13 @@ first_series ( void )
 	initial_series ( settings.starting_series );
 	set_position ( settings.starting_long, settings.starting_lat );
 
-#ifdef notdef
-/* Moved into try_series */
-	/* don't rely on maplet count tests for these */
-	if ( settings.starting_series == S_STATE
-		|| settings.starting_series == S_ATLAS ) {
-
-	    if ( lookup_method(info.series) )
-	    	return 1;
-	    return 0;
-	}
-#endif
-
-	/* We assume maplet size uniformity for these for now.
-	 * XXX - even though we know this is not true for 63K
-	 * up in Alaska.
-	 */
-	if ( try_series ( settings.starting_series ) ) {
+	if ( try_series ( settings.starting_series ) )
 	    return 1;
-	}
 
 	return 0;
 }
 
+#ifdef notdef
 void
 iterate_series_method ( mfptr handler )
 {
@@ -1081,6 +1058,7 @@ iterate_series_method ( mfptr handler )
 	if ( xp->type == M_FILE )
 	    file_maplets ( xp, handler );
 }
+#endif
 
 /* Try both upper and lower case path names for the tpq file.
  * It turns out we have to allow the file extension to be
@@ -1201,8 +1179,8 @@ method_file ( struct maplet *mp, struct method *xp )
 	tp = xp->tpq;
 
 	/* flip the count to origin from the NW corner */
-	x_index = tp->long_count - mp->world_x - 1;
-	y_index = tp->lat_count - mp->world_y - 1;
+	x_index = tp->long_count - maplet_x - 1;
+	y_index = tp->lat_count - maplet_y - 1;
 
 	rv = 1;
 	if ( x_index < 0 || x_index >= tp->long_count )
@@ -1221,29 +1199,6 @@ method_file ( struct maplet *mp, struct method *xp )
 	if ( ! rv )
 	    return 0;
 
-#ifdef notdef
-	/* Now figure which maplet within the sheet we need.
-	 */
-	mp->sheet_x = maplet_x - xp->tpq->sheet_long;
-	mp->sheet_y = maplet_y - xp->tpq->sheet_lat;
-
-	if ( settings.verbose & V_ARCHIVE ) {
-	    printf ( "MF trying file: %s\n", xp->tpq->path );
-	    printf ( "MF sheet long, lat: %d %d\n", xp->tpq->sheet_long, xp->tpq->sheet_lat );
-	    printf ( "MF maplet indices (x/y) : %d %d\n", maplet_x, maplet_y );
-	    printf ( "MF sheet indices (x/y): %d %d\n", mp->sheet_x, mp->sheet_y );
-	}
-
-	if ( mp->sheet_x < 0 || mp->sheet_x >= xp->tpq->long_count )
-	    return 0;
-	if ( mp->sheet_y < 0 || mp->sheet_y >= xp->tpq->lat_count )
-	    return 0;
-
-	/* flip the count to origin from the NW corner */
-	x_index = xp->tpq->long_count - mp->sheet_x - 1;
-	y_index = xp->tpq->lat_count - mp->sheet_y - 1;
-#endif
-
 	/* These are the vital things we need to set */
 	mp->tpq_path = tp->path;
 	mp->tpq_index = y_index * tp->long_count + x_index;
@@ -1260,6 +1215,7 @@ method_section ( struct maplet *mp, struct method *xp )
 	int lat_quad, long_quad;
 	int x_index, y_index;
 	int maplet_x, maplet_y;
+	int sheet_x, sheet_y;
 
 	sp = info.series;
 
@@ -1288,17 +1244,18 @@ method_section ( struct maplet *mp, struct method *xp )
 	if ( ! mp->tpq_path )
 	    return 0;
 
-	/* Now figure which maplet within the sheet we need.
+	/* Convert a maplet global maplet x,y to a local maplet x,y within that TPQ file.
+	Now figure which maplet within the sheet we need.
 	 */
-	mp->sheet_x = maplet_x - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
-	mp->sheet_y = maplet_y - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
+	sheet_x = maplet_x - long_quad * sp->long_count - long_section * sp->long_count * sp->long_count_d;
+	sheet_y = maplet_y - lat_quad * sp->lat_count - lat_section * sp->lat_count * sp->lat_count_d;
 
 	if ( settings.verbose & V_ARCHIVE )
 	    printf ( "long/lag quad, x/y maplet: %d %d  %d %d\n", long_quad, lat_quad, maplet_x, maplet_y );
 
 	/* flip the count to origin from the NW corner */
-	x_index = sp->long_count - mp->sheet_x - 1;
-	y_index = sp->lat_count - mp->sheet_y - 1;
+	x_index = sp->long_count - sheet_x - 1;
+	y_index = sp->lat_count - sheet_y - 1;
 
 	mp->tpq_index = y_index * sp->long_count + x_index;
 

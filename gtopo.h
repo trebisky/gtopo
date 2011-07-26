@@ -156,7 +156,7 @@ struct series {
 	int lat_dps;
 	int long_dps;
 
-	/* When things don't start at zero */
+	/* Used only for FILE method */
 	double lat_offset;
 	double long_offset;
 
@@ -164,7 +164,6 @@ struct series {
 	double maplet_lat_deg;
 	double maplet_long_deg;
 };
-
 
 /* Structure to hold our current position */
 struct topo_info {
@@ -221,10 +220,6 @@ struct maplet {
 	int world_x;
 	int world_y;
 
-	/* indices within the TPQ file */
-	int sheet_x;
-	int sheet_y;
-
 	/* Use for possible cache entry aging */
 	int time;
 
@@ -263,16 +258,15 @@ struct tpq_info {
 	int long_count;
 	int lat_count;
 
+#ifdef notdef
 	double long_offset;
 	double lat_offset;
+#endif
 
 	double maplet_long_deg;
 	double maplet_lat_deg;
 
 	enum s_type series;
-
-	int sheet_long;
-	int sheet_lat;
 
 	int index_size;
 	struct tpq_index_e *index;

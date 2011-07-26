@@ -33,7 +33,7 @@ struct tpq_info *tpq_lookup ( char * );
 
 /* from maplet.c */
 struct maplet *load_maplet ( int, int );
-struct maplet *load_maplet_any ( char * );
+struct maplet *load_maplet_any ( char *, struct series * );
 void state_maplet ( struct method *, mfptr );
 void file_maplets ( struct method *, mfptr );
 
