@@ -999,8 +999,8 @@ setup_series ( void )
 	if ( ! mp )
 	    return 0;
 
-	sp->x_pixel_scale = sp->maplet_long_deg / mp->xdim;
-	sp->y_pixel_scale = sp->maplet_lat_deg / mp->ydim;
+	sp->x_pixel_scale = sp->maplet_long_deg / (double) mp->xdim;
+	sp->y_pixel_scale = sp->maplet_lat_deg / (double) mp->ydim;
 
 	return 1;
 }

@@ -260,6 +260,7 @@ draw_maplet ( struct maplet *mp, int x, int y )
  * entire TPQ file.
  */
 
+#ifdef notdef
 /* This routine works just swell,
  * but is obsolete now that method_file works properly.
  * Anyway, with this, there was no way to navigate using the mouse.
@@ -329,6 +330,7 @@ state_handler ( struct maplet *mp )
 
 	draw_maplet ( mp, origx, origy );
 }
+#endif
 
 /* SIGNS, Signs, signs, keeping signs straight is what this is all about!
  * Watch out for a multitude of sign conventions, here is a
