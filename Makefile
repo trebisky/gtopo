@@ -82,7 +82,7 @@ tpq_io.o:	tpq_io.c gtopo.h
 #	rm version.c
 
 gtopo:	$(OBJS)
-	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS)
+	cc -o gtopo $(OBJS) $(CFLAGS) $(GTKLIBS) -lm
 
 # same as above, different name
 gtopo-32:	$(OBJS)

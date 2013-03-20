@@ -146,7 +146,10 @@ load_maplet_scale ( struct maplet *mp )
 		printf ( "SCALING\n" );
 	    tmp = mp->pixbuf;
 	    mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, pixel_norm, mp->ydim, GDK_INTERP_BILINEAR );
+	    /*
 	    gdk_pixbuf_unref ( tmp );
+	    */
+	    g_object_unref ( tmp );
 	    mp->xdim = gdk_pixbuf_get_width ( mp->pixbuf );
 	    mp->ydim = gdk_pixbuf_get_height ( mp->pixbuf );
 	}
