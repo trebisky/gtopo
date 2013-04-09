@@ -759,20 +759,21 @@ go_button_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 
 	sp = gtk_entry_get_text ( GTK_ENTRY(i_info.e_long) );
 	if ( sp == '\0' )
-	    return;
+	    return FALSE;
 	b_long = parse_dms ( (char *) sp );
 	if ( b_long > 0.0 )
 	    b_long = -b_long;
 
 	sp = gtk_entry_get_text ( GTK_ENTRY(i_info.e_lat) );
 	if ( sp == '\0' )
-	    return;
+	    return FALSE;
+
 	b_lat = parse_dms ( (char *) sp );
 
 	if ( b_lat < 24.0 || b_lat > 50.0 )
-	    return;
+	    return FALSE;
 	if ( b_long < -125.0 || b_long > -66.0 )
-	    return;
+	    return FALSE;
 
 	printf ( "long: %.4f\n", b_long );
 	printf ( "lat: %.4f\n", b_lat );
@@ -1325,7 +1326,7 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	 */
 	if ( i_info.status == UP && (event->state & GDK_BUTTON_MASK) == 0 ) {
 	    info_update ();
-	    return;
+	    return TRUE;
 	}
 
 	/*
@@ -1371,7 +1372,6 @@ motion_handler ( GtkWidget *wp, GdkEventMotion *event, gpointer data )
 	    */
 	}
 
-
 	return TRUE;
 }
 
@@ -1384,6 +1384,8 @@ scroll_handler ( GtkWidget *wp, GdkEventScroll *event, gpointer data )
 	    local_down_series ();
 	else
 	    printf ( "Scroll event %d\n", event->direction );
+
+	return TRUE;
 }
 
 /* Focus events are a funky business, but there is no way to
@@ -1395,6 +1397,8 @@ focus_handler ( GtkWidget *wp, GdkEventFocus *event, gpointer data )
 	/* We get 1 when we go in, 0 when we go out */
 	if ( settings.verbose & V_EVENT )
 	    printf ( "Focus event %d\n", event->in );
+
+	return TRUE;
 }
 
 void

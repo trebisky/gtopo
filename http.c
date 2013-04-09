@@ -497,7 +497,7 @@ free_http_soap ( void *pay )
 	free ( pay );
 }
 
-int
+void
 http_get ( char *server, int port, char *document )
 {
     	int sock;
@@ -584,7 +584,7 @@ static char *doc_name = "/index.html";
 */
 static char *doc_name = "/";
 
-int
+void
 http_test ( void )
 {
 	(void) http_get ( server_name, 80, doc_name );

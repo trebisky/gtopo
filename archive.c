@@ -1463,10 +1463,10 @@ scan_section ( struct section_dir *sdp, char *path )
 	}
 
 	if ( ! is_directory ( path ) )
-	    return;
+	    return 0;
 
 	if ( ! (dd = opendir ( path )) )
-	    return;
+	    return 0;
 
 	total_count = 0;
 	for ( ;; ) {

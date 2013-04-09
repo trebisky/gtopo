@@ -146,7 +146,7 @@ load_maplet_scale ( struct maplet *mp )
 		printf ( "SCALING\n" );
 	    tmp = mp->pixbuf;
 	    mp->pixbuf = gdk_pixbuf_scale_simple ( tmp, pixel_norm, mp->ydim, GDK_INTERP_BILINEAR );
-	    /*
+	    /* Deprecated 4-2013
 	    gdk_pixbuf_unref ( tmp );
 	    */
 	    g_object_unref ( tmp );
