@@ -135,7 +135,6 @@ void
 xml_attr ( struct xml *cp, char *name, char *value )
 {
 	struct xml *xp;
-	struct xml *yp;
 
 	xp = gmalloc ( sizeof(struct xml) );
 	xp->type = XT_ATTR;

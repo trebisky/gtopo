@@ -43,15 +43,18 @@
 extern struct topo_info info;
 extern struct settings settings;
 
-/* There are 8 map series,
+/* There are 9 map series once you include Alaska.
+ *  in the lower 48 there are 5 series (state,atlas,500K,100K,24K)
+ *  in Alaska there are 5 or 6 (state,atlas,250K,100K,63K,24K)
  * level 1 is the state as a whole on the screen
  * level 2 "national atlas"
- * level 3 500K
- * level 4 250K (Alaska)
+ * level 3 500K (not in Alaska)
+ * level 4 250K (Alaska only)
  * level 5 100K
  * level 6 100K (Alaska)
- * level 7 24K 
- * level 8 24K_AK (Alaska)
+ * level 7 63K (Alaska only)
+ * level 8 24K 
+ * level 9 24K_AK (Alaska - but only a few places)
  *
  * The 24K series represents each 7.5 minute quad by a single
  * TPQ file (so there are 64 per 1x1 degree "section".
@@ -291,8 +294,6 @@ file_info ( char *path, int extra )
 	    return;
 	}
 
-	printf ( "File info on: %s\n", path );
-
 	tp = mp->tpq;
 
 	sp = &info.series_info[tp->series];
@@ -303,31 +304,50 @@ file_info ( char *path, int extra )
 	long_scale = mp->tpq->maplet_long_deg * cos ( tp->mid_lat * DEGTORAD ) / mp->xdim;
 	long_scale_raw = mp->tpq->maplet_long_deg / mp->xdim;
 
-	printf ( "File: %s\n", path );
-	printf ( " state: %s", tp->state );
-	if ( strlen(tp->quad) > 1 )
-	    printf ( " ( %s )", tp->quad );
-	printf ( "\n" );
-	printf ( " nlong x nlat = %d %d ", tp->long_count, tp->lat_count );
-	nn = tp->long_count * tp->lat_count;
-	if ( nn < 2 )
-	    printf ( "(%d maplet)\n", nn );
-	else
-	    printf ( "(%d maplets)\n", nn );
-	printf ( " longitude range = %.4f to %.4f\n", tp->w_long, tp->e_long );
-	printf ( " latitude range = %.4f to %.4f\n", tp->s_lat, tp->n_lat );
-	printf ( " maplet size (long, lat) = %.4f by %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
-	printf ( " maplet pixels (x, y) = %d by %d\n", mp->xdim, mp->ydim );
-	printf ( " lat scale: %.8f\n", lat_scale );
-	printf ( " long scale: %.8f  (%.8f) at lat %.5f\n", long_scale, long_scale_raw, tp->mid_lat );
-	printf ( " series: %s\n", wonk_series ( tp->series ) );
-	printf ( " index size: %d\n", tp->index_size );
+	/* This is for gtopo -i */
+	if ( extra == 0 ) {
+	    printf ( "File info on: %s\n", path );
+	    printf ( "File: %s\n", path );
+	    printf ( " state: %s", tp->state );
+	    if ( strlen(tp->quad) > 1 )
+		printf ( " ( %s )", tp->quad );
+	    printf ( "\n" );
+	    printf ( " nlong x nlat = %d %d ", tp->long_count, tp->lat_count );
 
-	if ( ! extra )
-	    return;
+	    nn = tp->long_count * tp->lat_count;
+	    if ( nn < 2 )
+		printf ( "(%d maplet)\n", nn );
+	    else
+		printf ( "(%d maplets)\n", nn );
 
-	for ( i=0; i<tp->index_size; i++ )
-	    printf ( "%4d) %10d %10d\n", i+1, tp->index[i].offset, tp->index[i].size );
+	    printf ( " longitude range = %.4f to %.4f\n", tp->w_long, tp->e_long );
+	    printf ( " latitude range = %.4f to %.4f\n", tp->s_lat, tp->n_lat );
+	    printf ( " maplet size (long, lat) = %.4f by %.4f\n", tp->maplet_long_deg, tp->maplet_lat_deg );
+	    printf ( " maplet pixels (x, y) = %d by %d\n", mp->xdim, mp->ydim );
+	    printf ( " lat scale: %.8f\n", lat_scale );
+	    printf ( " long scale: %.8f  (%.8f) at lat %.5f\n", long_scale, long_scale_raw, tp->mid_lat );
+	    printf ( " series: %s\n", wonk_series ( tp->series ) );
+	    printf ( " index size: %d\n", tp->index_size );
+	}
+
+	/* This is for gtopo -j */
+	if ( extra == 1 ) {
+	    printf ( "%d", tp->long_count );
+	    printf ( " %d", tp->lat_count );
+	    printf ( " %.4f", tp->e_long - tp->w_long );
+	    printf ( " %.4f", tp->n_lat - tp->s_lat );
+	    printf ( " %.4f", tp->maplet_long_deg );
+	    printf ( " %.4f", tp->maplet_lat_deg );
+	    printf ( " %d", mp->xdim );
+	    printf ( " %d", mp->ydim );
+	    printf ( "\n" );
+	}
+
+	/* This is for gtopo -k */
+	if ( extra == 2 ) {
+	    for ( i=0; i<tp->index_size; i++ )
+		printf ( "%4d) %10d %10d\n", i+1, tp->index[i].offset, tp->index[i].size );
+	}
 }
 
 /* This is called when we are initializing to view just
@@ -362,9 +382,9 @@ file_init ( char *path )
 
 	sp->maplet_lat_deg = tp->maplet_lat_deg;
 	sp->maplet_long_deg = tp->maplet_long_deg;
-	synch_position ();
-
 	set_position ( (tp->w_long + tp->e_long)/2.0, (tp->s_lat + tp->n_lat)/2.0 );
+
+	synch_position ();
 
 	return 1;
 }
@@ -460,7 +480,7 @@ series_init_mapinfo ( void )
 	    */
 
 	    sp->lat_count_d = 4;
-	    sp->long_count_d = 6;
+	    sp->long_count_d = 6;	/* XXX - was 6 up to 4-9-2013 */
 
 	    sp->maplet_lat_deg = 0.025;
 	    sp->maplet_long_deg = 0.125;
@@ -503,7 +523,8 @@ series_init_mapinfo ( void )
 	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
 	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
-	/* As far as I know, we only see this in Alaska
+	/* As far as I know, we only see this in Alaska,
+	 *  where it replaces the 500K series.
 	 */
 	sp = &info.series_info[S_250K];
 	    sp->tpq_count = 0;

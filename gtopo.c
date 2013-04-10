@@ -413,6 +413,10 @@ pixmap_redraw ( void )
 	    info.series->ydim = py = mp->ydim;
 	    if ( settings.verbose & V_DRAW )
 		printf ( "Center maplet size x,y = %d, %d\n", px, py );
+	} else {
+	    if ( settings.verbose & V_DRAW )
+		printf ( "No Center maplet\n" );
+		
 	}
 
 	/* location of the center within the maplet */
@@ -422,8 +426,11 @@ pixmap_redraw ( void )
 	origx = vp_info.vxcent - offx;
 	origy = vp_info.vycent - offy;
 
-	if ( settings.verbose & V_DRAW )
+	if ( settings.verbose & V_DRAW ) {
 	    printf ( "Maplet off, orig: %d %d -- %d %d\n", offx, offy, origx, origy );
+	    printf ( "px, py = %d, %d\n", px, py );
+	    printf ( "vxdim, vydim = %d, %d\n", vxdim, vydim );
+	}
 
 	if ( info.center_only ) {
 	    nx1 = nx2 = 0;
@@ -1565,7 +1572,7 @@ main ( int argc, char **argv )
 
 	    /* XXX - really should dynamically generate version string at compile time */
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 0.9.18\n" );
+	    	printf ( "gtopo version 0.9.20\n" );
 		return 0;
 	    }
 
@@ -1596,17 +1603,24 @@ main ( int argc, char **argv )
 		file_opt = 1;
 	    }
 	    if ( strcmp ( p, "-i" ) == 0 ) {
-		/* show file information */
+		/* show file information, friendly and verbose */
 		if ( argc < 1 )
 		    usage ();
 		file_info ( *argv, 0 );
 		return 0;
 	    }
 	    if ( strcmp ( p, "-j" ) == 0 ) {
-		/* show file information, include index to maplets */
+		/* show file information, single line */
 		if ( argc < 1 )
 		    usage ();
 		file_info ( *argv, 1 );
+		return 0;
+	    }
+	    if ( strcmp ( p, "-k" ) == 0 ) {
+		/* show file information, include index to maplets (extra verbose) */
+		if ( argc < 1 )
+		    usage ();
+		file_info ( *argv, 2 );
 		return 0;
 	    }
 	}

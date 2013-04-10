@@ -40,8 +40,8 @@ GTKLIBS = `$(GTK_CONFIG) --libs`
 OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o terra.o xml.o http.o utils.o
 
 #COPTS = -g
-#COPTS = -g -Wall
 COPTS = -g -Wreturn-type
+#COPTS = -g -Wall
 TARGET = gtopo
 
 # -m32 lets you build a 32 bit version on a 64 bit system

@@ -135,7 +135,7 @@ net_read ( int sfd, char *buf, int nbuf )
 int
 net_write ( int sfd, char *buf, int nbuf)
 {
-    register n, nxfer;
+    register int n, nxfer;
 
     if ( net_debug ) {
 	printf("wr buf = %08x - %08x\n",buf,buf+nbuf-1);
@@ -539,7 +539,6 @@ http_soap ( char *server, int port, char *target, char *action,
 {
     	int sock;
 	char *rv;
-	int npay;
 
 	sock = net_client ( server, port );
 

@@ -296,7 +296,7 @@ terra_to_utm ( struct terra_loc *tlp )
  */
 
 static double grs80_a = 6378137.0;
-static double grs80_b = 6356752.3;
+static double grs80_b = 6356752.3;	/* never used */
 static double grs80_ee = 0.0066943800;
 /*
 static double grs80_f = 1.0 / 298.257;
@@ -315,7 +315,7 @@ calc_m ( double lat_rad )
 
 	e2 = grs80_ee;
 	e4 = e2 * e2;
-	e6 = e4 * e6;
+	e6 = e4 * e6;	/* XXX - e6 is uninitialized */
 
 	sin_2lat = sin ( 2.0 * lat_rad );
 	sin_4lat = sin ( 4.0 * lat_rad );
@@ -406,7 +406,7 @@ to_ll ( struct terra_loc *tlp )
 
 	e2 = grs80_ee;
 	e4 = e2 * e2;
-	e6 = e4 * e6;
+	e6 = e4 * e6;	/* XXX - e6 is uninitialized */
 
 	sqe = sqrt(1.0 - e2);
 
