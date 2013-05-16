@@ -147,7 +147,9 @@ static struct section *lookup_section ( struct section *, int );
  * When the Nevada set came along and added the nicely organized SI_D01
  *  the scheme became:
  * level 1 - file method (one file for entire US)
+ * 		(actually 3 file methods if you include AK and HI)
  * level 2 - file method (one file for entire US)
+ * 		(actually 3 file methods if you include AK and HI)
  * level 3 - section method
  * level 4 - section method
  * level 5 - section method
@@ -376,6 +378,8 @@ file_init ( char *path )
 	if ( ! add_file_method ( sp, path ) )
 	    return 0;
 
+	sp->tpq_count++;
+
 	/* XXX */
 	sp->lat_count = tp->lat_count;
 	sp->long_count = tp->long_count;
@@ -385,6 +389,9 @@ file_init ( char *path )
 	set_position ( (tp->w_long + tp->e_long)/2.0, (tp->s_lat + tp->n_lat)/2.0 );
 
 	synch_position ();
+
+	if ( settings.verbose & V_ARCHIVE2 )
+	    show_statistics ();
 
 	return 1;
 }
@@ -773,6 +780,9 @@ archive_init ( void )
 	if ( ! info.have_usa )
 	    add_section_method ( &info.series_info[S_500K], temp_section_head );
 
+	if ( settings.verbose & V_ARCHIVE2 )
+	    show_statistics ();
+
 	return nar;
 }
 
@@ -811,7 +821,7 @@ show_statistics ( void )
 
 	for ( s=0; s<N_SERIES; s++ ) {
 	    printf ( "Map series %d (%s) %d maps", s, wonk_series(s), info.series_info[s].tpq_count );
-	    if ( s == info.series->series )
+	    if ( info.series && s == info.series->series )
 	    	printf ( " <-- current series\n" );
 	    else
 	    	printf ( "\n" );
@@ -819,8 +829,12 @@ show_statistics ( void )
 	}
 }
 
-/* run down a list of file/state methods for a series
- * and find which one holds the desired long and lat
+/* For a given series, find out if it has a file method
+ * that contains the desired long and lat.
+ * This is normally only used for the state and atlas series,
+ * since they are the normal cases that use file methods,
+ * BUT when we use the -f switch, we inject a single file
+ * method in any series, so we need to handle that here too.
  */
 static struct method *
 lookup_method ( struct series *sp )
@@ -837,7 +851,7 @@ lookup_method ( struct series *sp )
 	    if ( settings.verbose & V_ARCHIVE ) {
 		printf ( "lookup method checking: %s\n", tp->path );
 	    	printf ( "lookup method, long %.4f (%.4f - %.4f)\n", info.long_deg, tp->w_long, tp->e_long );
-	    	printf ( "lookup method, lat %.4f (%.4f - %.4f)\n", info.lat_deg, tp->n_lat, tp->n_lat );
+	    	printf ( "lookup method, lat %.4f (%.4f - %.4f)\n", info.lat_deg, tp->s_lat, tp->n_lat );
 	    }
 
 	    if ( info.long_deg < tp->w_long )
@@ -907,7 +921,8 @@ up_series ( void )
 
 	while ( series > 0 ) {
 	    --series;
-	    printf ( "up series trying series %s (%d)\n", wonk_series(series), series );
+	    if ( settings.verbose & V_BASIC )
+		printf ( "up series trying series %s (%d)\n", wonk_series(series), series );
 	    if ( info.series_info[series].tpq_count <= 0 )
 	    	continue;
 	    if ( ! try_series ( series ) )
@@ -940,7 +955,8 @@ down_series ( void )
 
 	while ( series + 1 < N_SERIES ) {
 	    ++series;
-	    printf ( "down series trying series %s (%d)\n", wonk_series(series), series );
+	    if ( settings.verbose & V_BASIC )
+		printf ( "down series trying series %s (%d)\n", wonk_series(series), series );
 	    if ( info.series_info[series].tpq_count <= 0 )
 	    	continue;
 	    if ( ! try_series ( series ) )
@@ -1001,6 +1017,8 @@ setup_series ( void )
 	if ( sp->series != S_STATE && sp->series != S_ATLAS )
 	    return 0;
 
+	/* Following only done for STATE and ATLAS
+	 */
 	xp = lookup_method(sp);
 	if ( ! xp )
 	    return 0;
@@ -1009,6 +1027,7 @@ setup_series ( void )
 
 	sp->cur_method = xp;
 
+	/* The right thing for File methods */
 	sp->maplet_long_deg = tp->maplet_long_deg;
 	sp->maplet_lat_deg = tp->maplet_lat_deg;
 
@@ -1024,6 +1043,24 @@ setup_series ( void )
 	sp->y_pixel_scale = sp->maplet_lat_deg / (double) mp->ydim;
 
 	return 1;
+}
+
+/* This can be called for any series as long as long/lat
+ * have been set in the info structure.  It will search for
+ * a file method that contains that lat long, returning the
+ * tpq info structure if found.  It will fail if there are
+ * no file methods or if none contain the coordinate.
+ */
+struct tpq_info *
+lookup_tpq ( struct series *sp )
+{
+	struct method *xp;
+
+	xp = lookup_method(sp);
+	if ( xp )
+	    return xp->tpq;
+	else
+	    return NULL;
 }
 
 /* This is called only to get a pass/fail return on whether there
@@ -1185,6 +1222,7 @@ section_find_map ( struct section *head, int lat_section, int long_section, int 
 }
 
 /* Handle a single file (typically a STATE or ATLAS map).
+ * (but may be any file when -f switch is used)
  */
 static int
 method_file ( struct maplet *mp, struct method *xp )

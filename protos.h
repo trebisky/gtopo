@@ -42,10 +42,14 @@ int archive_init ( void );
 void archive_clear ( void );
 void archive_add ( char * );
 int lookup_series ( struct maplet * );
+struct tpq_info * lookup_tpq ( struct series * );
 void set_series ( enum s_type );
 char *wonk_series ( enum s_type );
 int first_series ( void );
 void iterate_series_method ( mfptr );
+void show_statistics ( void );
+void show_methods ( struct series * );
+
 
 /* from utils.c */
 void error ( char *, ... );

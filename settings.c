@@ -227,6 +227,37 @@ set_two ( char *name, char *val )
 	    archive_add ( val );
 }
 
+/* Get rid of blank lines and full line comments.
+ * Also allow online comments (as of 5-2013)
+ * Strip trailing white space
+ */
+static int
+cleanup_line ( char *line )
+{
+	char *p;
+
+	/* kill the newline */
+	line[strlen(line)-1] = '\0';
+
+	/* Trim off comments */
+	for ( p=line; *p; p++ )
+	    if ( *p == '#' )
+		*p = '\0';
+
+	/* Trim trailing white space */
+	for ( p = &line[strlen(line)-1]; p >= line; p-- ) {
+	    if ( *p != ' ' && *p != '\t' )
+		break;
+	    *p = '\0';
+	}
+
+	/* tell caller to skip totally blank lines */
+	if ( line[0] == '\0' )
+	    return 1;
+
+	return 0;
+}
+
 #define MAX_LINE	128
 #define MAX_WORDS	8
 
@@ -244,13 +275,10 @@ load_settings ( char *path )
 
 	/* Remember fgets includes the newline */
 	while ( fgets ( line, MAX_LINE, fp ) ) {
-	    /* kill the newline */
-	    line[strlen(line)-1] = '\0';
 
-	    /* allow blank lines and comments */
-	    if ( line[0] == '\0' || line[0] == '#' )
-	    	continue;
-
+	    if ( cleanup_line ( line ) )
+		continue;
+	
 	    nw = split_q ( line, wp, MAX_WORDS );
 	    /* printf ( "%d  %s  %s\n", nw, wp[0], wp[1] ); */
 

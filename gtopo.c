@@ -469,7 +469,7 @@ pixmap_redraw ( void )
 
 		if ( settings.verbose & V_DRAW2 )
 		    printf ( "redraw OK for %d %d, draw at %d %d\n",
-			x, y, origx + mp->xdim*x, origy + mp->ydim*y );
+			x, y, origx - mp->xdim*x, origy - mp->ydim*y );
 		draw_maplet ( mp,
 			origx - mp->xdim * x,
 			origy - mp->ydim * y );
@@ -1412,14 +1412,22 @@ void
 synch_position ( void )
 {
     	double x, y;
+	struct tpq_info *tp;
 
 	if ( info.series->terra ) {
 	    ll_to_utm ( info.long_deg, info.lat_deg, &info.utm_zone, &info.utm_x, &info.utm_y );
 	    x = info.utm_x / ( 200.0 * info.series->x_pixel_scale );
 	    y = info.utm_y / ( 200.0 * info.series->y_pixel_scale );
 	} else {
-	    x = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
-	    y =   (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
+	    if ( tp = lookup_tpq ( info.series ) ) {
+		/* File method has it */
+		x = - (info.long_deg - tp->e_long) / info.series->maplet_long_deg;
+		y =   (info.lat_deg - tp->s_lat) / info.series->maplet_lat_deg;
+	    } else {
+		/* Setion method (lat/long offsets always zero) */
+		x = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
+		y =   (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
+	    }
 	}
 
 	/* indices of the maplet we are in
@@ -1568,11 +1576,12 @@ main ( int argc, char **argv )
 	while ( argc-- ) {
 	    p = *argv++;
 	    if ( strcmp ( p, "-V" ) == 0 )
-	    	settings.verbose = 0xffff;
+		/* Event debugging is usually a nuisance */
+	    	settings.verbose = (0xffff ^ V_EVENT);
 
 	    /* XXX - really should dynamically generate version string at compile time */
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 0.9.20\n" );
+	    	printf ( "gtopo version 0.9.21\n" );
 		return 0;
 	    }
 
@@ -1623,6 +1632,10 @@ main ( int argc, char **argv )
 		file_info ( *argv, 2 );
 		return 0;
 	    }
+	}
+	
+	if ( settings.verbose ) {
+		printf ( "Debug mask: %08x\n", settings.verbose );
 	}
 
 	if ( file_opt ) {
