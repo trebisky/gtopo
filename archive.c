@@ -237,8 +237,6 @@ series_init_one ( struct series *sp, enum s_type series )
 	sp->content = 0;
 	sp->methods = NULL;
 	sp->cur_method = NULL;
-	sp->lat_offset = 0.0;
-	sp->long_offset = 0.0;
 }
 
 void
@@ -1030,9 +1028,6 @@ setup_series ( void )
 	/* The right thing for File methods */
 	sp->maplet_long_deg = tp->maplet_long_deg;
 	sp->maplet_lat_deg = tp->maplet_lat_deg;
-
-	sp->long_offset = tp->e_long;
-	sp->lat_offset = tp->s_lat;
 
 	/* Just so we can set pixel scale ! */
 	mp = load_maplet_any ( tp->path, sp );

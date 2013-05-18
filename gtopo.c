@@ -850,8 +850,16 @@ debug_dumper ( void )
 	printf ( "maplet size (%s): %.3f %.3f\n", wonk_series(info.series->series), info.series->maplet_long_deg, info.series->maplet_lat_deg );
 
 	printf ( "Center long, lat = %.5f %.5f\n", info.long_deg, info.lat_deg );
-	x = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
-	y =   (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
+
+	if ( tp = lookup_tpq ( info.series ) ) {
+	    /* File method has the position */
+	    x = - (info.long_deg - tp->e_long) / info.series->maplet_long_deg;
+	    y =   (info.lat_deg - tp->s_lat) / info.series->maplet_lat_deg;
+	} else {
+	    /* Setion method (lat/long offsets always zero) */
+	    x = - info.long_deg / info.series->maplet_long_deg;
+	    y =   info.lat_deg  / info.series->maplet_lat_deg;
+	}
 
 	printf ( "Center maplet raw x,y = %.5f %.5f\n", x, y );
 
@@ -1420,13 +1428,13 @@ synch_position ( void )
 	    y = info.utm_y / ( 200.0 * info.series->y_pixel_scale );
 	} else {
 	    if ( tp = lookup_tpq ( info.series ) ) {
-		/* File method has it */
+		/* File method has the position */
 		x = - (info.long_deg - tp->e_long) / info.series->maplet_long_deg;
 		y =   (info.lat_deg - tp->s_lat) / info.series->maplet_lat_deg;
 	    } else {
 		/* Setion method (lat/long offsets always zero) */
-		x = - (info.long_deg - info.series->long_offset) / info.series->maplet_long_deg;
-		y =   (info.lat_deg - info.series->lat_offset) / info.series->maplet_lat_deg;
+		x = - info.long_deg / info.series->maplet_long_deg;
+		y =   info.lat_deg / info.series->maplet_lat_deg;
 	    }
 	}
 

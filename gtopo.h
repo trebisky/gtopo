@@ -156,10 +156,6 @@ struct series {
 	int lat_dps;
 	int long_dps;
 
-	/* Used only for FILE method */
-	double lat_offset;
-	double long_offset;
-
 	/* size of each maplet */
 	double maplet_lat_deg;
 	double maplet_long_deg;
@@ -257,11 +253,6 @@ struct tpq_info {
 
 	int long_count;
 	int lat_count;
-
-#ifdef notdef
-	double long_offset;
-	double lat_offset;
-#endif
 
 	double maplet_long_deg;
 	double maplet_lat_deg;
