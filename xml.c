@@ -487,12 +487,8 @@ xml_parse_doc ( char *buf, int nbuf )
 
 	init_node ( &base, XT_ROOT );
 	ep = xml_parse_tag_list ( &base, p, end );
-	if ( ep != end ) {
-	    printf ( "Xml document parse fails: %s\n", ep );
-	    /* fussy compilers don't like this:
-	    printf ( "Xml document parse fails: %08x - %08x %s\n", end, ep, ep );
-	    */
-	}
+	if ( ep != end )
+	    printf ( "Xml document parse fails: %d - %d %s\n", end, ep, ep );
 
 	return base.children;
 }

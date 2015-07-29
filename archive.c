@@ -349,7 +349,7 @@ file_info ( char *path, int extra )
 	/* This is for gtopo -k */
 	if ( extra == 2 ) {
 	    for ( i=0; i<tp->index_size; i++ )
-		printf ( "%4d) %10ld %10ld\n", i+1, (long) tp->index[i].offset, tp->index[i].size );
+		printf ( "%4d) %10d %10d\n", i+1, tp->index[i].offset, tp->index[i].size );
 	}
 }
 
