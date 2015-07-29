@@ -175,8 +175,8 @@ struct topo_info {
 	/* This specifies the maplet containing the above,
 	 * it changes every time we change series.
 	 */
-	long	maplet_x;
-	long	maplet_y;
+	int	maplet_x;
+	int	maplet_y;
 
 	/* fractional offset in the maplet */
 	double 	fx;
