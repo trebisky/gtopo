@@ -141,7 +141,7 @@ net_write ( int sfd, char *buf, int nbuf)
     register int n, nxfer;
 
     if ( net_debug ) {
-	printf("wr buf = %08x - %08x\n",buf,buf+nbuf-1);
+	printf("wr buf = %08lx - %08lx\n", (unsigned long) buf, (unsigned long) buf+nbuf-1);
     }
 
     for ( n=0; n < nbuf; n += nxfer ) {
