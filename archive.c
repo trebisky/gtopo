@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -122,6 +123,8 @@ static int add_new_archive ( char * );
 static int add_disk ( char *, char * );
 static void add_full_usa ( char *, char * );
 static int add_dir ( char *, char * );
+static int add_usa ( char *, int );
+static int add_section ( char *, char *, struct section ** );
 
 static struct section *lookup_section ( struct section *, int );
 
@@ -1356,7 +1359,7 @@ lookup_series ( struct maplet *mp )
 /* Look for the SI_D01 directory (either case)
  * Notice recursion limited to one level.
  */
-int
+static int
 add_usa ( char *archive, int depth )
 {
 	DIR *dd;
@@ -1590,7 +1593,7 @@ scan_section ( struct section_dir *sdp, char *path )
  * Note that the same section can be covered by more than one path
  * if it is on the boundary of several states.
  */
-int
+static int
 add_section ( char *disk, char *section, struct section **head )
 {
 	char section_path[100];

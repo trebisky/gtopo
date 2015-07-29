@@ -35,6 +35,8 @@
 #include "protos.h"
 #include "xml.h"
 
+void xml_destroy ( struct xml * );
+
 extern struct topo_info info;
 
 int terra_verbose = 0;

@@ -146,9 +146,17 @@ split_q ( char *buf, char **bufp, int max )
  * than two you get 3 things: the two you asked
  * for, and a third which is "everything else".
  * This means that the bufp array needs max+1 entries.
+ * XXX - 
+ * This is called just one place (in places.c) and I
+ * ignore the fourth argument both there and here,
+ * so ..... this needs some looking at.
  */
+/*
 int
 split_n ( char *buf, char **bufp, int max, char *end )
+*/
+int
+split_n ( char *buf, char **bufp, int max )
 {
 	int i;
 	char *p;

@@ -22,6 +22,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+
+#include <unistd.h>
+
 #include <netdb.h>
 #include <errno.h>
 
