@@ -1589,7 +1589,7 @@ main ( int argc, char **argv )
 
 	    /* XXX - really should dynamically generate version string at compile time */
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 0.9.21\n" );
+	    	printf ( "gtopo version 0.9.22\n" );
 		return 0;
 	    }
 
