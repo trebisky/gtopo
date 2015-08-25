@@ -258,6 +258,8 @@ wonk_series ( enum s_type series )
 	    return "24K_AK";
 	if ( series == S_24K )
 	    return "24K";
+	if ( series == S_50K )
+	    return "50K";
 	if ( series == S_63K )
 	    return "63K";
 	if ( series == S_100K )
@@ -461,6 +463,33 @@ series_init_mapinfo ( void )
 	    sp->maplet_long_deg = 0.06;
 	    sp->quad_lat_count = 1;
 	    sp->quad_long_count = 1;
+	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
+	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
+
+	sp = &info.series_info[S_50K];
+	    sp->tpq_count = 0;
+
+	    /* Correct for 44073 */
+	    sp->xdim = 283;
+	    sp->ydim = 393;
+	    sp->terra = 0;
+
+	    sp->lat_count = 4;
+	    sp->long_count = 4;
+
+	    sp->lat_count_d = 8;
+	    sp->long_count_d = 8;
+
+	    sp->maplet_lat_deg = 0.03125;
+	    sp->maplet_long_deg = 0.03125;
+
+	    /* degrees per "section" */
+	    sp->lat_dps = 1;
+	    sp->long_dps = 1;
+
+	    sp->quad_lat_count = 1;
+	    sp->quad_long_count = 1;
+
 	    sp->x_pixel_scale = sp->maplet_long_deg / (double) sp->xdim;
 	    sp->y_pixel_scale = sp->maplet_lat_deg / (double) sp->ydim;
 
@@ -773,6 +802,7 @@ archive_init ( void )
 	/* XXX - These all use the same section list */
 	add_section_method ( &info.series_info[S_24K], temp_section_head );
 	add_section_method ( &info.series_info[S_24K_AK], temp_section_head );
+	add_section_method ( &info.series_info[S_50K], temp_section_head );
 	add_section_method ( &info.series_info[S_63K], temp_section_head );
 	add_section_method ( &info.series_info[S_100K], temp_section_head );
 	add_section_method ( &info.series_info[S_250K], temp_section_head );
@@ -1497,6 +1527,8 @@ add_disk ( char *archive, char *disk )
  *	a = xxxxx can be 20 of these (ABCD, 12345)
  * Full USA (SI_D01)
  * 	G = 500K
+ * ADK set 8-24-2015
+ *	T = 50K
  *
  * Note that in the nevada case, the 500K files here
  * are redundant with the capital G files in the SI directories
@@ -1556,6 +1588,8 @@ scan_section ( struct section_dir *sdp, char *path )
 	    	series = S_100K;
 	    } else if ( toupper(letter) == 'C' ) {
 	    	series = S_100K;
+	    } else if ( toupper(letter) == 'T' ) {
+	    	series = S_50K;
 	    } else if ( toupper(letter) == 'A' ) {
 		/* Alaska Only */
 	    	series = S_63K;

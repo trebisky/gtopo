@@ -38,8 +38,9 @@ enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_63K, S_24K, S_24K_AK,
 #define N_SERIES	11
 #else
 /* Added 250K, 63K, and 25K_AK to support Alaska 6/15/2011 */
-enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_63K, S_24K, S_24K_AK };
-#define N_SERIES	8
+/* Add 50K to support Adirondack (ADK) map set 8/24/2015 */
+enum s_type { S_STATE, S_ATLAS, S_500K, S_250K, S_100K, S_63K, S_50K, S_24K, S_24K_AK };
+#define N_SERIES	9
 #endif
 
 #define PI		3.141592654
