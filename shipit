@@ -17,6 +17,10 @@ cp TODO ${SHIPDIR}
 tar czvf ${SHIPTAR} ${SHIPDIR}
 rm -rf ${SHIPDIR}
 
-cp ${SHIPTAR} /www/cholla/gtopo/downloads
-cp TODO /www/cholla/gtopo/TODO.txt
+#cp ${SHIPTAR} /www/cholla/gtopo/downloads
+#cp TODO /www/cholla/gtopo/TODO.txt
+
+scp ${SHIPTAR} cholla:/u1/www/gtopo/downloads
+scp TODO cholla:/u1/www/gtopo/TODO.txt
+
 rm ${SHIPTAR}

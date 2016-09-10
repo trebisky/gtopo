@@ -20,6 +20,8 @@
 # Makefile for gtopo
 # Tom Trebisky  6-26-2007
 
+# Note that on fedora you will need the gtk2-devel package.
+
 # This will get you gtk-1.2.10
 # gtk-1.2.10 is/was the apparent default
 #CFLAGS = `gtk-config --cflags`
@@ -48,6 +50,7 @@ TARGET = gtopo
 #  comment out the two lines above, and uncomment these two lines to do so.
 #  (and be sure and do a make clean first).
 #  I needed to yum install cairo-devel.i386 at some point for this to work.
+#  and it has been a long time since I have done this, since all my systems are 64 bit now.
 #COPTS = -g -m32
 #TARGET = gtopo-32
 
