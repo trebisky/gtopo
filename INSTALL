@@ -1,5 +1,29 @@
 How to install and run gtopo
 
+I currently build and test the program on an x86_64 linux system
+(running Fedora 24 as of August, 2016).  There are some package
+dependencies, namely:
+
+dnf install gtk2-devel
+
+This pulls in something like 36 packages on my system.
+If you try to build without this package in place,
+ you get something like:
+
+make
+ cc -c -g gtopo.c -g -Wreturn-type `pkg-config gtk+-2.0 --cflags`
+ Package gtk+-2.0 was not found in the pkg-config search path.
+ Perhaps you should add the directory containing `gtk+-2.0.pc'
+ to the PKG_CONFIG_PATH environment variable
+ No package 'gtk+-2.0' found
+ gtopo.c:21:21: fatal error: gtk/gtk.h: No such file or directory
+  #include <gtk/gtk.h>
+
+You should ignore the hints in the error message and just install the
+required package.
+
+-----------------------------------------------------
+
 * Building the program:
 
 	tar xzvf gtopo-0.9.0.tar.gz

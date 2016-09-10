@@ -89,7 +89,7 @@ settings_default ( void )
 	settings.show_maplets = 0;
 
 	settings.m1_action = M1_GRAB;
-	settings.m3_action = M1_CENTER;
+	settings.m3_action = M3_CENTER;
 
 	/* Keyboard key to zoom in/out (go up/down series) */
 	settings.up_key = KV_PAGE_UP;
