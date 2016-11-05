@@ -27,6 +27,7 @@
 
 #include "gtopo.h"
 #include "protos.h"
+#include "xml.h"
 
 /* The land fell away in a vast sweep like a great, empty sea
  * where no billows rolled, nor even waves.  Stiff grass stood in
@@ -339,9 +340,9 @@ state_handler ( struct maplet *mp )
  * 	long,lat    - long increases to the east (right), lat increases to north (up)
  *		(Do not be fooled by longitude values which are negative and
  *		 become more negative to the west, this is still decreasing!!)
+ * 	utm x,y     - x increases to east, y increases to north.
  * 	maplet x,y  - x increases to west (left), y increases to north (up)
  * 	pixmap x,y  - x increases to the right (east), y increases down (south)
- * 	utm x,y     - x increases to east, y increases to north.
  *	viewport    - x increases to right, y increases down
  *
  * pixmap_redraw is the guts of what goes on during a reconfigure.
@@ -878,13 +879,85 @@ debug_dumper ( void )
 	    return;
 	}
 
-
 	tp = mp->tpq;
 	printf ( " maplet from file: %s\n", tp->path );
 	printf ( " maplet from quad: %s (%s)\n", tp->quad, tp->state );
 
 	printf ( " sheet, S, N: %.4f %.4f\n", tp->s_lat, tp->n_lat );
 	printf ( " sheet, W, E: %.4f %.4f\n", tp->w_long, tp->e_long );
+}
+
+static void
+process_file ( char *file )
+{
+	struct stat st;
+	int fd;
+	int n;
+	char *xbuf;
+	struct xml *xp;
+
+	fd = open ( file, O_RDONLY );
+	if ( fd < 0 )
+	    return;
+
+	if ( fstat ( fd, &st ) < 0 ) {
+	    close ( fd );
+	    return;
+	}
+
+	n = st.st_size;
+	if ( n > 1024*1024 ) {
+	    printf ( "File too big: %d\n", n );
+	    close ( fd );
+	    return;
+	}
+
+	xbuf = gmalloc ( n + 128 );
+	if ( read ( fd, xbuf, n + 128 ) != n ) {
+	    printf ( "Read error\n" );
+	    free ( xbuf );
+	    close ( fd );
+	}
+
+	close ( fd );
+
+	printf ( "FILE: %s %d\n", file, n );
+
+	xp = xml_parse_doc ( xbuf, n );
+	free ( xbuf );
+
+	if ( ! xp ) {
+	    printf ( "invalid file\n" );
+	    return;
+	}
+
+	xml_destroy ( xp );
+}
+
+void
+file_window ( void )
+{
+	GtkWidget *dialog;
+	char *filename;
+
+	dialog = gtk_file_chooser_dialog_new ("Open File",
+				      NULL,
+				      GTK_FILE_CHOOSER_ACTION_OPEN,
+				      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+				      GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+				      NULL);
+
+	filename = NULL;
+	if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
+	    filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
+
+	gtk_widget_destroy (dialog);
+
+	if ( ! filename )
+	    return;
+
+	process_file (filename);
+	g_free (filename);
 }
 
 void
@@ -1112,6 +1185,9 @@ places_window ( void )
 #define KV_D		'd'
 #define KV_D_UC		'D'
 
+#define KV_F		'f'
+#define KV_F_UC		'F'
+
 #define KV_I		'i'
 #define KV_I_UC		'I'
 
@@ -1197,6 +1273,8 @@ keyboard_handler ( GtkWidget *wp, GdkEventKey *event, gpointer data )
 	    local_down_series ();
 	else if ( event->keyval == KV_D || event->keyval == KV_D_UC )
 	    debug_dumper ();
+	else if ( event->keyval == KV_F || event->keyval == KV_F_UC )
+	    file_window ();
 	else if ( event->keyval == KV_I || event->keyval == KV_I_UC )
 	    info_window ();
 	else if ( event->keyval == KV_P || event->keyval == KV_P_UC )

@@ -40,5 +40,6 @@ struct xml * xml_find_tag ( struct xml *, char * );
 char * xml_find_tag_value ( struct xml *, char * );
 
 struct xml * xml_parse_doc ( char *, int );
+void xml_destroy ( struct xml * );
 
 /* THE END */
