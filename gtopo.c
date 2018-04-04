@@ -767,14 +767,14 @@ go_button_handler ( GtkWidget *w, GdkEvent *event, gpointer data )
 	double b_long, b_lat;
 
 	sp = gtk_entry_get_text ( GTK_ENTRY(i_info.e_long) );
-	if ( sp == '\0' )
+	if ( sp == 0 )
 	    return FALSE;
 	b_long = parse_dms ( (char *) sp );
 	if ( b_long > 0.0 )
 	    b_long = -b_long;
 
 	sp = gtk_entry_get_text ( GTK_ENTRY(i_info.e_lat) );
-	if ( sp == '\0' )
+	if ( sp == 0 )
 	    return FALSE;
 
 	b_lat = parse_dms ( (char *) sp );
