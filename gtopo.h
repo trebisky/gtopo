@@ -25,6 +25,7 @@
  * This works, but can be very slow, and I sometimes accidentally get it trying
  * to pull maps from terraserver, and I would rather not, so this must be turned
  * on explicitly.  Someday this will be controlled from the config file.
+ * If we ever get back to fiddling with terraserver.
  */
 #ifdef notdef
 #define TERRA
