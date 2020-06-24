@@ -199,6 +199,35 @@ struct topo_info {
 	int n_sections;
 };
 
+enum win_status { GONE, HIDDEN, UP };
+
+struct mouse {
+        double x;
+        double y;
+        int time;
+};
+
+/* XXX - should eliminate mo_ stuff below and use the above */
+struct viewport {
+        int vx;
+        int vy;
+        int vxcent;
+        int vycent;
+        double mo_x;
+        double mo_y;
+        int mo_time;
+        GtkWidget *da;
+};
+
+struct info_info {
+        enum win_status status;
+        GtkWidget *main;
+        GtkWidget *l_long;
+        GtkWidget *l_lat;
+        GtkWidget *e_long;
+        GtkWidget *e_lat;
+};
+
 struct method {
 	struct method *next;
 	enum m_type type;
@@ -269,8 +298,6 @@ struct tpq_index_e {
 	off_t	offset;
 	long	size;
 };
-
-enum win_status { GONE, HIDDEN, UP };
 
 enum {
         NAME_COLUMN,

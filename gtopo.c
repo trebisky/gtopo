@@ -160,32 +160,9 @@ struct places_info p_info;
 
 GdkColormap *syscm;
 
-struct mouse {
-	double x;
-	double y;
-	int time;
-} mouse_info;
-
-/* XXX - should eliminate mo_ stuff below and use the above */
-struct viewport {
-	int vx;
-	int vy;
-	int vxcent;
-	int vycent;
-	double mo_x;
-	double mo_y;
-	int mo_time;
-	GtkWidget *da;
-} vp_info;
-
-struct info_info {
-	enum win_status status;
-	GtkWidget *main;
-	GtkWidget *l_long;
-	GtkWidget *l_lat;
-	GtkWidget *e_long;
-	GtkWidget *e_lat;
-} i_info = { GONE };
+struct mouse mouse_info;
+struct viewport vp_info;
+struct info_info i_info = { GONE };
 
 /* Prototypes ..........
  */
@@ -210,6 +187,7 @@ pixmap_expose ( gint x, gint y, gint nx, gint ny )
 		info.series->pixels,
 		x, y, x, y, nx, ny );
 
+	overlay_redraw ();
 	cursor_show ( 1 );
 }
 
@@ -490,6 +468,8 @@ pixmap_redraw ( void )
 		    0, yy, vp_info.vx, yy );
 	    }
 	}
+
+	// overlay_redraw ();
 }
 
 /* We are changing location, and maybe also series, so we should not
@@ -1761,6 +1741,8 @@ main ( int argc, char **argv )
 	    if ( settings.verbose & V_BASIC )
 	    	printf ( "first_series() gives a green light\n" );
 	}
+
+	overlay_init ();
 
 	/* --- set up the GTK stuff we need */
 

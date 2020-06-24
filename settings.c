@@ -71,7 +71,6 @@ settings_default ( void )
 	/* Flagstaff, Arizona */
 	settings.starting_long = -111.6722;
 	settings.starting_lat = 35.18;
-#endif
 
 	/* Tucson, Arizona */
 	/* XXX - this really needs to be dynamic, what if
@@ -81,6 +80,12 @@ settings_default ( void )
 	settings.starting_series = S_STATE;
 	settings.starting_long = -110.94;
 	settings.starting_lat = 32.27;
+#endif
+
+	/* Josephine Saddle, Santa Rita Mts. */
+	settings.starting_series = S_STATE;
+	settings.starting_long = -110.86018;
+	settings.starting_lat = 31.69373;
 
 	/* Marker size is "half" the marker from center to end */
 	settings.center_marker = 1;

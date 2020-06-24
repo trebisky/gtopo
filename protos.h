@@ -104,4 +104,8 @@ void free_http_soap ( void * );
 /* from xml.c */
 void xml_test ( void );
 
+/* from overlay.c */
+void overlay_init ( void );
+void overlay_redraw ( void );
+
 /* THE END */
