@@ -1,13 +1,19 @@
 #!/bin/sh
 
+# As of 6-28-2020 I don't support this
+# anyone who wants the sources should
+# obtain them from github.
+exit
+
 SHIPVER=`cat VERSION`
 SHIPDIR=gtopo-${SHIPVER}
 SHIPTAR=${SHIPDIR}.tar.gz
 
 rm -rf ${SHIPDIR}
 mkdir ${SHIPDIR}
-cp *.h *.c ${SHIPDIR}
-cp Makefile ${SHIPDIR}
+# cp *.h *.c ${SHIPDIR}
+# cp Makefile ${SHIPDIR}
+cp -var src ${SHIPDIR}
 cp README ${SHIPDIR}
 cp COPYING ${SHIPDIR}
 cp INSTALL ${SHIPDIR}

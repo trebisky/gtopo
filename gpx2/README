@@ -1,0 +1,11 @@
+I began working on this 6-21-2020 after receiving a gpx file of the Four Springs
+Trail in the Santa Ritas from John Montgomery.
+
+After spending a few hours, I had a deja vu feeling and looked at the gtopo sources
+and found the "gpx" directory from 2016 when my interest in this direction was
+stirred by getting a gpx file of the rainbow mountain hike from Dave Baker.
+
+So, I could use either of these.  The 2016 "gpx" looks like a full general
+XML parser, whereas the 2020 "gpx2" is a corner cutting hack job that throws
+caution to the wind and just aims to extract lat,long pairs from waypoints
+and tracks.
