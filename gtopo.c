@@ -469,6 +469,8 @@ pixmap_redraw ( void )
 	    }
 	}
 
+	// This won't work here, everything gets overwritten
+	//  by the map and you never see it.
 	// overlay_redraw ();
 }
 
