@@ -109,6 +109,8 @@
  * version 0.9.16 - 6/15/2011
  *	begin adding new series to support Alaska (AK) set
  * version 1.0.1  - 8/24/2015
+ *	add code to read and display GPX file tracks and waypoints
+ * version 1.1.0  - 6/29/2020
  *
  *  TODO
  *   - add age field to maplet cache and expire/recycle
@@ -1652,7 +1654,7 @@ main ( int argc, char **argv )
 
 	    /* XXX - really should dynamically generate version string at compile time */
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 1.0.1\n" );
+	    	printf ( "gtopo version 1.1.0\n" );
 		return 0;
 	    }
 
