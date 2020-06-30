@@ -66,12 +66,14 @@ extern struct track *track_head;
 static double x_long = -110.84633;
 static double x_lat = 31.70057;
 
+/* for debug */
 void
 show_first_track ( float ll [][2] )
 {
 	printf ( " lat, long = %.7f, %.7f\n", ll[0][0], ll[0][1] );
 }
 
+/* for debug */
 static void
 check_gpx ( void )
 {
@@ -101,20 +103,21 @@ check_gpx ( void )
 void
 overlay_init ( void )
 {
-	check_gpx ();
+	// check_gpx ();
 }
 
-#define MARKER_SIZE	12
+#define TRACK_MARKER_SIZE	3
+#define WAYPOINT_MARKER_SIZE	6
 
 static void
-draw_marker ( cairo_t *cr, int mx, int my )
+draw_marker_x ( cairo_t *cr, int mx, int my, int size )
 {
-	mx -= MARKER_SIZE/2;
-	my -= MARKER_SIZE/2;
+	mx -= size/2;
+	my -= size/2;
 
 	/* Blue */
-	cairo_set_source_rgb (cr, 0, 0, 65535);
-	cairo_rectangle(cr, mx, my, MARKER_SIZE, MARKER_SIZE);
+	cairo_set_source_rgb (cr, 0, 0, 65535 );
+	cairo_rectangle(cr, mx, my, size, size );
 	cairo_fill (cr);
 }
 
@@ -146,7 +149,71 @@ test_mark ( cairo_t *cr )
 	if ( visible ) {
 	    x1 = ( x_long - long1 ) / info.series->x_pixel_scale;
 	    y1 = ( lat2 - x_lat ) / info.series->y_pixel_scale;
-	    draw_marker ( cr, x1, y1 );
+	    draw_marker_x ( cr, x1, y1, WAYPOINT_MARKER_SIZE );
+	}
+}
+
+static void
+draw_path ( cairo_t *cr, float path[][2], int count )
+{
+	double long1, long2;
+	double lat1, lat2;
+	float x_long, x_lat;
+	int x1, y1;
+	int visible;
+	int i;
+
+	/* Get limits of visible region in lat/long */
+	long1 = info.long_deg - vp_info.vxcent * info.series->x_pixel_scale;
+	long2 = info.long_deg + vp_info.vxcent * info.series->x_pixel_scale;
+	lat1 = info.lat_deg - vp_info.vycent * info.series->y_pixel_scale;
+	lat2 = info.lat_deg + vp_info.vycent * info.series->y_pixel_scale;
+
+	for ( i=0; i<count; i++ ) {
+
+	    /* XXX */
+	    x_lat = path[i][0];
+	    x_long = path[i][1];
+
+	    visible = 1;
+	    if ( x_long < long1 || x_long > long2 ) visible = 0;
+	    if ( x_lat < lat1 || x_lat > lat2 ) visible = 0;
+
+	    if ( visible ) {
+		x1 = ( x_long - long1 ) / info.series->x_pixel_scale;
+		y1 = ( lat2 - x_lat ) / info.series->y_pixel_scale;
+		draw_marker_x ( cr, x1, y1, TRACK_MARKER_SIZE );
+	    }
+	}
+}
+
+static void
+draw_tracks ( cairo_t *cr )
+{
+	double long1, long2;
+	double lat1, lat2;
+	int visible;
+	struct track *tp;
+
+	/* Get limits of visible region in lat/long */
+	long1 = info.long_deg - vp_info.vxcent * info.series->x_pixel_scale;
+	long2 = info.long_deg + vp_info.vxcent * info.series->x_pixel_scale;
+	lat1 = info.lat_deg - vp_info.vycent * info.series->y_pixel_scale;
+	lat2 = info.lat_deg + vp_info.vycent * info.series->y_pixel_scale;
+
+	tp = track_head;
+	while ( tp ) {
+
+	    visible = 1;
+	    if ( tp->long_min > long2 ) visible = 0;
+	    if ( tp->long_max < long1 ) visible = 0;
+	    if ( tp->lat_min > lat2 ) visible = 0;
+	    if ( tp->lat_max < lat1 ) visible = 0;
+
+	    if ( visible )
+		draw_path ( cr, (float (*)[2]) tp->data, tp->count );
+
+	    tp = tp->next;
 	}
 }
 
@@ -182,7 +249,7 @@ draw_waypoints ( cairo_t *cr )
 	    if ( visible ) {
 		x1 = ( x_long - long1 ) / info.series->x_pixel_scale;
 		y1 = ( lat2 - x_lat ) / info.series->y_pixel_scale;
-		draw_marker ( cr, x1, y1 );
+		draw_marker_x ( cr, x1, y1, WAYPOINT_MARKER_SIZE );
 	    }
 
 	    wp = wp->next;
@@ -243,11 +310,12 @@ overlay_redraw ( void )
 	x1 = vp_info.vxcent;
 	y1 = vp_info.vycent;
 
-	draw_marker ( cr, x1, y1 );
+	draw_marker_x ( cr, x1, y1, WAYPOINT_MARKER_SIZE );
 #endif
 
-	test_mark ( cr );
+	// test_mark ( cr );
 	draw_waypoints ( cr );
+	draw_tracks ( cr );
 
 #ifdef notdef
 	// printf ( "Center: %.4f, %.4f\n", info.long_deg, info.lat_deg );
@@ -269,7 +337,7 @@ overlay_redraw ( void )
 	if ( visible ) {
 	    x1 = ( x_long - long1 ) / info.series->x_pixel_scale;
 	    y1 = ( lat2 - x_lat ) / info.series->y_pixel_scale;
-	    draw_marker ( cr, x1, y1 );
+	    draw_marker_x ( cr, x1, y1, WAYPOINT_MARKER_SIZE );
 	}
 #endif
 

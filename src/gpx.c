@@ -101,13 +101,13 @@ static void gpx_add ( char *gpx_file, int is_way )
 
 void gpx_waypoints_add ( char *gpx_file )
 {
-	printf ( "Load waypoints from: %s\n", gpx_file );
+	// printf ( "Load waypoints from: %s\n", gpx_file );
 	gpx_add ( gpx_file, 1 );
 }
 
 void gpx_tracks_add ( char *gpx_file )
 {
-	printf ( "Load tracks from: %s\n", gpx_file );
+	// printf ( "Load tracks from: %s\n", gpx_file );
 	gpx_add ( gpx_file, 0 );
 }
 
@@ -307,7 +307,7 @@ new_waypoint ( float wlat, float wlon )
 {
     struct waypoint *wp;
 
-    printf ( "New waypoint: %.6f, %.6f\n", wlat, wlon );
+    // printf ( "New waypoint: %.6f, %.6f\n", wlat, wlon );
 
     wp = (struct waypoint *) gmalloc ( sizeof(struct waypoint) );
     wp->way_lat = wlat;
@@ -324,7 +324,7 @@ new_track ( float track[][2], int num )
     int size;
     int i;
 
-    printf ( "New track: %d points\n", num );
+    // printf ( "New track: %d points\n", num );
 
     tp = (struct track *) gmalloc ( sizeof(struct track) );
     tp->count = num;
