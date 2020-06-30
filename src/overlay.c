@@ -49,11 +49,17 @@
  *   For stroking, the same caveats for converting code apply as for gdk_draw_line().
  */
 
+#include "gpx.h"
+
+
 extern struct topo_info info;
 extern struct settings settings;
 extern struct places_info p_info;
 
 extern struct viewport vp_info;
+
+extern struct waypoint *way_head;
+extern struct track *track_head;
 
 /* Baldy Saddle, Santa Rita Mountains */
 /* A test coordinate to try to mark */
@@ -61,14 +67,41 @@ static double x_long = -110.84633;
 static double x_lat = 31.70057;
 
 void
+show_first_track ( float ll [][2] )
+{
+	printf ( " lat, long = %.7f, %.7f\n", ll[0][0], ll[0][1] );
+}
+
+static void
+check_gpx ( void )
+{
+	struct waypoint *wp;
+	struct track *tp;
+	int n;
+
+	n = 0;
+	wp = way_head;
+	while ( wp ) {
+	    n++;
+	    wp = wp->next;
+	}
+	printf ( "%d waypoints\n", n );
+
+	n = 0;
+	tp = track_head;
+	while ( tp ) {
+	    n++;
+	    printf ( "Track %d, %d points\n", n, tp->count );
+	    show_first_track ( (float (*)[2]) tp->data );
+	    tp = tp->next;
+	}
+
+}
+
+void
 overlay_init ( void )
 {
-/*
-cm = pixmap.get_colormap()
-red = cm.alloc_color('red')
-gc = pixmap.new_gc(foreground=red)
-pixmap.draw_line(gc,0,0,w,h)
-*/
+	check_gpx ();
 }
 
 #define MARKER_SIZE	12
@@ -83,6 +116,77 @@ draw_marker ( cairo_t *cr, int mx, int my )
 	cairo_set_source_rgb (cr, 0, 0, 65535);
 	cairo_rectangle(cr, mx, my, MARKER_SIZE, MARKER_SIZE);
 	cairo_fill (cr);
+}
+
+/* For test only, draw the mark at Baldy Saddle */
+static void
+test_mark ( cairo_t *cr )
+{
+	double long1, long2;
+	double lat1, lat2;
+	int x1, y1;
+	int visible;
+
+	// printf ( "Center: %.4f, %.4f\n", info.long_deg, info.lat_deg );
+	// printf ( "Scale: %.5f, %.5f\n",
+	//     info.series->x_pixel_scale, info.series->y_pixel_scale );
+
+	long1 = info.long_deg - vp_info.vxcent * info.series->x_pixel_scale;
+	long2 = info.long_deg + vp_info.vxcent * info.series->x_pixel_scale;
+	lat1 = info.lat_deg - vp_info.vycent * info.series->y_pixel_scale;
+	lat2 = info.lat_deg + vp_info.vycent * info.series->y_pixel_scale;
+	// printf ( "Long: %.4f, %.4f\n", long1, long2 );
+	// printf ( "Lat : %.4f, %.4f\n", lat1, lat2 );
+
+	// mark ( cr, x_long, x_lat );
+	visible = 1;
+	if ( x_long < long1 || x_long > long2 ) visible = 0;
+	if ( x_lat < lat1 || x_lat > lat2 ) visible = 0;
+
+	if ( visible ) {
+	    x1 = ( x_long - long1 ) / info.series->x_pixel_scale;
+	    y1 = ( lat2 - x_lat ) / info.series->y_pixel_scale;
+	    draw_marker ( cr, x1, y1 );
+	}
+}
+
+static void
+draw_waypoints ( cairo_t *cr )
+{
+	double long1, long2;
+	double lat1, lat2;
+	int x1, y1;
+	int visible;
+	float x_long, x_lat;
+	struct waypoint *wp;
+
+	/* Get limits of visible region in lat/long */
+	long1 = info.long_deg - vp_info.vxcent * info.series->x_pixel_scale;
+	long2 = info.long_deg + vp_info.vxcent * info.series->x_pixel_scale;
+	lat1 = info.lat_deg - vp_info.vycent * info.series->y_pixel_scale;
+	lat2 = info.lat_deg + vp_info.vycent * info.series->y_pixel_scale;
+	// printf ( "Long: %.4f, %.4f\n", long1, long2 );
+	// printf ( "Lat : %.4f, %.4f\n", lat1, lat2 );
+
+	wp = way_head;
+	while ( wp ) {
+
+	    /* XXX */
+	    x_lat = wp->way_lat;
+	    x_long = wp->way_long;
+
+	    visible = 1;
+	    if ( x_long < long1 || x_long > long2 ) visible = 0;
+	    if ( x_lat < lat1 || x_lat > lat2 ) visible = 0;
+
+	    if ( visible ) {
+		x1 = ( x_long - long1 ) / info.series->x_pixel_scale;
+		y1 = ( lat2 - x_lat ) / info.series->y_pixel_scale;
+		draw_marker ( cr, x1, y1 );
+	    }
+
+	    wp = wp->next;
+	}
 }
 
 void
@@ -142,11 +246,10 @@ overlay_redraw ( void )
 	draw_marker ( cr, x1, y1 );
 #endif
 
-	/* This converts mouse location into long/lat
-	c_long = info.long_deg + (mouse_info.x-vp_info.vxcent) * info.series->x_pixel_scale;
-        c_lat = info.lat_deg - (mouse_info.y-vp_info.vycent) * info.series->y_pixel_scale;
-	*/
+	test_mark ( cr );
+	draw_waypoints ( cr );
 
+#ifdef notdef
 	// printf ( "Center: %.4f, %.4f\n", info.long_deg, info.lat_deg );
 	// printf ( "Scale: %.5f, %.5f\n",
 	//     info.series->x_pixel_scale, info.series->y_pixel_scale );
@@ -162,11 +265,13 @@ overlay_redraw ( void )
 	visible = 1;
 	if ( x_long < long1 || x_long > long2 ) visible = 0;
 	if ( x_lat < lat1 || x_lat > lat2 ) visible = 0;
+
 	if ( visible ) {
 	    x1 = ( x_long - long1 ) / info.series->x_pixel_scale;
 	    y1 = ( lat2 - x_lat ) / info.series->y_pixel_scale;
 	    draw_marker ( cr, x1, y1 );
 	}
+#endif
 
 	// gdk_draw_line ( info.series->pixels, vp_info.da->style->black_gc, xx, 0, xx, vp_info.vy );
 

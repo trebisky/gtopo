@@ -28,6 +28,9 @@
 #include "gtopo.h"
 #include "protos.h"
 
+/* This reads the file ~/.gtopo/config and loads settings from it.
+ */
+
 extern struct settings settings;
 
 /* PC keyboard Page-Up and Page-Down keys */
@@ -217,9 +220,8 @@ set_two ( char *name, char *val )
 	    settings.starting_long = parse_dms ( val );
 	else if ( strcmp ( name, "starting_lat" ) == 0 )
 	    settings.starting_lat = parse_dms ( val );
-	else if ( strcmp ( name, "starting_series" ) == 0 ) {
+	else if ( strcmp ( name, "starting_series" ) == 0 )
 	    gronk_series ( (int *) &settings.starting_series, val );
-	}
 	else if ( strcmp ( name, "m1_action" ) == 0 )
 	    gronk_word ( (int *) &settings.m1_action, val, m1_words );
 	else if ( strcmp ( name, "m3_action" ) == 0 )
@@ -230,6 +232,10 @@ set_two ( char *name, char *val )
 	    gronk_key ( (int *) &settings.down_key, val );
 	else if ( strcmp ( name, "add_archive" ) == 0 )
 	    archive_add ( val );
+	else if ( strcmp ( name, "gpx" ) == 0 )
+	    gpx_tracks_add ( val );
+	else if ( strcmp ( name, "gpx_way" ) == 0 )
+	    gpx_waypoints_add ( val );
 }
 
 /* Get rid of blank lines and full line comments.

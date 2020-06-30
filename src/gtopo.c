@@ -1636,6 +1636,8 @@ main ( int argc, char **argv )
 
 	series_init ();
 
+	gpx_init ();
+
 	settings_init ();
 
 	p_info.status = GONE;

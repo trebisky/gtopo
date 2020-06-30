@@ -39,7 +39,7 @@ GTK_CONFIG = pkg-config gtk+-2.0
 CFLAGS = $(COPTS) `$(GTK_CONFIG) --cflags`
 GTKLIBS = `$(GTK_CONFIG) --libs`
 
-OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o terra.o xml.o http.o utils.o overlay.o
+OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o terra.o xml.o http.o utils.o overlay.o gpx.o
 
 #COPTS = -g
 COPTS = -g -Wreturn-type

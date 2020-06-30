@@ -108,4 +108,9 @@ void xml_test ( void );
 void overlay_init ( void );
 void overlay_redraw ( void );
 
+/* from gpx.c */
+void gpx_init ( void );
+void gpx_waypoints_add ( char * );
+void gpx_tracks_add ( char * );
+
 /* THE END */
