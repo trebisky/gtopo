@@ -39,6 +39,11 @@ GTK_CONFIG = pkg-config gtk+-2.0
 CFLAGS = $(COPTS) `$(GTK_CONFIG) --cflags`
 GTKLIBS = `$(GTK_CONFIG) --libs`
 
+# Added 1-4-2021 -- the gtk2 headers are using
+#  deprecated variables, and that isn't my problem.
+# Not yet anyway.
+CFLAGS += -Wno-deprecated-declarations
+
 OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o terra.o xml.o http.o utils.o overlay.o gpx.o
 
 #COPTS = -g

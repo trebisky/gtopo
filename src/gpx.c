@@ -30,6 +30,8 @@
 
 #include "gpx.h"
 
+#define skip_sp(x)	while ( *x == ' ' ) x++
+
 /* This handles the loading of information from gpx files.
  * The actual display of the information is handled in overlay.c
  *
@@ -95,6 +97,8 @@ static void gpx_add ( char *gpx_file, int is_way )
 	    gpx_error2 ("Cannot open:", gpx_file );
 	}
 
+	// printf ( "Read gpx file: %s\n", gpx_file );
+
 	read_gpx ( gfile, is_way );
 	fclose ( gfile );
 }
@@ -116,7 +120,10 @@ void gpx_tracks_add ( char *gpx_file )
 
 enum GPX_mode { START, START2, READY };
 
-#define MAX_GPX	1024
+// #define MAX_GPX	1024
+// For the AZT (219265 points)
+#define MAX_GPX	250000
+
 static float gpx_points[MAX_GPX][2];
 
 void
@@ -124,33 +131,37 @@ read_gpx ( FILE *file, int is_way )
 {
     char buf[MAX_LINE];
     enum GPX_mode mode = START;
+    char *p;
 
     /* fgets returns the newline */
     while ( fgets ( buf, MAX_LINE, file ) ) {
+	p = buf;
+	skip_sp ( p );
+
 	if ( mode == START ) {
-	    if ( strncmp ( buf, "<?xml ", 6 ) != 0 )
+	    if ( strncmp ( p, "<?xml ", 6 ) != 0 )
 		gpx_error ( "Not a GPX file" );
 	    mode = START2;
 	    continue;
 	}
 	if ( mode == START2 ) {
-	    if ( strncmp ( buf, "<gpx ", 5 ) != 0 )
+	    if ( strncmp ( p, "<gpx ", 5 ) != 0 )
 		gpx_error ( "Malformed GPX file" );
 	    mode = READY;
 	    continue;
 	}
 	if ( mode == READY ) {
-	    if ( strncmp ( buf, "<wpt ", 5 ) == 0 ) {
-		do_wpt ( file, buf, ! is_way );
+	    if ( strncmp ( p, "<wpt ", 5 ) == 0 ) {
+		do_wpt ( file, p, ! is_way );
 	    }
-	    else if ( strncmp ( buf, "<trk>", 5 ) == 0 ) {
-		do_trk ( file, buf, is_way );
+	    else if ( strncmp ( p, "<trk>", 5 ) == 0 ) {
+		do_trk ( file, p, is_way );
 	    }
-	    else if ( strncmp ( buf, "</gpx>", 6 ) == 0 ) {
+	    else if ( strncmp ( p, "</gpx>", 6 ) == 0 ) {
 		/* This ends the file, just skip it */
 	    }
 	    else
-		gpx_error2 ( "Unexpected: ", buf );
+		gpx_error2 ( "Unexpected: ", p );
 
 	}
     }
@@ -244,8 +255,6 @@ get_thing ( char *buf, char *thing )
     *thing = '\0';
 }
 
-#define skip_sp(x)	while ( *x == ' ' ) x++
-
 void do_trk ( FILE *file, char *line, int skip )
 {
     char buf[MAX_LINE];
@@ -255,6 +264,7 @@ void do_trk ( FILE *file, char *line, int skip )
     char lat[MAX_VAL];
     char lon[MAX_VAL];
     int count = 0;
+    static int first_warning = 0;
 
     ll[0] = lat;
     ll[1] = lon;
@@ -276,9 +286,16 @@ void do_trk ( FILE *file, char *line, int skip )
 	    get_ll ( ll, p );
 	    if ( ! skip ) {
 		// printf ( "Track point: %s, %s\n", lat, lon );
-		gpx_points[count][0] = atof ( lat );
-		gpx_points[count][1] = atof ( lon );
-		count++;
+		if ( count > MAX_GPX ) {
+		    if ( ! first_warning ) {
+			first_warning = 1;
+			printf ( "Too many points in GPS file, limit %d (truncating)\n", MAX_GPX );
+		    }
+		} else {
+		    gpx_points[count][0] = atof ( lat );
+		    gpx_points[count][1] = atof ( lon );
+		    count++;
+		}
 	    }
 	} else {
 	    ;
