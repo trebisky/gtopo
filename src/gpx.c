@@ -152,10 +152,12 @@ read_gpx ( FILE *file, int is_way )
 	}
 	if ( mode == READY ) {
 	    if ( strncmp ( p, "<wpt ", 5 ) == 0 ) {
+		// printf ( "read_gpx -- waypoint\n" );
 		do_wpt ( file, p, ! is_way );
 	    }
 	    else if ( strncmp ( p, "<trk>", 5 ) == 0 ) {
 		do_trk ( file, p, is_way );
+		// printf ( "read_gpx -- track\n" );
 	    }
 	    else if ( strncmp ( p, "</gpx>", 6 ) == 0 ) {
 		/* This ends the file, just skip it */
@@ -213,12 +215,15 @@ void do_wpt ( FILE *file, char *line, int skip )
     char lat[MAX_VAL];
     char lon[MAX_VAL];
     // double flat, flon;
+    char *p;
 
     // printf ( "WPT !!\n" );
     // printf ( line );
+
     ll[0] = lat;
     ll[1] = lon;
     get_ll ( ll, line );
+
     // printf ( "Lat = %s\n", ll[0] );
     // printf ( "Lon = %s\n", ll[1] );
     // flat = atof ( lat );
@@ -229,8 +234,11 @@ void do_wpt ( FILE *file, char *line, int skip )
     }
 
     while ( fgets ( buf, MAX_LINE, file ) ) {
-	//printf ( buf );
-	if ( strncmp ( buf, "</wpt>", 6 ) == 0 )
+	// printf ( buf );
+	p = buf;
+	skip_sp ( p );
+
+	if ( strncmp ( p, "</wpt>", 6 ) == 0 )
 	    break;
     }
 }
@@ -270,7 +278,7 @@ void do_trk ( FILE *file, char *line, int skip )
     ll[1] = lon;
 
     //printf ( "\n" );
-    //printf ( "TRK !!\n" );
+    // printf ( "TRK !!\n" );
     // printf ( line );
     while ( fgets ( buf, MAX_LINE, file ) ) {
 	// printf ( buf );
