@@ -55,6 +55,18 @@ static int new_cmd = 0;;
 
 #define REM_PORT 5555
 
+/* sleep for 10 milliseconds */
+static void
+sleeper ( void )
+{
+	struct timespec ts;
+
+	ts.tv_sec = 0;
+	ts.tv_nsec = 10 * 1000;
+
+	nanosleep ( &ts, NULL );
+}
+
 static void
 draw_mark ( double a_long, double a_lat )
 {
@@ -130,11 +142,19 @@ cmd_handler ( int ss, char *buf )
 	/* Flag the timer to pick this up */
 	new_cmd = 1;
 
+	/* Now we wait for the timer to clear new_cmd
+	 * so that our OK response truly indicates that
+	 * we are ready to accept a new command.
+	 */
+	while ( new_cmd )
+	    sleeper ();
+
 	rem_reply ( ss, "OK\r\n" );
 }
 
 /* This handles a single connection.
- * Note that elnet terminates lines with \r\n
+ * Note that telnet terminates lines with \r\n
+ *  whereas commands from python or such end with just \n
  */
 static void
 rem_handler ( int ss )
@@ -149,7 +169,7 @@ rem_handler ( int ss )
 	    if ( n == 0 )
 		break;
 
-	    printf ( "Read got %d\n", n );
+	    // printf ( "Read got %d\n", n );
 	    // dump ( buf, n );
 
 	    if ( n < 4 || n > 100 ) {
@@ -163,7 +183,7 @@ rem_handler ( int ss )
 		n--;
 	    buf[n] = '\0';
 
-	    printf ( "Received: %d %s\n", n, buf );
+	    // printf ( "Received: %d %s\n", n, buf );
 
 	    cmd_handler ( ss, buf );
 	}
@@ -213,6 +233,13 @@ rem_func ( void *arg )
 	return NULL;
 }
 
+/*
+ * ==========================================================
+ * Everything above here runs in the remote thread.
+ * below here runs in the main thread.
+ * ==========================================================
+ */
+
 void
 remote_init ( void )
 {
@@ -225,14 +252,34 @@ remote_init ( void )
 	// printf ( "Thread stat %d\n", stat );
 }
 
-/* Called at 2 Hz from the GTK timer */
+/* This is what is done in gtopo.c
+ * in places_select_func ()
+ * when we handle a user selection of a places file
+ * coordinate.
+ */
+
+static void
+center_on ( double lon, double lat )
+{
+	// initial_series ( series );
+	set_position ( lon, lat );
+
+	new_redraw ();
+}
+
+/* Called at 10 Hz from the GTK timer */
 void
 remote_check ( void )
 {
-	if ( new_cmd ) {
+	if ( ! new_cmd )
+	    return;
+
+	if ( mark )
 	    draw_mark ( x_long, x_lat );
-	    new_cmd = 0;
-	}
+	if ( center )
+	    center_on ( x_long, x_lat );
+
+	new_cmd = 0;
 }
 
 #ifdef notdef

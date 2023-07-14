@@ -1326,12 +1326,23 @@ cursor_show ( int clean )
 }
 
 /* in milliseconds */
+#ifdef notdef
 #define TICK_DELAY	500
+#define CURSOR_TICKS	1
+#endif
+
+#define TICK_DELAY	100
+#define CURSOR_TICKS	5
+
+static int cursor_count = 0;
 
 gint
 tick_handler ( gpointer data )
 {
-	cursor_show ( 0 );
+	cursor_count++;
+	if ( (cursor_count % CURSOR_TICKS) == 0 )
+	    cursor_show ( 0 );
+
 	remote_check ();
 
 	return TRUE;
@@ -1665,7 +1676,7 @@ main ( int argc, char **argv )
 
 	    /* XXX - really should dynamically generate version string at compile time */
 	    if ( strcmp ( p, "-v" ) == 0 ) {
-	    	printf ( "gtopo version 1.1.0\n" );
+	    	printf ( "gtopo version 1.2.0\n" );
 		return 0;
 	    }
 

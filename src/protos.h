@@ -28,6 +28,7 @@ void synch_position ( void );
 void set_position ( double, double );
 void redraw_series ( void );
 void full_redraw ( void );
+void new_redraw ( void );
 
 /* from tpq_io.c */
 int load_tpq_maplet ( struct maplet * );
