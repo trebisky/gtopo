@@ -44,7 +44,9 @@ GTKLIBS = `$(GTK_CONFIG) --libs`
 # Not yet anyway.
 CFLAGS += -Wno-deprecated-declarations
 
-OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o terra.o xml.o http.o utils.o \
+BOGUS_OBJS = terra.o
+
+OBJS = gtopo.o maplet.o archive.o tpq_io.o settings.o places.o xml.o http.o utils.o \
 	overlay.o gpx.o remote.o
 
 #COPTS = -g

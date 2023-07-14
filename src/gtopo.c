@@ -1486,20 +1486,22 @@ synch_position ( void )
     	double x, y;
 	struct tpq_info *tp;
 
+#ifdef TERRA
 	if ( info.series->terra ) {
 	    ll_to_utm ( info.long_deg, info.lat_deg, &info.utm_zone, &info.utm_x, &info.utm_y );
 	    x = info.utm_x / ( 200.0 * info.series->x_pixel_scale );
 	    y = info.utm_y / ( 200.0 * info.series->y_pixel_scale );
 	} else {
-	    if ( tp = lookup_tpq ( info.series ) ) {
-		/* File method has the position */
-		x = - (info.long_deg - tp->e_long) / info.series->maplet_long_deg;
-		y =   (info.lat_deg - tp->s_lat) / info.series->maplet_lat_deg;
-	    } else {
-		/* Setion method (lat/long offsets always zero) */
-		x = - info.long_deg / info.series->maplet_long_deg;
-		y =   info.lat_deg / info.series->maplet_lat_deg;
-	    }
+#endif
+
+	if ( tp = lookup_tpq ( info.series ) ) {
+	    /* File method has the position */
+	    x = - (info.long_deg - tp->e_long) / info.series->maplet_long_deg;
+	    y =   (info.lat_deg - tp->s_lat) / info.series->maplet_lat_deg;
+	} else {
+	    /* Setion method (lat/long offsets always zero) */
+	    x = - info.long_deg / info.series->maplet_long_deg;
+	    y =   info.lat_deg / info.series->maplet_lat_deg;
 	}
 
 	/* indices of the maplet we are in
@@ -1520,6 +1522,7 @@ synch_position ( void )
 	info.fy = 1.0 - (y - info.maplet_y);
 }
 
+#ifdef TERRA
 void
 synch_position_utm ( void )
 {
@@ -1546,6 +1549,7 @@ synch_position_utm ( void )
 	info.fx = 1.0 - (x - info.maplet_x);
 	info.fy = 1.0 - (y - info.maplet_y);
 }
+#endif
 
 /* Used by mouse routine to check that a possible new
  * position still has map coverage.
@@ -1555,6 +1559,7 @@ try_position ( double dx, double dy )
 {
     	double save1, save2;
 
+#ifdef TERRA
 	if ( info.series->terra ) {
 	    save1 = info.utm_x;
 	    save2 = info.utm_y;
@@ -1563,27 +1568,30 @@ try_position ( double dx, double dy )
 	    info.utm_y += dy;
 	    synch_position_utm ();
 	} else {
-	    save1 = info.long_deg;
-	    save2 = info.lat_deg;
+#endif
 
-	    info.long_deg += dx;
-	    info.lat_deg += dy;
-	    synch_position ();
-	}
+	save1 = info.long_deg;
+	save2 = info.lat_deg;
+
+	info.long_deg += dx;
+	info.lat_deg += dy;
+	synch_position ();
 
 	if ( load_maplet ( info.maplet_x, info.maplet_y ) )
 	    return 1;
 
 	/* Didn't like it, go back */
+#ifdef TERRA
 	if ( info.series->terra ) {
 	    info.utm_x = save1;
 	    info.utm_y = save2;
 	    synch_position_utm ();
 	} else {
-	    info.long_deg = save1;
-	    info.lat_deg = save2;
-	    synch_position ();
-	}
+#endif
+
+	info.long_deg = save1;
+	info.lat_deg = save2;
+	synch_position ();
 
 	return 0;
 }
@@ -1671,10 +1679,14 @@ main ( int argc, char **argv )
 	    	http_test ();
 		return 0;
 	    }
+
+#ifdef TERRA
 	    if ( strcmp ( p, "-t" ) == 0 ) {
 	    	terra_test ();
 		return 0;
 	    }
+#endif
+
 	    if ( strcmp ( p, "-x" ) == 0 ) {
 	    	xml_test ();
 		return 0;

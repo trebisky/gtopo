@@ -193,19 +193,21 @@ load_maplet ( int maplet_x, int maplet_y )
 	    printf ( "Read maplet(cache=%d) = %d %d\n", sp->cache_count,
 		    maplet_x, maplet_y );
 
+#ifdef TERRA
 	if ( sp->terra ) {
 	    rv = load_terra_maplet ( mp );
 	} else {
-	    /* Try to find it in the archive
-	     * This will set tpq_path as well as
-	     * tpq_index in the maplet structure.
-	     */
-	    if ( ! lookup_series ( mp ) ) {
-		maplet_free ( mp );
-		return NULL;
-	    }
-	    rv = load_maplet_scale ( mp );
+#endif
+
+	/* Try to find it in the archive
+	 * This will set tpq_path as well as
+	 * tpq_index in the maplet structure.
+	 */
+	if ( ! lookup_series ( mp ) ) {
+	    maplet_free ( mp );
+	    return NULL;
 	}
+	rv = load_maplet_scale ( mp );
 
 	if ( ! rv ) {
 	    maplet_free ( mp );
