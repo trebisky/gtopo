@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Send a single coordinate to gtopo via netcat
+# Tom Trebisky  7-14-2023
+
+# bash cannot deal with white space
+CMD="M -110.870457273 31.692344025"
+echo $CMD | nc localhost 5555
+

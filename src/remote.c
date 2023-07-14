@@ -40,8 +40,13 @@ struct remote remote_info;
 static double xx_long = -110.8597;
 static double xx_lat = 31.7038;
 
+/* New commands are posted in these variables to
+ * be picked up on a timer tick.
+ */
 static double x_long;
 static double x_lat;
+static int mark;
+static int center;
 static int new_cmd = 0;;
 
 /* This implements a socket listener that handles remote commands
@@ -63,7 +68,8 @@ static void
 rem_reply ( int ss, char *xx )
 {
 	int n = strlen ( xx );
-	write ( ss, xx, n+2 );
+	// xx[n++] = '\n';
+	write ( ss, xx, n );
 }
 
 static void
@@ -80,54 +86,43 @@ dump ( char *buf, int n )
 	}
 }
 
-/* Telnet terminates lines with \r\n
- */
 static void
-rem_handler ( int ss )
+cmd_handler ( int ss, char *buf )
 {
-	char buf[128];
-	int n;
 	int nw;
 	char *wp[4];
 	char *p;
-	double rr_long, rr_lat;
-
-	// printf ( "Connection on %d\n", ss );
-	n = read ( ss, buf, 128 );
-
-	// printf ( "Read got %d\n", n );
-	// dump ( buf, n );
-
-	if ( n < 4 || n > 100 ) {
-	    rem_reply ( ss, "ERR\r\n" );
-	    return;
-	}
-
-	if ( buf[n-1] == '\r' || buf[n-1] == '\n' )
-	    n--;
-	if ( buf[n-1] == '\r' || buf[n-1] == '\n' )
-	    n--;
-	buf[n] = '\0';
-
-	// printf ( "Received: %d %s\n", n, buf );
+	int valid;
 
 	nw = split_n ( buf, wp, 4 );
 	// printf ( "Split: %d\n", nw );
+
 	if ( nw != 3 ) {
 	    rem_reply ( ss, "ERR\r\n" );
 	    return;
 	}
 
-	p = wp[0];
-	if ( *p != 'm' && *p != 'M' ) {
+	mark = 0;
+	center = 0;
+	valid = 0;
+
+	for ( p = wp[0]; *p; p++ ) {
+	    if ( *p == 'm' || *p == 'M' ) {
+		mark = 1;
+		valid = 1;
+	    }
+	    if ( *p == 'c' || *p == 'C' ) {
+		center = 1;
+		valid = 1;
+	    }
+	}
+
+	if ( ! valid ) {
 	    rem_reply ( ss, "ERR\r\n" );
 	    return;
 	}
 
 	/* That is all the validation we do.
-	 * As long as we see 3 words and the
-	 * first word starts with m or M,
-	 * we go for it.
 	 */
 	x_long = atof ( wp[1] );
 	x_lat = atof ( wp[2] );
@@ -136,6 +131,42 @@ rem_handler ( int ss )
 	new_cmd = 1;
 
 	rem_reply ( ss, "OK\r\n" );
+}
+
+/* This handles a single connection.
+ * Note that elnet terminates lines with \r\n
+ */
+static void
+rem_handler ( int ss )
+{
+	char buf[128];
+	int n;
+
+	// printf ( "Connection on %d\n", ss );
+
+	for ( ;; ) {
+	    n = read ( ss, buf, 128 );
+	    if ( n == 0 )
+		break;
+
+	    printf ( "Read got %d\n", n );
+	    // dump ( buf, n );
+
+	    if ( n < 4 || n > 100 ) {
+		rem_reply ( ss, "ERR\r\n" );
+		return;
+	    }
+
+	    if ( buf[n-1] == '\r' || buf[n-1] == '\n' )
+		n--;
+	    if ( buf[n-1] == '\r' || buf[n-1] == '\n' )
+		n--;
+	    buf[n] = '\0';
+
+	    printf ( "Received: %d %s\n", n, buf );
+
+	    cmd_handler ( ss, buf );
+	}
 }
 
 static void
@@ -165,7 +196,6 @@ rem_server ( void )
 	    namelen = sizeof(client);
 	    if ((ss = accept(s, (struct sockaddr *)&client, &namelen)) == -1)
 		break;
-	    // printf ( "Connection!\n" );
 	    rem_handler ( ss );
 	    close ( ss );
 	}
