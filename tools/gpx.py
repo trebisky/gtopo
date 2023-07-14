@@ -45,8 +45,8 @@ if ( len(sys.argv) > 1 ) :
 #for l in data :
 #    print ( l )
 
-#print ( len(data) )
-# 1175 items in data
+print ( len(data) )
+# 1175 items in original data
 
 #    time.sleep ( 1 )
 
