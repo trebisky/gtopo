@@ -28,7 +28,11 @@
 
 #include "gtopo.h"
 #include "protos.h"
+
 #include "xml.h"
+#include "remote.h"
+
+extern struct remote remote_info;
 
 /* This is overlay.c
  *
@@ -121,10 +125,43 @@ draw_marker_x ( cairo_t *cr, int mx, int my, int size )
 	cairo_fill (cr);
 }
 
+/* shared by test_mark() and rem_mark() */
+static void
+make_mark ( cairo_t *cr, double a_long, double a_lat )
+{
+	double long1, long2;
+	double lat1, lat2;
+	int x1, y1;
+	int visible;
+
+	// printf ( "Center: %.4f, %.4f\n", info.long_deg, info.lat_deg );
+	// printf ( "Scale: %.5f, %.5f\n",
+	//     info.series->x_pixel_scale, info.series->y_pixel_scale );
+
+	long1 = info.long_deg - vp_info.vxcent * info.series->x_pixel_scale;
+	long2 = info.long_deg + vp_info.vxcent * info.series->x_pixel_scale;
+	lat1 = info.lat_deg - vp_info.vycent * info.series->y_pixel_scale;
+	lat2 = info.lat_deg + vp_info.vycent * info.series->y_pixel_scale;
+	// printf ( "Long: %.4f, %.4f\n", long1, long2 );
+	// printf ( "Lat : %.4f, %.4f\n", lat1, lat2 );
+
+	// mark ( cr, a_long, a_lat );
+	visible = 1;
+	if ( a_long < long1 || a_long > long2 ) visible = 0;
+	if ( a_lat < lat1 || a_lat > lat2 ) visible = 0;
+
+	if ( visible ) {
+	    x1 = ( a_long - long1 ) / info.series->x_pixel_scale;
+	    y1 = ( lat2 - a_lat ) / info.series->y_pixel_scale;
+	    draw_marker_x ( cr, x1, y1, WAYPOINT_MARKER_SIZE );
+	}
+}
+
 /* For test only, draw the mark at Baldy Saddle */
 static void
 test_mark ( cairo_t *cr )
 {
+#ifdef notdef
 	double long1, long2;
 	double lat1, lat2;
 	int x1, y1;
@@ -151,6 +188,15 @@ test_mark ( cairo_t *cr )
 	    y1 = ( lat2 - x_lat ) / info.series->y_pixel_scale;
 	    draw_marker_x ( cr, x1, y1, WAYPOINT_MARKER_SIZE );
 	}
+#endif
+
+	make_mark ( cr, x_long, x_lat );
+}
+
+static void
+rem_mark ( cairo_t *cr )
+{
+	make_mark ( cr, remote_info.r_long, remote_info.r_lat );
 }
 
 static void
@@ -313,7 +359,13 @@ overlay_redraw ( void )
 	draw_marker_x ( cr, x1, y1, WAYPOINT_MARKER_SIZE );
 #endif
 
+	// Mark at baldy saddle
 	// test_mark ( cr );
+
+	if ( remote_info.active ) {
+	    rem_mark ( cr );
+	}
+
 	draw_waypoints ( cr );
 	draw_tracks ( cr );
 
@@ -346,6 +398,16 @@ overlay_redraw ( void )
 	// clear screen
 	// gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->white_gc, TRUE, 0, 0, vxdim, vydim );
 	// gdk_draw_rectangle ( info.series->pixels, vp_info.da->style->red_gc, TRUE, x1, y1, xw, yw );
+}
+
+/* just doing a overlay_redraw adds a new marker and keeps the old as well.
+ * we have to do a full redraw to clear the slate.
+ */
+void
+remote_redraw ( void )
+{
+	// overlay_redraw ();
+	full_redraw ();
 }
 
 /* THE END */

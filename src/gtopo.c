@@ -1332,6 +1332,7 @@ gint
 tick_handler ( gpointer data )
 {
 	cursor_show ( 0 );
+	remote_check ();
 
 	return TRUE;
 }
@@ -1645,6 +1646,8 @@ main ( int argc, char **argv )
 	p_info.status = GONE;
 
 	places_init ();
+
+	remote_init ();
 
 	while ( argc-- ) {
 	    p = *argv++;

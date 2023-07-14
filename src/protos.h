@@ -27,6 +27,7 @@ typedef void (*mfptr) ( struct maplet * );
 void synch_position ( void );
 void set_position ( double, double );
 void redraw_series ( void );
+void full_redraw ( void );
 
 /* from tpq_io.c */
 int load_tpq_maplet ( struct maplet * );
@@ -107,10 +108,15 @@ void xml_test ( void );
 /* from overlay.c */
 void overlay_init ( void );
 void overlay_redraw ( void );
+void remote_redraw ( void );
 
 /* from gpx.c */
 void gpx_init ( void );
 void gpx_waypoints_add ( char * );
 void gpx_tracks_add ( char * );
+
+/* from remote.c */
+void remote_init ( void );
+void remote_check ( void );
 
 /* THE END */

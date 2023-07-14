@@ -82,8 +82,8 @@ find_file ( char *gpx_file )
 	if ( rv )
 	    return rv;
 	strncpy ( gpx_path, getenv("HOME"), PATH_SIZE );
-	strncat ( gpx_path, config_dir, PATH_SIZE );
-	strncat ( gpx_path, gpx_file, PATH_SIZE );
+	strncat ( gpx_path, config_dir, PATH_SIZE-1 );
+	strncat ( gpx_path, gpx_file, PATH_SIZE-1 );
 	// printf ( "%s\n", gpx_path );
 	return fopen ( gpx_path, "r" );
 }
