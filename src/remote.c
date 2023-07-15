@@ -187,6 +187,7 @@ rem_handler ( int ss )
 
 	    cmd_handler ( ss, buf );
 	}
+	// printf ( "Connection closed\n" );
 }
 
 static void

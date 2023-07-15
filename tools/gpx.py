@@ -8,12 +8,27 @@ gpx_path = "carrie.gpx"
 
 server = ('localhost',5555)
 
-def send_mark ( rcmd ) :
+def send_one_mark ( rcmd ) :
     s = socket.create_connection ( server )
     cmd = rcmd.encode()
     s.sendall ( cmd )
     reply = s.recv(16)
     #print ( reply )
+
+def send_marks ( data ) :
+    s = socket.create_connection ( server )
+
+    #for line in data :
+    #for i in range(1100,1174) :
+    for i in range(len(data)) :
+        print ( i )
+        cmd = data[i].encode()
+        s.sendall ( cmd )
+        # We don't do anything with the reply
+        # but it is important to wait for it.
+        reply = s.recv(16)
+        time.sleep ( 0.1 )
+    s.close ()
 
 def redo ( line ) :
     line = line.replace ( '>', '' )
@@ -38,23 +53,15 @@ if ( len(sys.argv) > 1 ) :
     x = sys.argv[1]
     i = int ( x )
     print ( i )
-    send_mark ( data[i] )
+    send_one_mark ( data[i] )
     sys.exit()
-
 
 #for l in data :
 #    print ( l )
 
-print ( len(data) )
+#print ( len(data) )
 # 1175 items in original data
 
-#    time.sleep ( 1 )
-
-#for line in data :
-#for i in range(1100,1174) :
-for i in range(len(data)) :
-    print ( i )
-    send_mark ( data[i] )
-    time.sleep ( 0.1 )
+send_marks ( data )
 
 # THE END
