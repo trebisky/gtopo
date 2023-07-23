@@ -27,10 +27,16 @@
 
 /* shared between remote.c and overlay.c */
 
+#define MAX_REM_POINTS	2000
+
 struct remote {
     int active;
     double r_lat;
     double r_long;
+    /* ---- */
+    int path;
+    int npath;
+    float data[MAX_REM_POINTS][2];
 };
 
 /* THE END */

@@ -234,6 +234,13 @@ draw_path ( cairo_t *cr, float path[][2], int count )
 }
 
 static void
+rem_path ( cairo_t *cr )
+{
+	draw_path ( cr, remote_info.data, remote_info.npath );
+	// (float (*)[2]) tp->data, tp->count );
+}
+
+static void
 draw_tracks ( cairo_t *cr )
 {
 	double long1, long2;
@@ -364,6 +371,10 @@ overlay_redraw ( void )
 
 	if ( remote_info.active ) {
 	    rem_mark ( cr );
+	}
+
+	if ( remote_info.path ) {
+	    rem_path ( cr );
 	}
 
 	draw_waypoints ( cr );

@@ -34,6 +34,19 @@
 
 #include "remote.h"
 
+/* This implements a protocol (server) listening on TCP port 5555
+ * Commands are ascii as follows:
+ *
+ * m = mark at given coords
+ * c = center at given coords
+ *  The above are usually used together as:
+ * MC -110.87813 31.71917
+ *
+ * e = erase path
+ * d = draw path
+ * p add coordinate to path
+ */
+
 struct remote remote_info;
 
 /* South of the Old Madera Mine */
@@ -48,6 +61,7 @@ static double x_lat;
 static int mark;
 static int center;
 static int new_cmd = 0;;
+static int new_path = 0;;
 
 /* This implements a socket listener that handles remote commands
  * Tom Trebisky 7-13-2023
@@ -65,15 +79,6 @@ sleeper ( void )
 	ts.tv_nsec = 10 * 1000;
 
 	nanosleep ( &ts, NULL );
-}
-
-static void
-draw_mark ( double a_long, double a_lat )
-{
-	remote_info.r_long = a_long;
-	remote_info.r_lat = a_lat;
-	remote_info.active = 1;
-	remote_redraw ();
 }
 
 static void
@@ -99,33 +104,86 @@ dump ( char *buf, int n )
 }
 
 static void
+erase_path ( void )
+{
+	remote_info.path = 0;
+	remote_info.npath = 0;
+	new_path = 1;
+}
+
+static void
+draw_path ( void )
+{
+	remote_info.path = 1;
+	new_path = 1;
+}
+
+static void
+add_to_path ( double lon, double lat )
+{
+	/* Silently discard excess points */
+	if ( remote_info.npath >= MAX_REM_POINTS )
+	    return;
+	
+	remote_info.data[remote_info.npath][0] = lat;
+	remote_info.data[remote_info.npath][1] = lon;
+	remote_info.npath++;
+}
+
+/* Handle a single line of input.
+ */
+static void
 cmd_handler ( int ss, char *buf )
 {
 	int nw;
 	char *wp[4];
 	char *p;
-	int valid;
 
+	int valid;
+	int point;
+
+	// printf ( "CMD: %s\n", buf );
 	nw = split_n ( buf, wp, 4 );
 	// printf ( "Split: %d\n", nw );
 
-	if ( nw != 3 ) {
+	if ( nw < 1 ) {
 	    rem_reply ( ss, "ERR\r\n" );
 	    return;
 	}
 
 	mark = 0;
 	center = 0;
+	point = 0;
 	valid = 0;
 
 	for ( p = wp[0]; *p; p++ ) {
+	    /* mark */
 	    if ( *p == 'm' || *p == 'M' ) {
 		mark = 1;
 		valid = 1;
 	    }
+	    /* center */
 	    if ( *p == 'c' || *p == 'C' ) {
 		center = 1;
 		valid = 1;
+	    }
+
+	    /* erase path */
+	    if ( *p == 'e' || *p == 'E' ) {
+		erase_path ();
+		rem_reply ( ss, "OK\r\n" );
+		return;
+	    }
+	    /* add point to path */
+	    if ( *p == 'p' || *p == 'P' ) {
+		point = 1;
+		valid = 1;
+	    }
+	    /* draw path */
+	    if ( *p == 'd' || *p == 'D' ) {
+		draw_path ();
+		rem_reply ( ss, "OK\r\n" );
+		return;
 	    }
 	}
 
@@ -134,10 +192,23 @@ cmd_handler ( int ss, char *buf )
 	    return;
 	}
 
+	if ( nw != 3 ) {
+	    rem_reply ( ss, "ERR\r\n" );
+	    return;
+	}
+
 	/* That is all the validation we do.
 	 */
 	x_long = atof ( wp[1] );
 	x_lat = atof ( wp[2] );
+
+	if ( point ) {
+	    add_to_path ( x_long, x_lat );
+	    rem_reply ( ss, "OK\r\n" );
+	    return;
+	}
+
+	/* Fall through to handle M and C */
 
 	/* Flag the timer to pick this up */
 	new_cmd = 1;
@@ -172,9 +243,9 @@ rem_handler ( int ss )
 	    // printf ( "Read got %d\n", n );
 	    // dump ( buf, n );
 
-	    if ( n < 4 || n > 100 ) {
+	    if ( n < 1 || n > 100 ) {
 		rem_reply ( ss, "ERR\r\n" );
-		return;
+		continue;
 	    }
 
 	    if ( buf[n-1] == '\r' || buf[n-1] == '\n' )
@@ -248,9 +319,20 @@ remote_init ( void )
 	int stat;
 
 	remote_info.active = 0;
+	remote_info.path = 0;
+	remote_info.npath = 0;
 
 	stat = pthread_create( &rem_thread, NULL, rem_func, NULL );
 	// printf ( "Thread stat %d\n", stat );
+}
+
+static void
+draw_mark ( double a_long, double a_lat )
+{
+	remote_info.r_long = a_long;
+	remote_info.r_lat = a_lat;
+	remote_info.active = 1;
+	remote_redraw ();
 }
 
 /* This is what is done in gtopo.c
@@ -272,6 +354,11 @@ center_on ( double lon, double lat )
 void
 remote_check ( void )
 {
+	if ( new_path ) {
+	    remote_redraw ();
+	    new_path = 0;
+	}
+
 	if ( ! new_cmd )
 	    return;
 
@@ -282,21 +369,5 @@ remote_check ( void )
 
 	new_cmd = 0;
 }
-
-#ifdef notdef
-static int xxx = 0;
-
-void
-remote_check ( void )
-{
-	if ( xxx ) {
-	    draw_mark ( x_long, x_lat );
-	    xxx = 0;
-	} else {
-	    draw_mark ( x_long + 0.004, x_lat - 0.004 );
-	    xxx = 1;
-	}
-}
-#endif
 
 /* THE END */
